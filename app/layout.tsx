@@ -20,16 +20,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <div className="flex h-screen overflow-hidden bg-background">
-            <Sidebar />
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <Header />
-              <main className="flex-1 overflow-auto">{children}</main>
-            </div>
-          </div>
+          {children}
         </ThemeProvider>
       </body>
     </html>
