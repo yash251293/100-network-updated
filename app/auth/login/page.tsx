@@ -18,27 +18,46 @@ export default function LoginPage() {
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null); // For API messages
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage(null); // Clear previous messages
 
     try {
-      // TODO: Add actual login logic here
-      console.log("Login attempt:", formData)
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const data = await response.json();
 
-      // For now, we'll just redirect to the explore page
-      // In a real app, you would verify credentials and handle tokens
-      router.push("/explore")
+      if (response.ok && data.token) {
+        setMessage({ type: 'success', content: data.message || 'Login successful! Redirecting...' });
+        // Store the JWT in localStorage
+        localStorage.setItem('authToken', data.token);
+        // Store user info if needed, or rely on token for future fetches
+        if (data.user) {
+            localStorage.setItem('authUser', JSON.stringify(data.user));
+        }
+        router.push('/explore'); // Redirect to a protected route or dashboard
+      } else {
+        setMessage({ type: 'error', content: data.message || 'An error occurred during login.' });
+      }
     } catch (error) {
-      console.error("Login failed:", error)
+      console.error('Login fetch error:', error);
+      setMessage({ type: 'error', content: 'Failed to connect to the server. Please try again.' });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -110,6 +129,12 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
+
+          {message && (
+            <div className={`mt-4 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+              {message.content}
+            </div>
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">

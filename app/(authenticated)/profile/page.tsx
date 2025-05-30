@@ -4,6 +4,18 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   MapPin,
+"use client"
+
+import { useState, useEffect, FormEvent, ChangeEvent } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import {
+  MapPin,
   Mail,
   Phone,
   Globe,
@@ -15,16 +27,153 @@ import {
   Users,
   Eye,
   MessageCircle,
+  Save,
+  Loader2,
 } from "lucide-react"
 
+interface ProfileData {
+  user_id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  headline: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  cover_photo_url: string | null;
+  location: string | null;
+  phone_number: string | null;
+  website_url: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  // Add skills, experiences, educations arrays if fetched
+}
+
+const initialProfileData: ProfileData = {
+  user_id: "",
+  email: "",
+  first_name: "",
+  last_name: "",
+  headline: "",
+  bio: "",
+  avatar_url: "/placeholder-user.jpg", // Default placeholder
+  cover_photo_url: "/placeholder-cover.png", // Default placeholder
+  location: "",
+  phone_number: "",
+  website_url: "",
+  linkedin_url: "",
+  github_url: "",
+};
+
 export default function ProfilePage() {
+  const [profile, setProfile] = useState<ProfileData>(initialProfileData);
+  const [editableProfile, setEditableProfile] = useState<Partial<ProfileData>>(initialProfileData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      setMessage(null);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setMessage({ type: 'error', content: 'Authentication token not found. Please login again.' });
+        setIsLoading(false);
+        // router.push('/auth/login'); // Redirect if no token
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProfile(data);
+          setEditableProfile(data); // Initialize editable profile with fetched data
+        } else {
+          const errorData = await response.json();
+          setMessage({ type: 'error', content: errorData.message || 'Failed to fetch profile.' });
+        }
+      } catch (error) {
+        console.error("Fetch profile error:", error);
+        setMessage({ type: 'error', content: 'An error occurred while fetching your profile.' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditableProfile(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setMessage(null);
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setMessage({ type: 'error', content: 'Authentication token not found. Please login again.' });
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(editableProfile),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setProfile(prev => ({ ...prev, ...editableProfile })); // Update displayed profile
+        setMessage({ type: 'success', content: data.message || 'Profile updated successfully!' });
+        setIsEditing(false);
+      } else {
+        setMessage({ type: 'error', content: data.message || 'Failed to update profile.' });
+      }
+    } catch (error) {
+      console.error("Update profile error:", error);
+      setMessage({ type: 'error', content: 'An error occurred while updating your profile.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container max-w-4xl py-6 flex justify-center items-center min-h-[calc(100vh-200px)]">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+        <p className="ml-4 text-lg">Loading profile...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container max-w-4xl py-6">
+      {message && (
+        <div className={`mb-4 p-3 rounded-md text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message.content}
+        </div>
+      )}
       {/* Header Card */}
       <Card className="mb-6">
         <div className="relative">
           {/* Cover Photo */}
-          <div className="h-48 bg-gradient-to-r from-blue-500 to-purple-600 rounded-t-lg"></div>
+          <div
+            className="h-48 bg-gradient-to-r from-blue-500 to-purple-600 rounded-t-lg bg-cover bg-center"
+            style={{ backgroundImage: `url(${profile.cover_photo_url || '/placeholder-cover.png'})` }}
+          ></div>
 
           {/* Profile Info */}
           <div className="relative px-6 pb-6 pt-4">
@@ -32,52 +181,97 @@ export default function ProfilePage() {
               {/* Profile Picture */}
               <div className="relative -mt-20 mb-6 sm:mb-0">
                 <Avatar className="h-32 w-32 border-4 border-white">
-                  <AvatarImage src="/professional-user-avatar.png" alt="Your Name" />
-                  <AvatarFallback className="text-2xl">YN</AvatarFallback>
+                  <AvatarImage src={profile.avatar_url || "/placeholder-user.jpg"} alt={profile.first_name || "User"} />
+                  <AvatarFallback className="text-2xl">
+                    {profile.first_name?.[0] || ""}{profile.last_name?.[0] || ""}
+                  </AvatarFallback>
                 </Avatar>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-white"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
+                {isEditing && (
+                   <Input type="text" name="avatar_url" value={editableProfile.avatar_url || ""} onChange={handleInputChange} placeholder="Avatar URL" className="mt-2 text-xs" />
+                )}
               </div>
 
               {/* Name and Title */}
               <div className="flex-1">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold">Alex Johnson</h1>
-                    <p className="text-lg text-muted-foreground">Senior Software Engineer at TechCorp</p>
-                    <div className="flex items-center text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      San Francisco, CA
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input name="first_name" value={editableProfile.first_name || ""} onChange={handleInputChange} placeholder="First Name" />
+                        <Input name="last_name" value={editableProfile.last_name || ""} onChange={handleInputChange} placeholder="Last Name" />
+                      </div>
+                      <Input name="headline" value={editableProfile.headline || ""} onChange={handleInputChange} placeholder="Headline (e.g. Software Engineer at X)" />
+                      <Input name="location" value={editableProfile.location || ""} onChange={handleInputChange} placeholder="Location (e.g. San Francisco, CA)" />
                     </div>
-                  </div>
-                  <Button variant="outline" className="ml-4">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
+                  ) : (
+                    <div>
+                      <h1 className="text-2xl font-bold">{profile.first_name || "Your"} {profile.last_name || "Name"}</h1>
+                      <p className="text-lg text-muted-foreground">{profile.headline || "Your headline"}</p>
+                      <div className="flex items-center text-sm text-muted-foreground mt-1">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {profile.location || "Your location"}
+                      </div>
+                    </div>
+                  )}
+                  {!isEditing ? (
+                    <Button variant="outline" onClick={() => { setIsEditing(true); setEditableProfile(profile); setMessage(null); }} className="ml-4">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                       <Button variant="outline" onClick={() => { setIsEditing(false); setMessage(null); }} disabled={isSaving}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSubmit} disabled={isSaving} className="ml-2">
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                        Save Changes
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Contact Info */}
-                <div className="flex flex-wrap gap-4 mt-4 text-sm">
-                  <div className="flex items-center text-blue-600">
-                    <Mail className="h-4 w-4 mr-1" />
-                    alex.johnson@email.com
+                {!isEditing ? (
+                  <div className="flex flex-wrap gap-4 mt-4 text-sm">
+                    <div className="flex items-center text-blue-600">
+                      <Mail className="h-4 w-4 mr-1" />
+                      {profile.email}
+                    </div>
+                    {profile.phone_number && (
+                      <div className="flex items-center text-muted-foreground">
+                        <Phone className="h-4 w-4 mr-1" />
+                        {profile.phone_number}
+                      </div>
+                    )}
+                    {profile.website_url && (
+                      <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:underline">
+                        <Globe className="h-4 w-4 mr-1" />
+                        {profile.website_url.replace(/^https?:\/\//, '')}
+                      </a>
+                    )}
+                     {profile.linkedin_url && (
+                      <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:underline">
+                        <Users className="h-4 w-4 mr-1" /> LinkedIn
+                      </a>
+                    )}
+                    {profile.github_url && (
+                      <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:underline">
+                        <Globe className="h-4 w-4 mr-1" /> GitHub
+                      </a>
+                    )}
                   </div>
-                  <div className="flex items-center text-muted-foreground">
-                    <Phone className="h-4 w-4 mr-1" />
-                    (555) 123-4567
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <Input name="phone_number" value={editableProfile.phone_number || ""} onChange={handleInputChange} placeholder="Phone Number" />
+                    <Input name="website_url" value={editableProfile.website_url || ""} onChange={handleInputChange} placeholder="Website URL" />
+                    <Input name="linkedin_url" value={editableProfile.linkedin_url || ""} onChange={handleInputChange} placeholder="LinkedIn URL" />
+                    <Input name="github_url" value={editableProfile.github_url || ""} onChange={handleInputChange} placeholder="GitHub URL" />
+                    <Input name="cover_photo_url" value={editableProfile.cover_photo_url || ""} onChange={handleInputChange} placeholder="Cover Photo URL" />
                   </div>
-                  <div className="flex items-center text-blue-600">
-                    <Globe className="h-4 w-4 mr-1" />
-                    alexjohnson.dev
-                  </div>
-                </div>
+                )}
 
-                {/* Stats */}
+                {/* Stats - These are usually not directly editable */}
                 <div className="flex gap-6 mt-4 text-sm">
                   <div className="flex items-center">
                     <Users className="h-4 w-4 mr-1 text-muted-foreground" />
@@ -101,23 +295,26 @@ export default function ProfilePage() {
         <div className="lg:col-span-2 space-y-6">
           {/* About Section */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-xl font-semibold">About</h2>
-              <Button variant="ghost" size="icon">
-                <Edit className="h-4 w-4" />
-              </Button>
+              {!isEditing && (
+                <Button variant="ghost" size="icon" onClick={() => { setIsEditing(true); setEditableProfile(profile); setMessage(null); }}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground leading-relaxed">
-                Passionate software engineer with 7+ years of experience building scalable web applications. Specialized
-                in React, Node.js, and cloud technologies. I love solving complex problems and mentoring junior
-                developers. Currently focused on building AI-powered solutions that make a positive impact on people's
-                lives.
-              </p>
+              {isEditing ? (
+                <Textarea name="bio" value={editableProfile.bio || ""} onChange={handleInputChange} placeholder="Tell us about yourself..." className="min-h-[120px]" />
+              ) : (
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {profile.bio || "No bio provided yet."}
+                </p>
+              )}
             </CardContent>
           </Card>
 
-          {/* Experience Section */}
+          {/* Experience Section - Placeholder for future implementation */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-xl font-semibold">Experience</h2>
