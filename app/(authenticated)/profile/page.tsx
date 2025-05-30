@@ -755,39 +755,42 @@ export default function ProfilePage() {
               {profile.skills && profile.skills.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {profile.skills.map((skill) => (
-                    <Badge key={skill.user_skill_id} variant="secondary" className="text-sm py-1 px-3">
+                    <Badge key={skill.user_skill_id} variant="secondary" className="text-sm py-1 px-3 relative group">
                       {skill.skill_name}
                       {skill.proficiency_level && (
                         <span className="ml-1.5 text-xs text-muted-foreground">
                           ({skill.proficiency_level})
                         </span>
                       )}
-                      {isEditing && ( // Show Edit button only when main profile is in edit mode
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="ml-2 h-6 w-6 hover:text-blue-700"
-                          onClick={() => handleOpenEditSkillModal(skill)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="ml-1 h-6 w-6 text-red-500 hover:text-red-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenDeleteSkillConfirm(skill);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          {/* The AlertDialogContent is now rendered once outside the loop, controlled by isDeleteSkillConfirmOpen */}
-                        </AlertDialog>
-                      </span>
+                      {isEditing && (
+                        <span className="ml-2 inline-flex items-center"> {/* Wrapper for buttons */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:text-blue-700"
+                            onClick={() => handleOpenEditSkillModal(skill)}
+                            title="Edit skill"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-red-500 hover:text-red-700"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenDeleteSkillConfirm(skill);
+                                }}
+                                title="Delete skill"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            {/* No AlertDialogContent here; it's handled globally */}
+                          </AlertDialog>
+                        </span>
                       )}
                     </Badge>
                   ))}
@@ -796,7 +799,7 @@ export default function ProfilePage() {
                 <p className="text-sm text-muted-foreground">
                   {isEditing
                     ? "You can add, edit, or delete skills via dedicated buttons/forms (not fully implemented in this view)."
-                    : "No skills added yet. Click 'Edit Profile', then use the 'Add Skill' (+) button or manage skills in the dedicated section."}
+                    : "No skills added yet. Use the '+' button above to add skills, or 'Edit Profile' to manage existing ones."}
                 </p>
               )}
               {/*
