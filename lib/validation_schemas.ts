@@ -32,6 +32,18 @@ export const UpdateProfileSchema = z.object({
   // The API logic can then convert empty strings to null if desired for the database.
 });
 
+export const AddSkillSchema = z.object({
+  skill_name: z.string().min(1, { message: 'Skill name is required.' }).max(100, { message: 'Skill name must be 100 characters or less.' }),
+  proficiency_level: z.string().max(50, { message: 'Proficiency level must be 50 characters or less.' }).optional().or(z.literal('')),
+});
+
+export const UpdateSkillSchema = z.object({
+  skill_name: z.string().min(1, { message: 'Skill name cannot be empty if provided.' }).max(100, { message: 'Skill name must be 100 characters or less.' }).optional(),
+  proficiency_level: z.string().max(50, { message: 'Proficiency level must be 50 characters or less.' }).optional().or(z.literal('')), // Allow empty string to clear it
+}).refine(data => Object.keys(data).length > 0, {
+  message: "At least one field (skill_name or proficiency_level) must be provided for an update.",
+});
+
 // --- Utility for parsing Zod errors ---
 export const formatZodError = (error: z.ZodError): string[] => {
   return error.errors.map(err => `${err.path.join('.')}: ${err.message}`);

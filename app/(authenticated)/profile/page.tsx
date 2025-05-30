@@ -29,7 +29,43 @@ import {
   MessageCircle,
   Save,
   Loader2,
-} from "lucide-react"
+  Trash2, // Added for delete icon
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose, // Added for explicit close button
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+
+interface ProfileSkill {
+  user_skill_id: string; // Changed from id to user_skill_id to match API response for clarity
+  skill_name: string;
+  proficiency_level: string | null;
+}
 
 interface ProfileData {
   user_id: string;
@@ -45,7 +81,8 @@ interface ProfileData {
   website_url: string | null;
   linkedin_url: string | null;
   github_url: string | null;
-  // Add skills, experiences, educations arrays if fetched
+  skills: ProfileSkill[];
+  // Add experiences, educations arrays if fetched
 }
 
 const initialProfileData: ProfileData = {
@@ -62,15 +99,44 @@ const initialProfileData: ProfileData = {
   website_url: "",
   linkedin_url: "",
   github_url: "",
+  skills: [],
 };
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData>(initialProfileData);
+  // Separate state for managing skill input form if we add "Add Skill" directly on this page
+  // const [newSkillName, setNewSkillName] = useState("");
+  // const [newSkillProficiency, setNewSkillProficiency] = useState("");
+  // const [isAddingSkill, setIsAddingSkill] = useState(false);
+
   const [editableProfile, setEditableProfile] = useState<Partial<ProfileData>>(initialProfileData);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
+
+  // State for "Add Skill" modal
+  const [isAddSkillModalOpen, setIsAddSkillModalOpen] = useState(false);
+  const [newSkillName, setNewSkillName] = useState("");
+  const [newSkillProficiency, setNewSkillProficiency] = useState("");
+  const [addSkillMessage, setAddSkillMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
+  const [isSavingSkill, setIsSavingSkill] = useState(false);
+
+  // State for "Edit Skill" modal
+  const [isEditSkillModalOpen, setIsEditSkillModalOpen] = useState(false);
+  const [editingSkill, setEditingSkill] = useState<ProfileSkill | null>(null);
+  const [editedSkillName, setEditedSkillName] = useState("");
+  const [editedSkillProficiency, setEditedSkillProficiency] = useState("");
+  const [editSkillMessage, setEditSkillMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
+  const [isUpdatingSkill, setIsUpdatingSkill] = useState(false);
+
+  // State for "Delete Skill" confirmation
+  const [isDeleteSkillConfirmOpen, setIsDeleteSkillConfirmOpen] = useState(false);
+  const [skillToDelete, setSkillToDelete] = useState<ProfileSkill | null>(null);
+  // General page message will be used for delete success/error for now
+  // const [deleteSkillMessage, setDeleteSkillMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
+  const [isDeletingSkill, setIsDeletingSkill] = useState(false);
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -91,12 +157,19 @@ export default function ProfilePage() {
           },
         });
         if (response.ok) {
-          const data = await response.json();
-          setProfile(data);
-          setEditableProfile(data); // Initialize editable profile with fetched data
+          const responseData = await response.json();
+          if (responseData.success && responseData.data) {
+            // Ensure skills is always an array, even if API returns null for it
+            const fetchedProfile = { ...responseData.data, skills: responseData.data.skills || [] };
+            setProfile(fetchedProfile);
+            setEditableProfile(fetchedProfile);
+          } else {
+            setMessage({ type: 'error', content: responseData.error || 'Failed to parse profile data.' });
+          }
         } else {
+          // Use .error from standardized API error response
           const errorData = await response.json();
-          setMessage({ type: 'error', content: errorData.message || 'Failed to fetch profile.' });
+          setMessage({ type: 'error', content: errorData.error || 'Failed to fetch profile.' });
         }
       } catch (error) {
         console.error("Fetch profile error:", error);
@@ -147,6 +220,174 @@ export default function ProfilePage() {
       setMessage({ type: 'error', content: 'An error occurred while updating your profile.' });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleAddSkillSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsSavingSkill(true);
+    setAddSkillMessage(null);
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      setAddSkillMessage({ type: 'error', content: 'Authentication token not found.' });
+      setIsSavingSkill(false);
+      return;
+    }
+    if (!newSkillName.trim()) {
+      setAddSkillMessage({ type: 'error', content: 'Skill name is required.' });
+      setIsSavingSkill(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/profile/skills', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          skill_name: newSkillName,
+          proficiency_level: newSkillProficiency || null,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setProfile(prevProfile => ({
+          ...prevProfile,
+          skills: [...prevProfile.skills, data.skill],
+        }));
+        setAddSkillMessage({ type: 'success', content: data.message || 'Skill added successfully!' });
+        setNewSkillName("");
+        setNewSkillProficiency("");
+        setIsAddSkillModalOpen(false); // Close modal on success
+      } else {
+        setAddSkillMessage({ type: 'error', content: data.error || data.details?.join(', ') || 'Failed to add skill.' });
+      }
+    } catch (error) {
+      console.error("Add skill error:", error);
+      setAddSkillMessage({ type: 'error', content: 'An error occurred while adding the skill.' });
+    } finally {
+      setIsSavingSkill(false);
+    }
+  };
+
+  const handleOpenEditSkillModal = (skill: ProfileSkill) => {
+    setEditingSkill(skill);
+    setEditedSkillName(skill.skill_name);
+    setEditedSkillProficiency(skill.proficiency_level || "");
+    setEditSkillMessage(null);
+    setIsEditSkillModalOpen(true);
+  };
+
+  const handleEditSkillSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingSkill) return;
+
+    setIsUpdatingSkill(true);
+    setEditSkillMessage(null);
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      setEditSkillMessage({ type: 'error', content: 'Authentication token not found.' });
+      setIsUpdatingSkill(false);
+      return;
+    }
+    if (!editedSkillName.trim()) {
+      setEditSkillMessage({ type: 'error', content: 'Skill name is required.' });
+      setIsUpdatingSkill(false);
+      return;
+    }
+
+    // Check if there are actual changes
+    if (editedSkillName === editingSkill.skill_name && (editedSkillProficiency || "") === (editingSkill.proficiency_level || "")) {
+      setEditSkillMessage({ type: 'error', content: 'No changes detected.' });
+      setIsUpdatingSkill(false);
+      return;
+    }
+
+
+    try {
+      const response = await fetch(`/api/profile/skills/${editingSkill.user_skill_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          skill_name: editedSkillName,
+          proficiency_level: editedSkillProficiency || null,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setProfile(prevProfile => ({
+          ...prevProfile,
+          skills: prevProfile.skills.map(s =>
+            s.user_skill_id === editingSkill.user_skill_id ? data.skill : s
+          ),
+        }));
+        setEditSkillMessage({ type: 'success', content: data.message || 'Skill updated successfully!' });
+        setIsEditSkillModalOpen(false);
+      } else {
+        setEditSkillMessage({ type: 'error', content: data.error || data.details?.join(', ') || 'Failed to update skill.' });
+      }
+    } catch (error) {
+      console.error("Update skill error:", error);
+      setEditSkillMessage({ type: 'error', content: 'An error occurred while updating the skill.' });
+    } finally {
+      setIsUpdatingSkill(false);
+    }
+  };
+
+  const handleOpenDeleteSkillConfirm = (skill: ProfileSkill) => {
+    setSkillToDelete(skill);
+    setMessage(null); // Clear previous page-level messages
+    setIsDeleteSkillConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSkill = async () => {
+    if (!skillToDelete) return;
+
+    setIsDeletingSkill(true);
+    setMessage(null);
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      setMessage({ type: 'error', content: 'Authentication token not found.' });
+      setIsDeletingSkill(false);
+      setIsDeleteSkillConfirmOpen(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/profile/skills/${skillToDelete.user_skill_id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) { // Status 200 or 204
+        setProfile(prevProfile => ({
+          ...prevProfile,
+          skills: prevProfile.skills.filter(s => s.user_skill_id !== skillToDelete.user_skill_id),
+        }));
+        setMessage({ type: 'success', content: `Skill "${skillToDelete.skill_name}" deleted successfully.` });
+      } else {
+        const data = await response.json().catch(() => ({ error: "Failed to delete skill and parse error response."})); // Catch if response is not JSON
+        setMessage({ type: 'error', content: data.error || 'Failed to delete skill.' });
+      }
+    } catch (error) {
+      console.error("Delete skill error:", error);
+      setMessage({ type: 'error', content: 'An error occurred while deleting the skill.' });
+    } finally {
+      setIsDeletingSkill(false);
+      setIsDeleteSkillConfirmOpen(false);
+      setSkillToDelete(null);
     }
   };
 
@@ -447,56 +688,253 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Skills</h2>
+              <Dialog open={isAddSkillModalOpen} onOpenChange={setIsAddSkillModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => { setIsAddSkillModalOpen(true); setAddSkillMessage(null); }}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Add New Skill</DialogTitle>
+                    <DialogDescription>
+                      Showcase your expertise by adding a new skill to your profile.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddSkillSubmit}>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="newSkillName" className="text-right">
+                          Skill Name
+                        </Label>
+                        <Input
+                          id="newSkillName"
+                          value={newSkillName}
+                          onChange={(e) => setNewSkillName(e.target.value)}
+                          className="col-span-3"
+                          placeholder="e.g. React, Python, Project Management"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="newSkillProficiency" className="text-right">
+                          Proficiency
+                        </Label>
+                        <Select
+                          value={newSkillProficiency}
+                          onValueChange={setNewSkillProficiency}
+                        >
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Select level (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value=""><em>None</em></SelectItem>
+                            <SelectItem value="Beginner">Beginner</SelectItem>
+                            <SelectItem value="Intermediate">Intermediate</SelectItem>
+                            <SelectItem value="Advanced">Advanced</SelectItem>
+                            <SelectItem value="Expert">Expert</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {addSkillMessage && (
+                      <div className={`mb-3 text-sm ${addSkillMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                        {addSkillMessage.content}
+                      </div>
+                    )}
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline" onClick={() => { setNewSkillName(""); setNewSkillProficiency(""); setAddSkillMessage(null);}}>
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                      <Button type="submit" disabled={isSavingSkill}>
+                        {isSavingSkill ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Save Skill
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {profile.skills && profile.skills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {profile.skills.map((skill) => (
+                    <Badge key={skill.user_skill_id} variant="secondary" className="text-sm py-1 px-3">
+                      {skill.skill_name}
+                      {skill.proficiency_level && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          ({skill.proficiency_level})
+                        </span>
+                      )}
+                      {isEditing && ( // Show Edit button only when main profile is in edit mode
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="ml-2 h-6 w-6 hover:text-blue-700"
+                          onClick={() => handleOpenEditSkillModal(skill)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="ml-1 h-6 w-6 text-red-500 hover:text-red-700"
+                              onClick={(e) => { e.stopPropagation(); /* Prevents triggering badge click if any */ }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          {/*
+                            The AlertDialogContent for delete confirmation will be placed outside the loop,
+                            its visibility controlled by isDeleteSkillConfirmOpen and skillToDelete.
+                            This is because nesting interactive components like Dialogs/AlertDialogs inside
+                            loops or other interactive components can sometimes lead to issues.
+                            We will call handleOpenDeleteSkillConfirm here to set the state.
+                          */}
+                           <span onClick={(e) => {e.stopPropagation(); handleOpenDeleteSkillConfirm(skill);}} className="cursor-pointer"></span>
+                        </AlertDialog>
+                      </span>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {isEditing
+                    ? "You can add, edit, or delete skills via dedicated buttons/forms (not fully implemented in this view)."
+                    : "No skills added yet. Click 'Edit Profile', then use the 'Add Skill' (+) button or manage skills in the dedicated section."}
+                </p>
+              )}
+              {/*
+                Placeholder for "Add Skill" form - could be a modal triggered by the Plus button.
+                This form would need its own state for skill_name, proficiency_level,
+                and a submit handler that calls POST /api/profile/skills.
+                After successful addition, the profile.skills state would need to be updated
+                (either by re-fetching the whole profile or by adding the new skill to the existing state).
+              */}
+
+              {/* Edit Skill Modal */}
+              {editingSkill && (
+                <Dialog open={isEditSkillModalOpen} onOpenChange={setIsEditSkillModalOpen}>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Edit Skill</DialogTitle>
+                      <DialogDescription>
+                        Update your skill name and proficiency level.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleEditSkillSubmit}>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="editedSkillName" className="text-right">
+                            Skill Name
+                          </Label>
+                          <Input
+                            id="editedSkillName"
+                            value={editedSkillName}
+                            onChange={(e) => setEditedSkillName(e.target.value)}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="editedSkillProficiency" className="text-right">
+                            Proficiency
+                          </Label>
+                          <Select
+                            value={editedSkillProficiency}
+                            onValueChange={setEditedSkillProficiency}
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Select level (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value=""><em>None</em></SelectItem>
+                              <SelectItem value="Beginner">Beginner</SelectItem>
+                              <SelectItem value="Intermediate">Intermediate</SelectItem>
+                              <SelectItem value="Advanced">Advanced</SelectItem>
+                              <SelectItem value="Expert">Expert</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {editSkillMessage && (
+                        <div className={`mb-3 text-sm ${editSkillMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                          {editSkillMessage.content}
+                        </div>
+                      )}
+                      <DialogFooter>
+                        <DialogClose asChild>
+                           <Button type="button" variant="outline" onClick={() => setIsEditSkillModalOpen(false)}>
+                            Cancel
+                          </Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isUpdatingSkill}>
+                          {isUpdatingSkill ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          Save Changes
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Certifications Section */}
+          <Card>
+            {/* Delete Skill Confirmation Dialog (Placed once outside the loop) */}
+            {skillToDelete && (
+              <AlertDialog open={isDeleteSkillConfirmOpen} onOpenChange={setIsDeleteSkillConfirmOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the skill
+                      "<strong>{skillToDelete.skill_name}</strong>" from your profile.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => { setIsDeleteSkillConfirmOpen(false); setSkillToDelete(null); }}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmDeleteSkill} disabled={isDeletingSkill} className="bg-red-600 hover:bg-red-700">
+                      {isDeletingSkill ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <CardHeader className="flex flex-row items-center justify-between">
+              <h2 className="text-lg font-semibold">Certifications</h2>
               <Button variant="ghost" size="icon">
                 <Plus className="h-4 w-4" />
               </Button>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="space-y-3">
+              <div className="flex items-start space-x-3">
+                <Award className="h-5 w-5 text-yellow-500 mt-0.5" />
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">JavaScript</span>
-                    <span className="text-xs text-muted-foreground">Expert</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "95%" }}></div>
-                  </div>
+                  <h3 className="text-sm font-medium">AWS Certified Solutions Architect</h3>
+                  <p className="text-xs text-muted-foreground">Amazon Web Services • 2023</p>
                 </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <Award className="h-5 w-5 text-yellow-500 mt-0.5" />
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">React</span>
-                    <span className="text-xs text-muted-foreground">Expert</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "90%" }}></div>
-                  </div>
+                  <h3 className="text-sm font-medium">React Developer Certification</h3>
+                  <p className="text-xs text-muted-foreground">Meta • 2022</p>
                 </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <Award className="h-5 w-5 text-yellow-500 mt-0.5" />
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Node.js</span>
-                    <span className="text-xs text-muted-foreground">Advanced</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "85%" }}></div>
-                  </div>
+                  <h3 className="text-sm font-medium">Scrum Master Certified</h3>
+                  <p className="text-xs text-muted-foreground">Scrum Alliance • 2021</p>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">AWS</span>
-                    <span className="text-xs text-muted-foreground">Advanced</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "80%" }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Python</span>
-                    <span className="text-xs text-muted-foreground">Intermediate</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "70%" }}></div>
-                  </div>
                 </div>
               </div>
             </CardContent>

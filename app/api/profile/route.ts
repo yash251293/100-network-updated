@@ -32,10 +32,30 @@ export async function GET(request: Request) {
         up.phone_number,
         up.website_url,
         up.linkedin_url,
-        up.github_url
+        up.github_url,
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'user_skill_id', us.id,         -- id from user_skills table
+                'skill_name', us.skill_name,  -- skill_name from user_skills table
+                'proficiency_level', us.proficiency_level -- proficiency_level from user_skills table
+                -- If you still had a master 'skills' table and us.skill_id referenced skills.id:
+                -- 'skill_id', s.id, -- id from the master skills table
+                -- 'skill_name', s.name -- name from the master skills table
+              )
+            )
+            FROM user_skills us
+            -- Optional JOIN to a master 'skills' table if us.skill_id links to it and you need canonical skill details
+            -- LEFT JOIN skills s ON us.skill_id = s.id
+            WHERE us.user_id = u.id
+          ),
+          '[]'::json
+        ) AS skills
       FROM users u
       LEFT JOIN user_profiles up ON u.id = up.user_id
-      WHERE u.id = $1;
+      WHERE u.id = $1
+      GROUP BY u.id, up.user_id; -- Group by user and profile primary keys to allow aggregation
     `;
 
     const result = await pool.query(profileQuery, [userId]);
@@ -49,13 +69,11 @@ export async function GET(request: Request) {
 
     const userProfileData = result.rows[0];
 
-    // TODO: Fetch related data like skills, experiences, education if needed
-    // Example for skills (if you have user_skills and skills tables):
-    // const skillsResult = await pool.query(
-    //   'SELECT s.name FROM skills s JOIN user_skills us ON s.id = us.skill_id WHERE us.user_id = $1',
-    //   [userId]
-    // );
-    // userProfileData.skills = skillsResult.rows.map(r => r.name);
+    // The 'skills' field is now directly part of userProfileData due to json_agg
+    // Ensure skills is always an array, even if null from DB (COALESCE handles this)
+    if (userProfileData && userProfileData.skills === null) {
+      userProfileData.skills = [];
+    }
 
     return NextResponse.json({ success: true, data: userProfileData }, { status: 200 });
 
