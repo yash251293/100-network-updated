@@ -777,19 +777,15 @@ export default function ProfilePage() {
                               variant="ghost"
                               size="icon"
                               className="ml-1 h-6 w-6 text-red-500 hover:text-red-700"
-                              onClick={(e) => { e.stopPropagation(); /* Prevents triggering badge click if any */ }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDeleteSkillConfirm(skill);
+                              }}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </AlertDialogTrigger>
-                          {/*
-                            The AlertDialogContent for delete confirmation will be placed outside the loop,
-                            its visibility controlled by isDeleteSkillConfirmOpen and skillToDelete.
-                            This is because nesting interactive components like Dialogs/AlertDialogs inside
-                            loops or other interactive components can sometimes lead to issues.
-                            We will call handleOpenDeleteSkillConfirm here to set the state.
-                          */}
-                           <span onClick={(e) => {e.stopPropagation(); handleOpenDeleteSkillConfirm(skill);}} className="cursor-pointer"></span>
+                          {/* The AlertDialogContent is now rendered once outside the loop, controlled by isDeleteSkillConfirmOpen */}
                         </AlertDialog>
                       </span>
                       )}
