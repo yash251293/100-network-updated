@@ -388,10 +388,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="container max-w-4xl py-6"> {/* Restored original container class */}
       {message && (
-        <div style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '0.375rem', backgroundColor: '#d1fae5', color: '#065f46' }}>
-          {message}
+        <div className={`mb-4 p-3 rounded-md text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message.content} {/* Corrected to render message.content */}
         </div>
       )}
       {/* Header Card */}
@@ -745,9 +745,222 @@ export default function ProfilePage() {
                 </DialogContent>
               </Dialog>
             </CardHeader>
-            {/* CardContent for skills list will be added next */}
+            <CardContent>
+              {profile.skills && profile.skills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {profile.skills.map((skill) => (
+                    <Badge key={skill.user_skill_id} variant="secondary" className="text-sm py-1 px-3 relative group">
+                      {skill.skill_name}
+                      {skill.proficiency_level && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          ({skill.proficiency_level})
+                        </span>
+                      )}
+                      {isEditing && (
+                        <span className="ml-2 inline-flex items-center"> {/* Wrapper for buttons */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:text-blue-700"
+                            onClick={() => handleOpenEditSkillModal(skill)}
+                            title="Edit skill"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-red-500 hover:text-red-700"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenDeleteSkillConfirm(skill);
+                                }}
+                                title="Delete skill"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            {/* No AlertDialogContent here; it's handled globally below */}
+                          </AlertDialog>
+                        </span>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {isEditing
+                    ? "Manage your skills using the buttons on each skill, or add new ones using the '+' icon."
+                    : "No skills added yet. Use the '+' button above to add skills."}
+                </p>
+              )}
+
+              {/* Edit Skill Modal */}
+              {editingSkill && (
+                <Dialog open={isEditSkillModalOpen} onOpenChange={setIsEditSkillModalOpen}>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Edit Skill</DialogTitle>
+                      <DialogDescription>
+                        Update your skill name and proficiency level.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleEditSkillSubmit}>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="editedSkillName" className="text-right">
+                            Skill Name
+                          </Label>
+                          <Input
+                            id="editedSkillName"
+                            value={editedSkillName}
+                            onChange={(e) => setEditedSkillName(e.target.value)}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="editedSkillProficiency" className="text-right">
+                            Proficiency
+                          </Label>
+                          <Select
+                            value={editedSkillProficiency}
+                            onValueChange={setEditedSkillProficiency}
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Select level (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value=""><em>None</em></SelectItem>
+                              <SelectItem value="Beginner">Beginner</SelectItem>
+                              <SelectItem value="Intermediate">Intermediate</SelectItem>
+                              <SelectItem value="Advanced">Advanced</SelectItem>
+                              <SelectItem value="Expert">Expert</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {editSkillMessage && (
+                        <div className={`mb-3 text-sm ${editSkillMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                          {editSkillMessage.content}
+                        </div>
+                      )}
+                      <DialogFooter>
+                        <DialogClose asChild>
+                           <Button type="button" variant="outline" onClick={() => setIsEditSkillModalOpen(false)}>
+                            Cancel
+                          </Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isUpdatingSkill}>
+                          {isUpdatingSkill ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          Save Changes
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </CardContent>
           </Card>
-          {/* Other cards for the right column (Certifications, etc.) will be added later */}
+
+          {/* Delete Skill Confirmation Dialog (Placed once in the right column) */}
+          {skillToDelete && (
+            <AlertDialog open={isDeleteSkillConfirmOpen} onOpenChange={setIsDeleteSkillConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the skill
+                    "<strong>{skillToDelete.skill_name}</strong>" from your profile.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => { setIsDeleteSkillConfirmOpen(false); setSkillToDelete(null); }}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleConfirmDeleteSkill} disabled={isDeletingSkill} className="bg-red-600 hover:bg-red-700">
+                    {isDeletingSkill ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
+          {/* Certifications Section */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Certifications</CardTitle>
+              <Button variant="ghost" size="icon" disabled={isEditing}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Placeholder Content */}
+              <div className="flex items-start space-x-3">
+                <Award className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-medium">AWS Certified Solutions Architect</h3>
+                  <p className="text-xs text-muted-foreground">Amazon Web Services • 2023</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <Award className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-medium">React Developer Certification</h3>
+                  <p className="text-xs text-muted-foreground">Meta • 2022</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Languages Section */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Languages</CardTitle>
+              <Button variant="ghost" size="icon" disabled={isEditing}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {/* Placeholder Content */}
+              <div className="flex justify-between">
+                <span className="text-sm">English</span>
+                <span className="text-xs text-muted-foreground">Native</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Spanish</span>
+                <span className="text-xs text-muted-foreground">Conversational</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recommendations Section - Placeholder */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Recommendations</CardTitle>
+              <Button variant="ghost" size="icon">
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="border-l-4 border-blue-500 pl-4">
+                <p className="text-sm italic mb-2">
+                  "Alex is an exceptional developer..."
+                </p>
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src="/manager-avatar.png" alt="Sarah Chen" />
+                    <AvatarFallback>SC</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-xs font-medium">Sarah Chen</p>
+                    <p className="text-xs text-muted-foreground">Engineering Manager at TechCorp</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div> {/* End Right Column */}
       </div> {/* End Grid */}
     </div>
