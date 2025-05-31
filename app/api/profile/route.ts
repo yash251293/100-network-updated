@@ -16,9 +16,22 @@ export async function GET(request: Request) {
 
     const userId = authUser.userId;
 
-    // Fetch user profile data along with basic user info
-    // Adjust the query to join with user_profiles and potentially other related tables (skills, experiences, educations)
     const profileQuery = `
+      WITH user_skill_list AS (
+        SELECT
+          us.user_id,
+          json_agg(
+            json_build_object(
+              'user_skill_id', us.id,
+              'skill_name', us.skill_name,
+              'proficiency_level', us.proficiency_level
+            )
+          ORDER BY us.skill_name ASC -- Optional: order skills alphabetically
+          ) AS skills_json
+        FROM user_skills us
+        WHERE us.user_id = $1 -- Filter skills for the specific user within CTE
+        GROUP BY us.user_id
+      )
       SELECT
         u.id AS user_id,
         u.email,
