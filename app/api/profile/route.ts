@@ -17,21 +17,6 @@ export async function GET(request: Request) {
     const userId = authUser.userId;
 
     const profileQuery = `
-WITH user_skill_list AS (
-  SELECT
-    us.user_id,
-    json_agg(
-      json_build_object(
-        'user_skill_id', us.id,
-        'skill_name', us.skill_name,
-        'proficiency_level', us.proficiency_level
-      )
-    ORDER BY us.skill_name ASC
-    ) AS skills_json
-  FROM user_skills us
-  WHERE us.user_id = $1 -- Filter skills for the specific user_id passed to the main query
-  GROUP BY us.user_id
-)
 SELECT
   u.id AS user_id,
   u.email,
@@ -46,10 +31,9 @@ SELECT
   up.website_url,
   up.linkedin_url,
   up.github_url,
-  COALESCE(usl.skills_json, '[]'::json) AS skills
+  '[]'::json AS skills -- Return an empty JSON array for skills for now
 FROM users u
 LEFT JOIN user_profiles up ON u.id = up.user_id
-LEFT JOIN user_skill_list usl ON u.id = usl.user_id
 WHERE u.id = $1;
     `;
 
