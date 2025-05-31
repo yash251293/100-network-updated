@@ -17,58 +17,40 @@ export async function GET(request: Request) {
     const userId = authUser.userId;
 
     const profileQuery = `
-      WITH user_skill_list AS (
-        SELECT
-          us.user_id,
-          json_agg(
-            json_build_object(
-              'user_skill_id', us.id,
-              'skill_name', us.skill_name,
-              'proficiency_level', us.proficiency_level
-            )
-          ORDER BY us.skill_name ASC -- Optional: order skills alphabetically
-          ) AS skills_json
-        FROM user_skills us
-        WHERE us.user_id = $1 -- Filter skills for the specific user within CTE
-        GROUP BY us.user_id
+WITH user_skill_list AS (
+  SELECT
+    us.user_id,
+    json_agg(
+      json_build_object(
+        'user_skill_id', us.id,
+        'skill_name', us.skill_name,
+        'proficiency_level', us.proficiency_level
       )
-      SELECT
-        u.id AS user_id,
-        u.email,
-        u.first_name,
-        u.last_name,
-        up.headline,
-        up.bio,
-        up.avatar_url,
-        up.cover_photo_url,
-        up.location,
-        up.phone_number,
-        up.website_url,
-        up.linkedin_url,
-        up.github_url,
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'user_skill_id', us.id,         -- id from user_skills table
-                'skill_name', us.skill_name,  -- skill_name from user_skills table
-                'proficiency_level', us.proficiency_level -- proficiency_level from user_skills table
-                -- If you still had a master 'skills' table and us.skill_id referenced skills.id:
-                -- 'skill_id', s.id, -- id from the master skills table
-                -- 'skill_name', s.name -- name from the master skills table
-              )
-            )
-            FROM user_skills us
-            -- Optional JOIN to a master 'skills' table if us.skill_id links to it and you need canonical skill details
-            -- LEFT JOIN skills s ON us.skill_id = s.id
-            WHERE us.user_id = u.id
-          ),
-          '[]'::json
-        ) AS skills
-      FROM users u
-      LEFT JOIN user_profiles up ON u.id = up.user_id
-      WHERE u.id = $1
-      GROUP BY u.id, up.user_id; -- Group by user and profile primary keys to allow aggregation
+    ORDER BY us.skill_name ASC
+    ) AS skills_json
+  FROM user_skills us
+  WHERE us.user_id = $1 -- Filter skills for the specific user_id passed to the main query
+  GROUP BY us.user_id
+)
+SELECT
+  u.id AS user_id,
+  u.email,
+  u.first_name,
+  u.last_name,
+  up.headline,
+  up.bio,
+  up.avatar_url,
+  up.cover_photo_url,
+  up.location,
+  up.phone_number,
+  up.website_url,
+  up.linkedin_url,
+  up.github_url,
+  COALESCE(usl.skills_json, '[]'::json) AS skills
+FROM users u
+LEFT JOIN user_profiles up ON u.id = up.user_id
+LEFT JOIN user_skill_list usl ON u.id = usl.user_id
+WHERE u.id = $1;
     `;
 
     const result = await pool.query(profileQuery, [userId]);
