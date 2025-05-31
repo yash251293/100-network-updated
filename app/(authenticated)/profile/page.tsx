@@ -97,17 +97,25 @@ const initialProfileData: ProfileData = {
 };
 
 export default function ProfilePage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
+
+  // Keep these for type consistency with simplified JSX, even if not fully used
   const [profile, setProfile] = useState<ProfileData>(initialProfileData);
+  const [editableProfile, setEditableProfile] = useState<Partial<ProfileData>>(initialProfileData);
+  const [isEditing, setIsEditing] = useState(false);
+
+
+  /*
+  // const [profile, setProfile] = useState<ProfileData>(initialProfileData);
   // Separate state for managing skill input form if we add "Add Skill" directly on this page
   // const [newSkillName, setNewSkillName] = useState("");
   // const [newSkillProficiency, setNewSkillProficiency] = useState("");
   // const [isAddingSkill, setIsAddingSkill] = useState(false);
 
-  const [editableProfile, setEditableProfile] = useState<Partial<ProfileData>>(initialProfileData);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  // const [editableProfile, setEditableProfile] = useState<Partial<ProfileData>>(initialProfileData);
+  // const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
 
   // State for "Add Skill" modal
   const [isAddSkillModalOpen, setIsAddSkillModalOpen] = useState(false);
@@ -130,57 +138,228 @@ export default function ProfilePage() {
   // General page message will be used for delete success/error for now
   // const [deleteSkillMessage, setDeleteSkillMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
   const [isDeletingSkill, setIsDeletingSkill] = useState(false);
-
+  */
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoading(true);
-      setMessage(null);
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setMessage({ type: 'error', content: 'Authentication token not found. Please login again.' });
-        setIsLoading(false);
-        // router.push('/auth/login'); // Redirect if no token
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        if (response.ok) {
-          const responseData = await response.json();
-          if (responseData.success && responseData.data) {
-            // Ensure skills is always an array, even if API returns null for it
-            const fetchedProfile = { ...responseData.data, skills: responseData.data.skills || [] };
-            setProfile(fetchedProfile);
-            setEditableProfile(fetchedProfile);
-          } else {
-            setMessage({ type: 'error', content: responseData.error || 'Failed to parse profile data.' });
-          }
-        } else {
-          // Use .error from standardized API error response
-          const errorData = await response.json();
-          setMessage({ type: 'error', content: errorData.error || 'Failed to fetch profile.' });
-        }
-      } catch (error) {
-        console.error("Fetch profile error:", error);
-        setMessage({ type: 'error', content: 'An error occurred while fetching your profile.' });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProfile();
+    setIsLoading(false);
+    // setMessage({type: "success", content: "Page shell loaded for debugging."}); // Optional: set a message
   }, []);
+  */
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setEditableProfile(prev => ({ ...prev, [name]: value }));
-  };
+  // const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  //   const { name, value } = e.target;
+  //   setEditableProfile(prev => ({ ...prev, [name]: value }));
+  // };
 
-  const handleSubmit = async (e: FormEvent) => {
+  // const handleSubmit = async (e: FormEvent) => {
+  //   e.preventDefault();
+  //   setIsSaving(true);
+  //   setMessage(null);
+  //   const token = localStorage.getItem('authToken');
+  //   if (!token) {
+  //     setMessage({ type: 'error', content: 'Authentication token not found. Please login again.' });
+  //     setIsSaving(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const response = await fetch('/api/profile', {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify(editableProfile),
+  //     });
+
+  //     const data = await response.json();
+  //     if (response.ok) {
+  //       setProfile(prev => ({ ...prev, ...editableProfile })); // Update displayed profile
+  //       setMessage({ type: 'success', content: data.message || 'Profile updated successfully!' });
+  //       setIsEditing(false);
+  //     } else {
+  //       setMessage({ type: 'error', content: data.message || 'Failed to update profile.' });
+  //     }
+  //   } catch (error) {
+  //     console.error("Update profile error:", error);
+  //     setMessage({ type: 'error', content: 'An error occurred while updating your profile.' });
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
+
+  // const handleAddSkillSubmit = async (e: FormEvent) => {
+  //   e.preventDefault();
+  //   setIsSavingSkill(true);
+  //   setAddSkillMessage(null);
+  //   const token = localStorage.getItem('authToken');
+
+  //   if (!token) {
+  //     setAddSkillMessage({ type: 'error', content: 'Authentication token not found.' });
+  //     setIsSavingSkill(false);
+  //     return;
+  //   }
+  //   if (!newSkillName.trim()) {
+  //     setAddSkillMessage({ type: 'error', content: 'Skill name is required.' });
+  //     setIsSavingSkill(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const response = await fetch('/api/profile/skills', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify({
+  //         skill_name: newSkillName,
+  //         proficiency_level: newSkillProficiency || null,
+  //       }),
+  //     });
+
+  //     const data = await response.json();
+  //     if (response.ok && data.success) {
+  //       setProfile(prevProfile => ({
+  //         ...prevProfile,
+  //         skills: [...prevProfile.skills, data.skill],
+  //       }));
+  //       setAddSkillMessage({ type: 'success', content: data.message || 'Skill added successfully!' });
+  //       setNewSkillName("");
+  //       setNewSkillProficiency("");
+  //       setIsAddSkillModalOpen(false); // Close modal on success
+  //     } else {
+  //       setAddSkillMessage({ type: 'error', content: data.error || data.details?.join(', ') || 'Failed to add skill.' });
+  //     }
+  //   } catch (error) {
+  //     console.error("Add skill error:", error);
+  //     setAddSkillMessage({ type: 'error', content: 'An error occurred while adding the skill.' });
+  //   } finally {
+  //     setIsSavingSkill(false);
+  //   }
+  // };
+
+  // const handleOpenEditSkillModal = (skill: ProfileSkill) => {
+  //   setEditingSkill(skill);
+  //   setEditedSkillName(skill.skill_name);
+  //   setEditedSkillProficiency(skill.proficiency_level || "");
+  //   setEditSkillMessage(null);
+  //   setIsEditSkillModalOpen(true);
+  // };
+
+  // const handleEditSkillSubmit = async (e: FormEvent) => {
+  //   e.preventDefault();
+  //   if (!editingSkill) return;
+
+  //   setIsUpdatingSkill(true);
+  //   setEditSkillMessage(null);
+  //   const token = localStorage.getItem('authToken');
+
+  //   if (!token) {
+  //     setEditSkillMessage({ type: 'error', content: 'Authentication token not found.' });
+  //     setIsUpdatingSkill(false);
+  //     return;
+  //   }
+  //   if (!editedSkillName.trim()) {
+  //     setEditSkillMessage({ type: 'error', content: 'Skill name is required.' });
+  //     setIsUpdatingSkill(false);
+  //     return;
+  //   }
+
+  //   // Check if there are actual changes
+  //   if (editedSkillName === editingSkill.skill_name && (editedSkillProficiency || "") === (editingSkill.proficiency_level || "")) {
+  //     setEditSkillMessage({ type: 'error', content: 'No changes detected.' });
+  //     setIsUpdatingSkill(false);
+  //     return;
+  //   }
+
+
+  //   try {
+  //     const response = await fetch(`/api/profile/skills/${editingSkill.user_skill_id}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify({
+  //         skill_name: editedSkillName,
+  //         proficiency_level: editedSkillProficiency || null,
+  //       }),
+  //     });
+
+  //     const data = await response.json();
+  //     if (response.ok && data.success) {
+  //       setProfile(prevProfile => ({
+  //         ...prevProfile,
+  //         skills: prevProfile.skills.map(s =>
+  //           s.user_skill_id === editingSkill.user_skill_id ? data.skill : s
+  //         ),
+  //       }));
+  //       setEditSkillMessage({ type: 'success', content: data.message || 'Skill updated successfully!' });
+  //       setIsEditSkillModalOpen(false);
+  //     } else {
+  //       setEditSkillMessage({ type: 'error', content: data.error || data.details?.join(', ') || 'Failed to update skill.' });
+  //     }
+  //   } catch (error) {
+  //     console.error("Update skill error:", error);
+  //     setEditSkillMessage({ type: 'error', content: 'An error occurred while updating the skill.' });
+  //   } finally {
+  //     setIsUpdatingSkill(false);
+  //   }
+  // };
+
+  // const handleOpenDeleteSkillConfirm = (skill: ProfileSkill) => {
+  //   setSkillToDelete(skill);
+  //   setMessage(null); // Clear previous page-level messages
+  //   setIsDeleteSkillConfirmOpen(true);
+  // };
+
+  // const handleConfirmDeleteSkill = async () => {
+  //   if (!skillToDelete) return;
+
+  //   setIsDeletingSkill(true);
+  //   setMessage(null);
+  //   const token = localStorage.getItem('authToken');
+
+  //   if (!token) {
+  //     setMessage({ type: 'error', content: 'Authentication token not found.' });
+  //     setIsDeletingSkill(false);
+  //     setIsDeleteSkillConfirmOpen(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const response = await fetch(`/api/profile/skills/${skillToDelete.user_skill_id}`, {
+  //       method: 'DELETE',
+  //       headers: {
+  //         'Authorization': `Bearer ${token}`,
+  //       },
+  //     });
+
+  //     if (response.ok) { // Status 200 or 204
+  //       setProfile(prevProfile => ({
+  //         ...prevProfile,
+  //         skills: prevProfile.skills.filter(s => s.user_skill_id !== skillToDelete.user_skill_id),
+  //       }));
+  //       setMessage({ type: 'success', content: `Skill "${skillToDelete.skill_name}" deleted successfully.` });
+  //     } else {
+  //       const data = await response.json().catch(() => ({ error: "Failed to delete skill and parse error response."})); // Catch if response is not JSON
+  //       setMessage({ type: 'error', content: data.error || 'Failed to delete skill.' });
+  //     }
+  //   } catch (error) {
+  //     console.error("Delete skill error:", error);
+  //     setMessage({ type: 'error', content: 'An error occurred while deleting the skill.' });
+  //   } finally {
+  //     setIsDeletingSkill(false);
+  //     setIsDeleteSkillConfirmOpen(false);
+  //     setSkillToDelete(null);
+  //   }
+  // };
+  /*
+
+  if (isLoading) {
+    return (
+      <div className="container max-w-4xl py-6 flex justify-center items-center min-h-[calc(100vh-200px)]">
     e.preventDefault();
     setIsSaving(true);
     setMessage(null);
