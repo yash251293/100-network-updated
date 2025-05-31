@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+// import pool from '@/lib/db';
+import { Client } from 'pg';
 import { getAuthUserFromRequest } from '@/lib/auth_utils';
 import { UpdateProfileSchema, formatZodError } from '@/lib/validation_schemas';
 
 // GET handler to retrieve the profile for the authenticated user
 export async function GET(request: Request) {
+  const client = new Client({ connectionString: process.env.POSTGRES_URL });
   try {
+    await client.connect();
     const authUser = getAuthUserFromRequest(request);
     if (!authUser || !authUser.userId) {
       return NextResponse.json(
@@ -53,7 +56,7 @@ LEFT JOIN user_skill_list usl ON u.id = usl.user_id
 WHERE u.id = $1;
     `; // Ensure no GROUP BY on the main query here
 
-    const result = await pool.query(profileQuery, [userId]);
+    const result = await client.query(profileQuery, [userId]);
 
     if (result.rows.length === 0) {
       return NextResponse.json(
@@ -78,12 +81,18 @@ WHERE u.id = $1;
       { success: false, error: 'An unexpected error occurred while fetching the profile.' },
       { status: 500 }
     );
+  } finally {
+    if (client) {
+      await client.end();
+    }
   }
 }
 
 
 // PUT handler to update the profile for the authenticated user
 export async function PUT(request: Request) {
+  // NOTE: This PUT handler still uses the pool.
+  // If direct client usage is desired here too, it needs similar changes as GET.
   try {
     const authUser = getAuthUserFromRequest(request);
     if (!authUser || !authUser.userId) {
