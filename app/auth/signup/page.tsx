@@ -21,7 +21,6 @@ export default function SignupPage() {
     confirmPassword: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null); // For API messages
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     uppercase: false,
@@ -30,53 +29,23 @@ export default function SignupPage() {
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage(null); // Clear previous messages
+    e.preventDefault()
+    setIsLoading(true)
 
     if (formData.password !== formData.confirmPassword) {
-      setMessage({ type: 'error', content: "Passwords don't match!" });
-      setIsLoading(false);
-      return;
+      alert("Passwords don't match!")
+      setIsLoading(false)
+      return
     }
 
-    if (!isPasswordValid) {
-      setMessage({ type: 'error', content: "Please ensure your password meets all criteria." });
-      setIsLoading(false);
-      return;
-    }
+    // TODO: Add signup logic here
+    console.log("Signup attempt:", formData)
 
-    try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage({ type: 'success', content: data.message || 'Signup successful! Please login.' });
-        // Optionally redirect or clear form:
-        // router.push('/auth/login');
-        setFormData({ firstName: "", lastName: "", email: "", password: "", confirmPassword: ""});
-      } else {
-        setMessage({ type: 'error', content: data.message || 'An error occurred during signup.' });
-      }
-    } catch (error) {
-      console.error('Signup fetch error:', error);
-      setMessage({ type: 'error', content: 'Failed to connect to the server. Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -238,12 +207,6 @@ export default function SignupPage() {
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
-
-          {message && (
-            <div className={`mt-4 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-              {message.content}
-            </div>
-          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">

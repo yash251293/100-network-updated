@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,53 +11,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null); // For API messages
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage(null); // Clear previous messages
+    e.preventDefault()
+    setIsLoading(true)
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
+    // TODO: Add login logic here
+    console.log("Login attempt:", formData)
 
-      const data = await response.json();
-
-      if (response.ok && data.token) {
-        setMessage({ type: 'success', content: data.message || 'Login successful! Redirecting...' });
-        // Store the JWT in localStorage
-        localStorage.setItem('authToken', data.token);
-        // Store user info if needed, or rely on token for future fetches
-        if (data.user) {
-            localStorage.setItem('authUser', JSON.stringify(data.user));
-        }
-        router.push('/explore'); // Redirect to a protected route or dashboard
-      } else {
-        setMessage({ type: 'error', content: data.message || 'An error occurred during login.' });
-      }
-    } catch (error) {
-      console.error('Login fetch error:', error);
-      setMessage({ type: 'error', content: 'Failed to connect to the server. Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -129,12 +101,6 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-
-          {message && (
-            <div className={`mt-4 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-              {message.content}
-            </div>
-          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">

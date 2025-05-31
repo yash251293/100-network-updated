@@ -18,7 +18,7 @@ const navItems = [
     icon: MessageSquare,
   },
   {
-    name: "Inbox",
+    name: "Messages",
     href: "/inbox",
     icon: Inbox,
     badge: 24,
