@@ -42,10 +42,10 @@ export default function LoginPage() {
       if (response.ok && data.token) {
         setMessage({ type: 'success', content: data.message || 'Login successful! Redirecting...' });
         // Store the JWT in localStorage
-        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('jwt_token', data.token);
         // Store user info if needed, or rely on token for future fetches
         if (data.user) {
-            localStorage.setItem('authUser', JSON.stringify(data.user));
+            localStorage.setItem('user_info', JSON.stringify(data.user));
         }
         router.push('/explore'); // Redirect to a protected route or dashboard
       } else {
