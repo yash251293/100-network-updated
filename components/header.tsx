@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation" // Added
 import { Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { logout } from "../lib/authClient" // Added
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +17,12 @@ import { Button } from "@/components/ui/button"
 
 export default function Header() {
   const [notifications, setNotifications] = useState(18)
+  const router = useRouter() // Added
+
+  const handleLogout = () => {
+    logout()
+    router.push('/auth/login')
+  }
 
   return (
     <header className="border-b bg-background">
@@ -76,8 +84,9 @@ export default function Header() {
               <DropdownMenuItem asChild>
                 <Link href="/terms">Terms of Service</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/logout">Log out</Link>
+              <DropdownMenuSeparator /> {/* Optional: added for visual separation */}
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

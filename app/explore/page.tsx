@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import ProtectedRoute from "../../components/ProtectedRoute" // Added
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { BookmarkIcon } from "lucide-react"
@@ -8,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function ExplorePage() {
   return (
-    <div className="container max-w-5xl py-6">
-      <h1 className="text-2xl font-bold mb-6">Explore</h1>
+    <ProtectedRoute>
+      <div className="container max-w-5xl py-6">
+        <h1 className="text-2xl font-bold mb-6">Explore</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-none">
@@ -332,5 +334,6 @@ export default function ExplorePage() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   )
 }

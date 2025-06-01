@@ -1,3 +1,6 @@
+"use client"; // Added
+
+import ProtectedRoute from "../../components/ProtectedRoute"; // Added
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -19,9 +22,10 @@ import {
 
 export default function ProfilePage() {
   return (
-    <div className="container max-w-4xl py-6">
-      {/* Header Card */}
-      <Card className="mb-6">
+    <ProtectedRoute>
+      <div className="container max-w-4xl py-6">
+        {/* Header Card */}
+        <Card className="mb-6">
         <div className="relative">
           {/* Cover Photo */}
           <div className="h-48 bg-gradient-to-r from-blue-500 to-purple-600 rounded-t-lg"></div>
@@ -394,5 +398,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   )
 }

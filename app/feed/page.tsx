@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import ProtectedRoute from "../../components/ProtectedRoute" // Added
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -39,9 +40,10 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="container max-w-5xl py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
+    <ProtectedRoute>
+      <div className="container max-w-5xl py-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
           <h1 className="text-2xl font-bold">What's happening today</h1>
         </div>
         <div className="flex items-center">
@@ -272,5 +274,6 @@ export default function FeedPage() {
         </CardContent>
       </Card>
     </div>
+    </ProtectedRoute>
   )
 }

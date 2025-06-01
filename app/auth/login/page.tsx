@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { login } from "../../lib/authClient" // Import login function
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,8 +35,15 @@ export default function LoginPage() {
 
       if (response.ok) {
         const data = await response.json()
-        alert(data.message || "Login successful!")
-        router.push('/explore')
+        if (data.token) {
+          login(data.token) // Store the token
+          alert(data.message || "Login successful!")
+          router.push('/explore')
+        } else {
+          // This case should ideally not happen if the API guarantees a token on success
+          console.error("Login successful, but no token received.")
+          alert("Login succeeded but failed to retrieve session token. Please try again.")
+        }
       } else {
         const errorData = await response.json().catch(() => ({}))
         alert(`Login failed: ${errorData.message || response.statusText}`)
