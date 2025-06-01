@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,18 +18,34 @@ export default function LoginPage() {
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
 
-    // TODO: Add login logic here
-    console.log("Login attempt:", formData)
-
-    // Simulate API call
-    setTimeout(() => {
+      if (response.ok) {
+        const data = await response.json()
+        alert(data.message || "Login successful!")
+        router.push('/explore')
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        alert(`Login failed: ${errorData.message || response.statusText}`)
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      alert("An unexpected error occurred during login. Please try again.")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,24 +28,44 @@ export default function SignupPage() {
     lowercase: false,
     number: false,
   })
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
 
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords don't match!")
-      setIsLoading(false)
-      return
+      return // No need to set isLoading true if passwords don't match
     }
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+        }), // Send only necessary fields
+      })
 
-    // TODO: Add signup logic here
-    console.log("Signup attempt:", formData)
-
-    // Simulate API call
-    setTimeout(() => {
+      if (response.ok) {
+        const data = await response.json()
+        alert(data.message || "Signup successful! Please check your email to verify.")
+        router.push('/explore') // Or to a verification pending page
+      } else {
+        const errorData = await response.json().catch(() => ({})) // Try to parse error JSON
+        alert(`Signup failed: ${errorData.message || response.statusText}`)
+      }
+    } catch (error) {
+      console.error("Signup error:", error)
+      alert("An unexpected error occurred during signup. Please try again.")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
