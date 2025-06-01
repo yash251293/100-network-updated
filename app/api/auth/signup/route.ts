@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
-import { query } from '../../lib/db' // Adjusted path
+import { query } from '@/lib/db' // Adjusted path
 
 export async function POST(request: Request) {
   let body
