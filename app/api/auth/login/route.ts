@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { compare } from 'bcryptjs'
+import { query } from '../../lib/db' // Adjusted path
 
 export async function POST(request: Request) {
   let body
@@ -9,38 +11,46 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: 'Invalid request body. Ensure it is valid JSON.' }, { status: 400 })
   }
 
-  console.log('Login API request body:', body)
-
   const { email, password } = body
+  // console.log('Login API request body:', body); // Optional: Keep for debugging
 
-  // In a real application, you would:
-  // 1. Validate the data
-  // 2. Find the user by email in the database
-  // 3. Compare the provided password with the stored hashed password
-  // 4. If credentials are valid, generate a session token (e.g., JWT)
+  if (!email || typeof email !== 'string' || !password || typeof password !== 'string' || password.length === 0) {
+    return NextResponse.json({ success: false, message: 'Invalid credentials. Please provide email and password.' }, { status: 401 })
+  }
 
-  if (email && password && typeof email === 'string' && typeof password === 'string' && password.length > 0) {
-    // Simulate successful login for any non-empty email/password
-    // For testing, you might check for a specific dummy user:
-    // if (email === "test@example.com" && password === "password123") {
+  try {
+    // Retrieve user by email
+    const result = await query('SELECT id, email, password_hash FROM users WHERE email = $1', [email])
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({ success: false, message: 'Invalid email or password.' }, { status: 401 })
+    }
+
+    const user = result.rows[0]
+
+    // Compare passwords
+    const passwordsMatch = await compare(password, user.password_hash)
+
+    if (!passwordsMatch) {
+      return NextResponse.json({ success: false, message: 'Invalid email or password.' }, { status: 401 })
+    }
+
+    // If passwords match, return success response with a fake token
     return NextResponse.json(
       {
         success: true,
         message: 'Login successful!',
-        token: 'fake-jwt-token-for-testing', // Send a dummy token
-        user: { // Optionally send some user data
-          email: email,
-          name: "Test User" // Example user name
-        }
+        token: 'fake-jwt-token-for-testing', // In a real app, generate a real JWT
+        user: {
+          id: user.id,
+          email: user.email,
+          // Add other non-sensitive user details you might want to return
+        },
       },
       { status: 200 }
     )
-    // }
+  } catch (error) {
+    console.error('Login database/bcrypt error:', error)
+    return NextResponse.json({ success: false, message: 'An error occurred during login. Please try again.' }, { status: 500 })
   }
-
-  // If credentials are not valid (or don't match the dummy user)
-  return NextResponse.json(
-    { success: false, message: 'Invalid credentials. Please provide valid email and password.' },
-    { status: 401 }
-  )
 }
