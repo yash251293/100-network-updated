@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation" // Added
 import { Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { logout } from "../lib/authClient" // Added
+import { logout } from "@/lib/authClient" // Added
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated } from '../lib/authClient'; // Adjust path if needed
+import { isAuthenticated } from '@/lib/authClient'; // Adjust path if needed
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
