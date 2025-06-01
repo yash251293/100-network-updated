@@ -716,7 +716,6 @@ export default function ProfilePage() {
                             <SelectValue placeholder="Select level (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value=""><em>None</em></SelectItem>
                             <SelectItem value="Beginner">Beginner</SelectItem>
                             <SelectItem value="Intermediate">Intermediate</SelectItem>
                             <SelectItem value="Advanced">Advanced</SelectItem>
