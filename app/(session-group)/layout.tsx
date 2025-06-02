@@ -1,19 +1,20 @@
-// app/(auth)/layout.tsx
+// app/(session-group)/layout.tsx
 import type React from "react";
 
-// Imports for Inter font, ThemeProvider, and globals.css are removed
-// as they are expected to be handled by the root app/layout.tsx
+// This layout is for pages that are viewed by an authenticated user.
+// The root app/layout.tsx already conditionally renders Sidebar and Header
+// based on authentication state.
+// Therefore, this layout should primarily focus on the structure of the content
+// *within* the main area provided by the root layout.
+// For many cases, it might just pass children through, or add minimal wrappers
+// if all pages in this group share some common internal structure beyond Sidebar/Header.
 
-export default function AuthLayout({
+export default function SessionGroupLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // This div provides the specific styling for the auth section (background, centering)
-  // It will be rendered inside the <main> tag of the root app/layout.tsx
-  return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 flex min-h-screen flex-col items-center justify-center">
-      {children}
-    </div>
-  );
+  // If pages in this group need a specific container or padding INSIDE the main content area,
+  // it can be added here. For now, just passing children through.
+  return <>{children}</>;
 }
