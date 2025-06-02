@@ -5,12 +5,14 @@ const TOKEN_KEY = 'fake_jwt_token';
 export const login = (token: string): void => {
   if (typeof window !== 'undefined') {
     localStorage.setItem(TOKEN_KEY, token);
+    window.dispatchEvent(new Event('authChange')); // Dispatch event
   }
 };
 
 export const logout = (): void => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(TOKEN_KEY);
+    window.dispatchEvent(new Event('authChange')); // Dispatch event
     // Optionally, redirect to login or notify other parts of the app
     // For now, just removing the token. Redirection will be handled by ProtectedRoute or calling component.
   }

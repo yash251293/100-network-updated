@@ -27,11 +27,20 @@ export default function RootLayout({
 
   useEffect(() => {
     if (isMounted) {
-      const authStatus = isAuthenticated();
-      // console.log removed
-      setIsUserAuthenticated(authStatus);
+      const handleAuthChange = () => {
+        // console.log('[RootLayout] authChange event triggered or initial check'); // Optional: for temporary debugging
+        setIsUserAuthenticated(isAuthenticated());
+      };
+
+      handleAuthChange(); // Initial check
+
+      window.addEventListener('authChange', handleAuthChange);
+
+      return () => {
+        window.removeEventListener('authChange', handleAuthChange);
+      };
     }
-  }, [isMounted]); // pathname removed from dependency array
+  }, [isMounted]); // Dependency array remains [isMounted]
 
   if (!isMounted) {
     // Return a minimal structure or loader during server rendering / initial client hydration
