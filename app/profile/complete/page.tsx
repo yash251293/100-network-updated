@@ -866,10 +866,11 @@ export default function CompleteProfilePage() {
         {/* Main Content Card */}
         <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-8 md:p-12">
-            {renderStep()}
+            <div>Initial content commented out for debugging.</div>
+            {/* {renderStep()} */}
 
             {/* Enhanced Navigation Buttons */}
-            <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100">
+            {/* <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100">
               <Button
                 variant="outline"
                 onClick={prevStep}
@@ -906,7 +907,7 @@ export default function CompleteProfilePage() {
                   )}
                 </Button>
               </div>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </div>
