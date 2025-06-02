@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Added useEffect
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,7 +27,8 @@ import {
 export default function CompleteProfilePage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false) // For form submission
+  const [isFetchingProfile, setIsFetchingProfile] = useState(true); // For initial data fetch
 
   const [profileData, setProfileData] = useState({
     // Basic Info
@@ -74,6 +75,41 @@ export default function CompleteProfilePage() {
 
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      setIsFetchingProfile(true);
+      try {
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const fetched = await response.json();
+          setProfileData(prev => ({
+            ...prev,
+            profilePicture: fetched.avatar_url || "",
+            bio: fetched.bio || "",
+            location: fetched.location || "",
+            website: fetched.website_url || "",
+            // phone: fetched.phone || "", // Assuming phone might be added to profiles table later
+            skills: fetched.skills ? fetched.skills.map((s: any) => s.name) : [],
+            experience: fetched.experience && fetched.experience.length > 0 ? fetched.experience : [{ title: "", company: "", location: "", startDate: "", endDate: "", current: false, description: "" }],
+            education: fetched.education && fetched.education.length > 0 ? fetched.education : [{ school: "", degree: "", field: "", startDate: "", endDate: "", current: false }],
+            // jobType, experienceLevel, industries, remoteWork are not fetched by current GET API
+            // but if they were, they'd be set here too e.g. jobType: fetched.job_type || ""
+          }));
+        } else {
+          console.error("Failed to fetch profile data:", response.statusText);
+          // Optionally, set an error state here to show a message to the user
+        }
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+        // Optionally, set an error state here
+      } finally {
+        setIsFetchingProfile(false);
+      }
+    };
+
+    fetchProfileData();
+  }, []); // Empty dependency array to run once on mount
 
   const totalSteps = 5
 
@@ -163,17 +199,32 @@ export default function CompleteProfilePage() {
   }
 
   const handleSubmit = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profileData), // profileData is already in component's state
+      });
 
-    // TODO: Submit profile data to backend
-    console.log("Profile data:", profileData)
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      router.push("/profile")
-    }, 2000)
-  }
+      if (response.ok) {
+        // const result = await response.json(); // Optional: if backend sends data
+        alert('Profile updated successfully!'); // Or use a toast notification
+        router.push("/profile");
+      } else {
+        const errorData = await response.json().catch(() => ({})); // Try to parse error, default to empty obj
+        console.error("Failed to update profile:", errorData);
+        alert(`Failed to update profile: ${errorData.message || errorData.error || response.statusText}`);
+      }
+    } catch (error: any) { // Added : any for error.message
+      console.error("Error submitting profile:", error);
+      alert(`An unexpected error occurred: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -198,6 +249,15 @@ export default function CompleteProfilePage() {
   ]
 
   const renderStep = () => {
+    if (isFetchingProfile) {
+      return (
+        <div className="flex justify-center items-center min-h-[300px]">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="ml-4 text-xl text-muted-foreground">Loading profile...</p>
+        </div>
+      );
+    }
+
     switch (currentStep) {
       case 1:
         return (

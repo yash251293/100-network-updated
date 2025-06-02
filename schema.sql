@@ -121,3 +121,67 @@ CREATE INDEX idx_skills_name ON skills(name);
 -- Primary key (user_id, skill_id) is already indexed.
 -- Consider an index on skill_id if you frequently query for all users with a specific skill.
 CREATE INDEX idx_user_skills_skill_id ON user_skills(skill_id);
+
+
+-- User Experience Table
+CREATE TABLE user_experience (
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255) NOT NULL, -- Changed from 'company' to 'company_name' to avoid SQL keyword clash if any
+    location VARCHAR(255),
+    start_date DATE, -- Storing as DATE, frontend will need to provide YYYY-MM-01 if only month is given
+    end_date DATE,
+    current_job BOOLEAN DEFAULT FALSE,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_experience_user_id ON user_experience(user_id);
+
+-- Trigger for user_experience updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_user_experience()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_user_experience_updated_at
+BEFORE UPDATE ON user_experience
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_user_experience();
+
+
+-- User Education Table
+CREATE TABLE user_education (
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    school_name VARCHAR(255) NOT NULL,
+    degree VARCHAR(255),
+    field_of_study VARCHAR(255),
+    start_date DATE, -- Storing as DATE
+    end_date DATE,
+    current_student BOOLEAN DEFAULT FALSE,
+    description TEXT, -- Optional field for notes or achievements
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_education_user_id ON user_education(user_id);
+
+-- Trigger for user_education updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_user_education()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_user_education_updated_at
+BEFORE UPDATE ON user_education
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_user_education();
