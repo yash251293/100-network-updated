@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation"; // Added usePathname
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -18,6 +19,7 @@ export default function RootLayout({
 }>) {
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const pathname = usePathname(); // Correct placement of usePathname
 
   useEffect(() => {
     setIsMounted(true);
@@ -25,9 +27,11 @@ export default function RootLayout({
 
   useEffect(() => {
     if (isMounted) {
-      setIsUserAuthenticated(isAuthenticated());
+      const authStatus = isAuthenticated();
+      setIsUserAuthenticated(authStatus);
+      console.log('[RootLayout] Path:', pathname, 'isMounted:', isMounted, 'isAuthenticated:', authStatus);
     }
-  }, [isMounted]);
+  }, [isMounted, pathname]); // Added pathname to dependency array
 
   if (!isMounted) {
     // Return a minimal structure or loader during server rendering / initial client hydration

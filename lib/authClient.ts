@@ -23,9 +23,16 @@ export const login = (token: string): void => {
 
 export const logout = (): void => {
   if (typeof window !== 'undefined') {
+    const tokenBefore = localStorage.getItem(TOKEN_KEY);
+    console.log('[authClient] logout: Token before removal:', tokenBefore);
     localStorage.removeItem(TOKEN_KEY);
-    // Optionally, redirect to login or notify other parts of the app
-    // For now, just removing the token. Redirection will be handled by ProtectedRoute or calling component.
+    const tokenAfter = localStorage.getItem(TOKEN_KEY);
+    console.log('[authClient] logout: Token after removal:', tokenAfter);
+    if (tokenAfter !== null) {
+      console.warn('[authClient] logout: WARNING! Token still present after removeItem attempt.');
+    }
+  } else {
+    console.warn('[authClient] logout: Called on server-side.');
   }
 };
 
