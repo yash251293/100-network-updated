@@ -786,5 +786,5 @@ export default function CompleteProfilePage() {
     }
   }
 
-  return <div>Minimal test content for CompleteProfilePage</div>;
+  return renderStep();
 }
