@@ -35,35 +35,49 @@ export default function CompleteProfilePage() {
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
 
+  console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile);
+
   useEffect(() => {
+    console.log("[CompleteProfilePage][useEffect] Effect triggered.");
     const fetchProfileData = async () => {
+      console.log("[CompleteProfilePage][fetchProfileData] Starting...");
       setIsFetchingProfile(true);
       try {
+        console.log("[CompleteProfilePage][fetchProfileData] About to fetch /api/profile");
         const response = await fetch('/api/profile');
+        console.log("[CompleteProfilePage][fetchProfileData] Fetch response received:", response);
+        console.log("[CompleteProfilePage][fetchProfileData] response.ok:", response.ok, "response.status:", response.status);
+
         if (response.ok) {
           const fetched = await response.json();
-          setProfileData(prev => ({
-            ...prev,
-            profilePicture: fetched.avatar_url || "",
-            bio: fetched.bio || "",
-            location: fetched.location || "",
-            website: fetched.website_url || "",
-            // phone: fetched.phone || "", // Assuming phone might be added to profiles table later
-            skills: fetched.skills ? fetched.skills.map((s: any) => s.name) : [],
-            experience: fetched.experience && fetched.experience.length > 0 ? fetched.experience : [{ title: "", company: "", location: "", startDate: "", endDate: "", current: false, description: "" }],
-            education: fetched.education && fetched.education.length > 0 ? fetched.education : [{ school: "", degree: "", field: "", startDate: "", endDate: "", current: false }],
-            // jobType, experienceLevel, industries, remoteWork are not fetched by current GET API
-            // but if they were, they'd be set here too e.g. jobType: fetched.job_type || ""
-          }));
+          console.log("[CompleteProfilePage][fetchProfileData] Fetched data (parsed JSON):", fetched);
+          setProfileData(prev => {
+            console.log("[CompleteProfilePage][fetchProfileData] Calling setProfileData. Previous data:", prev);
+            const newData = {
+              ...prev,
+              profilePicture: fetched.avatar_url || "",
+              bio: fetched.bio || "",
+              location: fetched.location || "",
+              website: fetched.website_url || "",
+              skills: fetched.skills ? fetched.skills.map((s: any) => s.name) : [],
+              experience: fetched.experience && fetched.experience.length > 0 ? fetched.experience : [{ title: "", company: "", location: "", startDate: "", endDate: "", current: false, description: "" }],
+              education: fetched.education && fetched.education.length > 0 ? fetched.education : [{ school: "", degree: "", field: "", startDate: "", endDate: "", current: false }],
+            };
+            console.log("[CompleteProfilePage][fetchProfileData] New data for setProfileData:", newData);
+            return newData;
+          });
+          console.log("[CompleteProfilePage][fetchProfileData] setProfileData has been called.");
         } else {
-          console.error("Failed to fetch profile data:", response.statusText);
-          // Optionally, set an error state here to show a message to the user
+          console.error("[CompleteProfilePage][fetchProfileData] Failed to fetch profile data. Status:", response.status, "StatusText:", response.statusText);
+          const errorBody = await response.text();
+          console.error("[CompleteProfilePage][fetchProfileData] Error response body:", errorBody);
         }
       } catch (error) {
-        console.error("Error fetching profile data:", error);
-        // Optionally, set an error state here
+        console.error("[CompleteProfilePage][fetchProfileData] Error during fetch or processing:", error);
       } finally {
+        console.log("[CompleteProfilePage][fetchProfileData] Entering finally block.");
         setIsFetchingProfile(false);
+        console.log("[CompleteProfilePage][fetchProfileData] setIsFetchingProfile(false) has been called.");
       }
     };
 
