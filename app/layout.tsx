@@ -73,7 +73,7 @@ export default function RootLayout({
           {isUserAuthenticated ? (
             <div className="flex h-screen bg-background">
               <Sidebar />
-              <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex flex-col flex-1">
                 <Header />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
                   {children}
