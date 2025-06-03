@@ -99,55 +99,50 @@ export async function POST(request: Request) {
   }
 
   try {
-    const profileData = await request.json();
-
-    // IMPORTANT: Use a database transaction to ensure all operations succeed or fail together.
-    // The specific way to do transactions depends on the 'pg' library setup in `lib/db.ts`.
-    // Assuming `lib/db.ts` exports a way to get a client and manage transactions, like:
-    // const client = await getPool().connect(); // Get a client from the pool
+    // TODO: Wrap all database operations in a transaction (BEGIN, COMMIT, ROLLBACK)
     // await client.query('BEGIN');
-    // ... operations ...
-    // await client.query('COMMIT');
-    // client.release();
-    // If `lib/db.ts` doesn't support this directly, this is a simplification.
-    // For now, we'll write the queries sequentially and note the need for explicit transaction handling.
+    const profileData = await request.json();
     
     console.log(`API /api/profile POST: Saving data for userId: ${userId}`, profileData);
 
     // 1. Update/Insert into `profiles` table
-    // Note: The 'profiles' table uses the user's 'id' as its primary key.
-    // We need to handle both insert (if no profile yet) and update (if profile exists).
-    // This is often done with an "UPSERT" operation (INSERT ... ON CONFLICT ... DO UPDATE).
-    // const {
-    //   first_name, // Assuming this comes from profileData; form has 'firstName'
-    //   last_name,  // Assuming this comes from profileData; form has 'lastName'
-    //   avatar_url, // Assuming from profileData; form has 'profilePicture'
-    //   headline,   // Assuming from profileData; form doesn't explicitly have this.
-    //   bio,
-    //   location,
-    //   linkedin_url, // Assuming from profileData; form doesn't explicitly have this.
-    //   github_url,   // Assuming from profileData; form doesn't explicitly have this.
-    //   website_url,  // Assuming from profileData; form has 'website'
-    //   // other fields from profileData that map to `profiles` table columns
-    // } = profileData;
-
     // Map frontend field names to DB column names if they differ
-    // The current CompleteProfilePage state uses: profilePicture, bio, location, website, phone
-    // The `profiles` schema has: first_name, last_name, avatar_url, headline, bio, location, linkedin_url, github_url, website_url
-    // There's a mismatch to be handled. For now, we'll use what's available.
-    // A more robust solution would involve mapping all fields or adjusting the form state.
+    const industriesString = profileData.industries ? JSON.stringify(profileData.industries) : null;
+
+    console.log('Processing and saving career preferences:', {
+      jobType: profileData.jobType,
+      experienceLevel: profileData.experienceLevel,
+      remoteWork: profileData.remoteWork,
+      industries: profileData.industries
+    });
 
     await query(
-      `INSERT INTO profiles (id, bio, location, website_url, avatar_url, updated_at)
-       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      `INSERT INTO profiles (id, bio, location, website_url, avatar_url, phone, job_type, experience_level, remote_work_preference, preferred_industries, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
        ON CONFLICT (id) DO UPDATE SET
          bio = EXCLUDED.bio,
          location = EXCLUDED.location,
          website_url = EXCLUDED.website_url,
          avatar_url = EXCLUDED.avatar_url,
+         phone = EXCLUDED.phone,
+         job_type = EXCLUDED.job_type,
+         experience_level = EXCLUDED.experience_level,
+         remote_work_preference = EXCLUDED.remote_work_preference,
+         preferred_industries = EXCLUDED.preferred_industries,
          updated_at = CURRENT_TIMESTAMP
       `,
-      [userId, profileData.bio, profileData.location, profileData.website, profileData.profilePicture]
+      [
+        userId,
+        profileData.bio,
+        profileData.location,
+        profileData.website,
+        profileData.profilePicture,
+        profileData.phone, // New field
+        profileData.jobType, // New field
+        profileData.experienceLevel, // New field
+        profileData.remoteWork, // New field
+        industriesString // New field (stringified array)
+      ]
     );
     console.log('Profile upserted');
 
@@ -202,21 +197,17 @@ export async function POST(request: Request) {
       console.log('New education inserted');
     }
     
-    // TODO: Handle career preferences (jobType, experienceLevel, industries, remoteWork)
-    // These fields are in profileData but not currently saved to any specific table in schema.sql.
-    // They might go into the `profiles` table if columns are added, or a new `user_preferences` table.
-    // For now, we acknowledge they are collected but not persisted by this script.
-    console.warn("Career preferences from profileData are not currently being saved to the database by this endpoint.");
+    // Career preferences are now handled by the main profiles upsert.
+    // The console.log above confirms processing.
 
-
-    // await client.query('COMMIT'); // If using explicit transactions
+    // await client.query('COMMIT');
     return NextResponse.json({ message: 'Profile updated successfully' });
 
   } catch (error) {
-    // await client.query('ROLLBACK'); // If using explicit transactions
+    // await client.query('ROLLBACK');
     console.error('POST /api/profile error:', error);
     return NextResponse.json({ error: 'Failed to update profile data', details: (error as Error).message }, { status: 500 });
   } finally {
-    // client.release(); // If using explicit transactions
+    // if (client) client.release();
   }
 }
