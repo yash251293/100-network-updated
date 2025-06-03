@@ -39,20 +39,38 @@ export default function CompleteProfilePage() {
 
   useEffect(() => {
     console.log("[CompleteProfilePage][useEffect] Effect triggered.");
+    let isActive = true;
+
     const fetchProfileData = async () => {
-      console.log("[CompleteProfilePage][fetchProfileData] Starting...");
-      setIsFetchingProfile(true);
+      console.log(`[CompleteProfilePage][fetchProfileData] Starting... (isActive: ${isActive})`);
+      // Guard the initial setIsFetchingProfile(true)
+      if (isActive) {
+        setIsFetchingProfile(true);
+      } else {
+        // If not active at the very start, perhaps this instance of fetchProfileData shouldn't even run.
+        // However, to match the previous log structure, we'll let it run but bail out before state updates.
+        // A more aggressive approach could return early here if !isActive.
+      }
+
       try {
-        console.log("[CompleteProfilePage][fetchProfileData] About to fetch /api/profile");
+        console.log(`[CompleteProfilePage][fetchProfileData] About to fetch /api/profile (isActive: ${isActive})`);
         const response = await fetch('/api/profile');
-        console.log("[CompleteProfilePage][fetchProfileData] Fetch response received:", response);
-        console.log("[CompleteProfilePage][fetchProfileData] response.ok:", response.ok, "response.status:", response.status);
+
+        if (!isActive) {
+          console.log("[CompleteProfilePage][fetchProfileData] Stale request detected after fetch response. Bailing out.");
+          return;
+        }
+        console.log("[CompleteProfilePage][fetchProfileData] Fetch response received:", response); // Keep existing log
+        console.log("[CompleteProfilePage][fetchProfileData] response.ok:", response.ok, "response.status:", response.status); // Keep existing log
 
         if (response.ok) {
           const fetched = await response.json();
-          console.log("[CompleteProfilePage][fetchProfileData] Fetched data (parsed JSON):", fetched);
+          if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request before processing JSON. Bailing out."); return; }
+          console.log("[CompleteProfilePage][fetchProfileData] Fetched data (parsed JSON):", fetched); // Keep existing log
+
           setProfileData(prev => {
-            console.log("[CompleteProfilePage][fetchProfileData] Calling setProfileData. Previous data:", prev);
+            if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData][setProfileData] Stale request inside setter. Bailing from update."); return prev; } // Check again
+            console.log("[CompleteProfilePage][fetchProfileData] Calling setProfileData. Previous data:", prev); // Keep existing log
             const newData = {
               ...prev,
               profilePicture: fetched.avatar_url || "",
@@ -63,25 +81,39 @@ export default function CompleteProfilePage() {
               experience: fetched.experience && fetched.experience.length > 0 ? fetched.experience : [{ title: "", company: "", location: "", startDate: "", endDate: "", current: false, description: "" }],
               education: fetched.education && fetched.education.length > 0 ? fetched.education : [{ school: "", degree: "", field: "", startDate: "", endDate: "", current: false }],
             };
-            console.log("[CompleteProfilePage][fetchProfileData] New data for setProfileData:", newData);
+            console.log("[CompleteProfilePage][fetchProfileData] New data for setProfileData:", newData); // Keep existing log
             return newData;
           });
-          console.log("[CompleteProfilePage][fetchProfileData] setProfileData has been called.");
+          if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request after setProfileData call. (Note: state update was dispatched)."); return; }
+          console.log("[CompleteProfilePage][fetchProfileData] setProfileData has been called."); // Keep existing log
         } else {
-          console.error("[CompleteProfilePage][fetchProfileData] Failed to fetch profile data. Status:", response.status, "StatusText:", response.statusText);
+          if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request in response NOT ok. Bailing out."); return; }
+          console.error("[CompleteProfilePage][fetchProfileData] Failed to fetch profile data. Status:", response.status, "StatusText:", response.statusText); // Keep existing log
           const errorBody = await response.text();
-          console.error("[CompleteProfilePage][fetchProfileData] Error response body:", errorBody);
+          if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request after fetching error body. Bailing out."); return; }
+          console.error("[CompleteProfilePage][fetchProfileData] Error response body:", errorBody); // Keep existing log
         }
       } catch (error) {
-        console.error("[CompleteProfilePage][fetchProfileData] Error during fetch or processing:", error);
+        if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request in catch block. Bailing out."); return; }
+        console.error("[CompleteProfilePage][fetchProfileData] Error during fetch or processing:", error); // Keep existing log
       } finally {
-        console.log("[CompleteProfilePage][fetchProfileData] Entering finally block.");
-        setIsFetchingProfile(false);
-        console.log("[CompleteProfilePage][fetchProfileData] setIsFetchingProfile(false) has been called.");
+        if (isActive) {
+          console.log("[CompleteProfilePage][fetchProfileData] Entering finally block for ACTIVE request.");
+          setIsFetchingProfile(false);
+          console.log("[CompleteProfilePage][fetchProfileData] setIsFetchingProfile(false) has been called for ACTIVE request.");
+        } else {
+          console.log("[CompleteProfilePage][fetchProfileData] Entering finally block for STALE request. Not changing isFetchingProfile.");
+        }
       }
     };
 
-    fetchProfileData();
+    // Initial call to fetchProfileData
+    fetchProfileData(); // This remains, the isActive flag inside fetchProfileData will handle its own logic.
+
+    return () => {
+      console.log("[CompleteProfilePage][useEffect] Cleanup: Setting isActive = false.");
+      isActive = false;
+    };
   }, []); // Empty dependency array to run once on mount
 
   const totalSteps = 5
