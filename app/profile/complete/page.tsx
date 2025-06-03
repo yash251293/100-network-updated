@@ -773,11 +773,11 @@ export default function CompleteProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Decorative background elements are OMITTED for this iteration */}
-      {/* <div className="absolute inset-0 overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-600/20 rounded-full blur-3xl"></div>
-      </div> */}
+      </div>
 
       <div className="relative container max-w-4xl mx-auto px-4 py-12">
         {/* Header Section (within CompleteProfilePage) */}
