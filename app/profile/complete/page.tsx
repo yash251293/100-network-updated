@@ -35,7 +35,7 @@ export default function CompleteProfilePage() {
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
 
-  console.log("Rendering CompleteProfilePage (Iteration 1: Simplest Div Test)");
+  console.log("Rendering CompleteProfilePage (Iteration 2: Outermost Original Div Test)");
   console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile);
 
   useEffect(() => {
@@ -773,9 +773,9 @@ export default function CompleteProfilePage() {
   };
 
   return (
-    <div style={{padding: '20px', border: '3px solid blue', margin: '20px', minHeight: '100px'}}>
-      CPP Test Div (Iteration 1)
-      <p>Testing Sidebar clickability with this minimal page output.</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      CPP Outermost Div (Iteration 2)
+      <p style={{padding: "20px"}}>Testing Sidebar clickability with this structure.</p>
     </div>
   );
 }
