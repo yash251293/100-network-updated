@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -35,8 +35,8 @@ export default function CompleteProfilePage() {
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
 
-  console.log("Rendering CompleteProfilePage (Iteration 5: Decorative Elements Test)");
-  console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile);
+  // console.log("Rendering CompleteProfilePage (Iteration 4: Card Structure Test)"); // Original log for this version was about Card Structure
+  console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile); // Existing detailed log
 
   useEffect(() => {
     console.log("[CompleteProfilePage][useEffect] Effect triggered.");
@@ -684,36 +684,56 @@ export default function CompleteProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-base font-semibold">Job Type</Label>
-                  <Input
-                    type="text"
-                    placeholder="Enter job type (e.g., full-time)"
-                    value={profileData.jobType}
-                    onChange={(e) => handleInputChange("jobType", e.target.value)}
-                    className="border-2 focus:border-amber-500 transition-colors"
-                  />
+                  <Select value={profileData.jobType} onValueChange={(value) => handleInputChange("jobType", value)}>
+                    <SelectTrigger className="border-2 focus:border-amber-500 transition-colors">
+                      <SelectValue placeholder="Select job type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full-time">Full-time</SelectItem>
+                      <SelectItem value="part-time">Part-time</SelectItem>
+                      <SelectItem value="contract">Contract</SelectItem>
+                      <SelectItem value="freelance">Freelance</SelectItem>
+                      <SelectItem value="internship">Internship</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-base font-semibold">Experience Level</Label>
-                  <Input
-                    type="text"
-                    placeholder="Enter experience level (e.g., mid)"
+                  <Select
                     value={profileData.experienceLevel}
-                    onChange={(e) => handleInputChange("experienceLevel", e.target.value)}
-                    className="border-2 focus:border-amber-500 transition-colors"
-                  />
+                    onValueChange={(value) => handleInputChange("experienceLevel", value)}
+                  >
+                    <SelectTrigger className="border-2 focus:border-amber-500 transition-colors">
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="entry">Entry Level</SelectItem>
+                      <SelectItem value="mid">Mid Level</SelectItem>
+                      <SelectItem value="senior">Senior Level</SelectItem>
+                      <SelectItem value="lead">Lead/Principal</SelectItem>
+                      <SelectItem value="executive">Executive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-base font-semibold">Remote Work Preference</Label>
-                <Input
-                  type="text"
-                  placeholder="Enter remote preference (e.g., hybrid)"
+                <Select
                   value={profileData.remoteWork}
-                  onChange={(e) => handleInputChange("remoteWork", e.target.value)}
-                  className="border-2 focus:border-amber-500 transition-colors"
-                />
+                  onValueChange={(value) => handleInputChange("remoteWork", value)}
+                >
+                  <SelectTrigger className="border-2 focus:border-amber-500 transition-colors">
+                    <SelectValue placeholder="Select preference" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="remote">Remote Only</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                    <SelectItem value="onsite">On-site Only</SelectItem>
+                    <SelectItem value="flexible">Flexible</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-4">
