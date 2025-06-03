@@ -6,9 +6,9 @@ import { useState, useEffect } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 // import { ThemeProvider } from "@/components/theme-provider";
-import Sidebar from "@/components/sidebar";
-import Header from "@/components/header";
-import { isAuthenticated } from "@/lib/authClient";
+// import Sidebar from "@/components/sidebar";
+// import Header from "@/components/header";
+// import { isAuthenticated } from "@/lib/authClient";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,7 +17,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
+  // const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   // const pathname = usePathname(); // Declaration removed
 
@@ -25,22 +25,22 @@ export default function RootLayout({
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      const handleAuthChange = () => {
-        // console.log('[RootLayout] authChange event triggered or initial check'); // Optional: for temporary debugging
-        setIsUserAuthenticated(isAuthenticated());
-      };
+  // useEffect(() => {
+  //   if (isMounted) {
+  //     const handleAuthChange = () => {
+  //       // console.log('[RootLayout] authChange event triggered or initial check'); // Optional: for temporary debugging
+  //       setIsUserAuthenticated(isAuthenticated());
+  //     };
 
-      handleAuthChange(); // Initial check
+  //     handleAuthChange(); // Initial check
 
-      window.addEventListener('authChange', handleAuthChange);
+  //     window.addEventListener('authChange', handleAuthChange);
 
-      return () => {
-        window.removeEventListener('authChange', handleAuthChange);
-      };
-    }
-  }, [isMounted]); // Dependency array remains [isMounted]
+  //     return () => {
+  //       window.removeEventListener('authChange', handleAuthChange);
+  //     };
+  //   }
+  // }, [isMounted]); // Dependency array remains [isMounted]
 
   if (!isMounted) {
     // Return a minimal structure or loader during server rendering / initial client hydration
@@ -70,22 +70,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         > */}
-          {isUserAuthenticated ? (
-            <div className="flex h-screen bg-background">
-              <Sidebar />
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <Header />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
-                  {children}
-                </main>
-              </div>
-            </div>
-          ) : (
-            // Layout for unauthenticated users (e.g., login, signup pages)
-            // These pages typically define their own layout structure (e.g., centered content)
-            // via their specific layout files like app/(auth)/layout.tsx
-            <main>{children}</main>
-          )}
+          <main>{children}</main>
         {/* </ThemeProvider> */}
       </body>
     </html>
