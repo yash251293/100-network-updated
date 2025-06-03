@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-// usePathname import will be removed
+import { usePathname } from "next/navigation";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -17,9 +17,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isAuthPage = pathname.startsWith('/auth/');
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  // const pathname = usePathname(); // Declaration removed
 
   useEffect(() => {
     setIsMounted(true);
@@ -70,18 +71,20 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {isUserAuthenticated ? (
-            <div className="flex h-screen bg-background">
+          {isAuthPage ? (
+            <main>{children}</main> // Simple layout for /auth/* pages
+          ) : isUserAuthenticated ? (
+            <div className="flex h-screen bg-background"> {/* Authenticated Layout */}
               <Sidebar />
-              <div className="flex flex-col flex-1">
-                <Header />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+              <div className="flex flex-col flex-1"> {/* overflow-hidden was removed here */}
+                <Header /> {/* Full Header */}
+                <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
                   {children}
                 </main>
               </div>
             </div>
           ) : (
-            <main>{children}</main>
+            <main>{children}</main> // Fallback for other unauthenticated pages (if any) or initial state
           )}
         </ThemeProvider>
       </body>
