@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+// import Link from "next/link"
+// import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { logout } from "@/lib/authClient"
+// import { logout } from "@/lib/authClient"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,12 +17,12 @@ import { Button } from "@/components/ui/button"
 
 export default function Header() {
   const [notifications, setNotifications] = useState(18)
-  const router = useRouter()
+  // const router = useRouter()
 
-  const handleLogout = () => {
-    logout()
-    router.push('/auth/login')
-  }
+  // const handleLogout = () => {
+  //   logout()
+  //   router.push('/auth/login')
+  // }
 
   return (
     <header className="border-b bg-background">
@@ -49,44 +49,44 @@ export default function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem asChild>
-                <Link href="/profile">My profile</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">My profile (Link disabled)</div>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/jobs/saved">My jobs</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">My jobs (Link disabled)</div>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/meetings">My meetings</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">My meetings (Link disabled)</div>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/documents">My documents</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">My documents (Link disabled)</div>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/career-interests">My career interests</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">My career interests (Link disabled)</div>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/reviews">My reviews</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/notifications/preferences">Notification preferences</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/school/connections">School connections</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings">Settings</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">My reviews (Link disabled)</div>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/help">Help center</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">Notification preferences (Link disabled)</div>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/terms">Terms of Service</Link>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">School connections (Link disabled)</div>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">Settings (Link disabled)</div>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">Help center (Link disabled)</div>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm outline-none cursor-default">Terms of Service (Link disabled)</div>
               </DropdownMenuItem>
               <DropdownMenuSeparator /> {/* Optional: added for visual separation */}
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                Log out
+              <DropdownMenuItem className="cursor-default">
+                <div className="px-2 py-1.5 text-sm outline-none">Log out (Logout disabled)</div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
