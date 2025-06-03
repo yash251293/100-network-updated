@@ -780,8 +780,8 @@ export default function CompleteProfilePage() {
       </div> */}
 
       <div className="relative container max-w-4xl mx-auto px-4 py-12">
-        {/* Header Section (within CompleteProfilePage) is OMITTED for this iteration */}
-        {/* <div className="text-center mb-12">
+        {/* Header Section (within CompleteProfilePage) */}
+        <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-6 shadow-2xl">
             <img
               src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/100N%20logo-hXZbA69LLfyoIxuGBxaKL2lq5TY9q7.png"
@@ -795,7 +795,7 @@ export default function CompleteProfilePage() {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Create a compelling professional profile that showcases your unique talents and attracts the right opportunities
           </p>
-        </div> */}
+        </div>
 
         {/* Progress Section (within CompleteProfilePage) is OMITTED for this iteration */}
         {/* <div className="mb-12">
