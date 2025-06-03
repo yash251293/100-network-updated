@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 // usePathname import will be removed
 import { Inter } from "next/font/google";
 import "./globals.css";
-// import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import { isAuthenticated } from "@/lib/authClient";
@@ -64,12 +64,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        {/* <ThemeProvider
+        <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-        > */}
+        >
           {isUserAuthenticated ? (
             <div className="flex h-screen bg-background">
               <Sidebar />
@@ -83,7 +83,7 @@ export default function RootLayout({
           ) : (
             <main>{children}</main>
           )}
-        {/* </ThemeProvider> */}
+        </ThemeProvider>
       </body>
     </html>
   );
