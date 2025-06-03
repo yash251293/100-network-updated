@@ -8,7 +8,7 @@ import "./globals.css";
 // import { ThemeProvider } from "@/components/theme-provider";
 // import Sidebar from "@/components/sidebar";
 // import Header from "@/components/header";
-// import { isAuthenticated } from "@/lib/authClient";
+import { isAuthenticated } from "@/lib/authClient";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,7 +17,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
+  const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   // const pathname = usePathname(); // Declaration removed
 
@@ -25,22 +25,22 @@ export default function RootLayout({
     setIsMounted(true);
   }, []);
 
-  // useEffect(() => {
-  //   if (isMounted) {
-  //     const handleAuthChange = () => {
-  //       // console.log('[RootLayout] authChange event triggered or initial check'); // Optional: for temporary debugging
-  //       setIsUserAuthenticated(isAuthenticated());
-  //     };
+  useEffect(() => {
+    if (isMounted) {
+      const handleAuthChange = () => {
+        // console.log('[RootLayout] authChange event triggered or initial check'); // Optional: for temporary debugging
+        setIsUserAuthenticated(isAuthenticated());
+      };
 
-  //     handleAuthChange(); // Initial check
+      handleAuthChange(); // Initial check
 
-  //     window.addEventListener('authChange', handleAuthChange);
+      window.addEventListener('authChange', handleAuthChange);
 
-  //     return () => {
-  //       window.removeEventListener('authChange', handleAuthChange);
-  //     };
-  //   }
-  // }, [isMounted]); // Dependency array remains [isMounted]
+      return () => {
+        window.removeEventListener('authChange', handleAuthChange);
+      };
+    }
+  }, [isMounted]); // Dependency array remains [isMounted]
 
   if (!isMounted) {
     // Return a minimal structure or loader during server rendering / initial client hydration
