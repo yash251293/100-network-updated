@@ -4,15 +4,15 @@ import { useState } from "react"
 // import Link from "next/link"
 // import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 // import { logout } from "@/lib/authClient"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuSeparator,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 
 export default function Header() {
@@ -23,7 +23,7 @@ export default function Header() {
   //   logout()
   //   router.push('/auth/login')
   // }
-
+  console.log("Rendering Header (DropdownMenu removed)");
   return (
     <header className="border-b bg-background">
       <div className="flex items-center justify-between px-4 py-2">
@@ -39,7 +39,7 @@ export default function Header() {
               </span>
             )}
           </Button>
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Avatar className="h-8 w-8">
@@ -85,11 +85,11 @@ export default function Header() {
                 <div className="px-2 py-1.5 text-sm outline-none cursor-default">Terms of Service (Link disabled)</div>
               </DropdownMenuItem>
               <DropdownMenuSeparator /> {/* Optional: added for visual separation */}
-              <DropdownMenuItem className="cursor-default">
+              {/* <DropdownMenuItem className="cursor-default">
                 <div className="px-2 py-1.5 text-sm outline-none">Log out (Logout disabled)</div>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
         </div>
       </div>
     </header>
