@@ -35,7 +35,7 @@ export default function CompleteProfilePage() {
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
 
-  console.log("Rendering CompleteProfilePage (Iteration 4: Card Structure Test)");
+  console.log("Rendering CompleteProfilePage (Iteration 5: Decorative Elements Test)");
   console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile);
 
   useEffect(() => {
