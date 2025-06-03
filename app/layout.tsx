@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 // import { ThemeProvider } from "@/components/theme-provider";
-// import Sidebar from "@/components/sidebar";
+import Sidebar from "@/components/sidebar";
 // import Header from "@/components/header";
 import { isAuthenticated } from "@/lib/authClient";
 
@@ -72,7 +72,7 @@ export default function RootLayout({
         > */}
           {isUserAuthenticated ? (
             <div className="flex h-screen bg-background">
-              <div style={{ padding: '1rem', borderRight: '1px solid #ccc', background: '#f0f0f0' }}>SIDEBAR_PLACEHOLDER</div>
+              <Sidebar />
               <div className="flex flex-col flex-1 overflow-hidden">
                 <div style={{ padding: '1rem', borderBottom: '1px solid #ccc', background: '#e0e0e0' }}>HEADER_PLACEHOLDER</div>
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
