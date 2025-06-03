@@ -70,7 +70,19 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         > */}
-          <main>{children}</main>
+          {isUserAuthenticated ? (
+            <div className="flex h-screen bg-background">
+              <div style={{ padding: '1rem', borderRight: '1px solid #ccc', background: '#f0f0f0' }}>SIDEBAR_PLACEHOLDER</div>
+              <div className="flex flex-col flex-1 overflow-hidden">
+                <div style={{ padding: '1rem', borderBottom: '1px solid #ccc', background: '#e0e0e0' }}>HEADER_PLACEHOLDER</div>
+                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+                  {children}
+                </main>
+              </div>
+            </div>
+          ) : (
+            <main>{children}</main>
+          )}
         {/* </ThemeProvider> */}
       </body>
     </html>
