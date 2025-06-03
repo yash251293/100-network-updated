@@ -797,8 +797,8 @@ export default function CompleteProfilePage() {
           </p>
         </div>
 
-        {/* Progress Section (within CompleteProfilePage) is OMITTED for this iteration */}
-        {/* <div className="mb-12">
+        {/* Progress Section (within CompleteProfilePage) */}
+        <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
               <span className="text-lg font-semibold">
@@ -817,6 +817,7 @@ export default function CompleteProfilePage() {
               {Math.round((currentStep / totalSteps) * 100)}% Complete
             </span>
           </div>
+          {/* Enhanced Progress Bar */}
           <div className="relative">
             <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
               <div
@@ -843,7 +844,7 @@ export default function CompleteProfilePage() {
               ))}
             </div>
           </div>
-        </div> */}
+        </div>
 
         {/* Main Content Card (within CompleteProfilePage) */}
         <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
