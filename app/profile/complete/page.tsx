@@ -853,12 +853,12 @@ export default function CompleteProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Enhanced Navigation Buttons (within CompleteProfilePage) are OMITTED for this iteration */}
-        {/* <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100">
+        {/* Enhanced Navigation Buttons (within CompleteProfilePage) */}
+        <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100">
           <Button
             variant="outline"
             onClick={prevStep}
-            disabled={currentStep === 1 || isLoading}
+            disabled={currentStep === 1 || isLoading} /* Ensure this corrected disabled logic is used */
             className="px-8 py-3 border-2 hover:bg-gray-50 disabled:opacity-50 transition-all duration-300"
           >
             Previous
@@ -890,7 +890,7 @@ export default function CompleteProfilePage() {
               )}
             </Button>
           </div>
-        </div> */}
+        </div>
       </div>
     </div>
   );
