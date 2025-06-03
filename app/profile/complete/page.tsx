@@ -108,7 +108,7 @@ export default function CompleteProfilePage() {
       }
     };
 
-    fetchProfileData();
+    // fetchProfileData();
   }, []); // Empty dependency array to run once on mount
 
   const totalSteps = 5
