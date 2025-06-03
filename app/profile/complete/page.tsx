@@ -30,48 +30,7 @@ export default function CompleteProfilePage() {
   const [isLoading, setIsLoading] = useState(false) // For form submission
   const [isFetchingProfile, setIsFetchingProfile] = useState(true); // For initial data fetch
 
-  const [profileData, setProfileData] = useState({
-    // Basic Info
-    profilePicture: "",
-    bio: "",
-    location: "",
-    website: "",
-    phone: "",
-
-    // Skills
-    skills: [] as string[],
-
-    // Experience
-    experience: [
-      {
-        title: "",
-        company: "",
-        location: "",
-        startDate: "",
-        endDate: "",
-        current: false,
-        description: "",
-      },
-    ],
-
-    // Education
-    education: [
-      {
-        school: "",
-        degree: "",
-        field: "",
-        startDate: "",
-        endDate: "",
-        current: false,
-      },
-    ],
-
-    // Preferences
-    jobType: "",
-    experienceLevel: "",
-    industries: [] as string[],
-    remoteWork: "",
-  })
+  const [profileData, setProfileData] = useState({});
 
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
