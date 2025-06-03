@@ -35,7 +35,7 @@ export default function CompleteProfilePage() {
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
 
-  console.log("Rendering CompleteProfilePage (Iteration 3: Relative Container Div Test)");
+  console.log("Rendering CompleteProfilePage (Iteration 4: Card Structure Test)");
   console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile);
 
   useEffect(() => {
@@ -775,8 +775,11 @@ export default function CompleteProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="relative container max-w-4xl mx-auto px-4 py-12">
-        CPP Relative Container Div (Iteration 3)
-        <p style={{padding: "20px"}}>Testing Sidebar clickability with this structure.</p>
+        <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-8 md:p-12">
+            {renderStep()}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
