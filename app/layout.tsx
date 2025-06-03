@@ -7,7 +7,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 // import { ThemeProvider } from "@/components/theme-provider";
 import Sidebar from "@/components/sidebar";
-// import Header from "@/components/header";
+import Header from "@/components/header";
 import { isAuthenticated } from "@/lib/authClient";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -74,7 +74,7 @@ export default function RootLayout({
             <div className="flex h-screen bg-background">
               <Sidebar />
               <div className="flex flex-col flex-1 overflow-hidden">
-                <div style={{ padding: '1rem', borderBottom: '1px solid #ccc', background: '#e0e0e0' }}>HEADER_PLACEHOLDER</div>
+                <Header />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
                   {children}
                 </main>
