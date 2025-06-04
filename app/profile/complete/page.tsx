@@ -25,6 +25,23 @@ import {
 } from "lucide-react"
 import { getToken } from "@/lib/authClient";
 
+function formatDateToYearMonth(dateString: string | null | Date): string | null {
+  if (!dateString) return null;
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        console.warn("formatDateToYearMonth received invalid date string:", dateString);
+        return null;
+    }
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    return `${year}-${month}`;
+  } catch (e) {
+    console.error("Error formatting date:", dateString, e);
+    return null;
+  }
+}
+
 export default function CompleteProfilePage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
