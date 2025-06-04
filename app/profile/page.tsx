@@ -117,14 +117,12 @@ export default function ProfilePage() {
                       {profileData.location || 'Location not set'}
                     </div>
                   </div>
-                  <Link href="/profile/complete" passHref>
-                    <Button variant="outline" className="ml-4" asChild>
-                      <a>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Profile
-                      </a>
-                    </Button>
-                  </Link>
+                  <Button variant="outline" className="ml-4" asChild>
+                    <Link href="/profile/complete">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Link>
+                  </Button>
                 </div>
 
                 {/* Contact Info */}
