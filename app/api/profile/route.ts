@@ -52,12 +52,16 @@ export async function GET(request: Request) {
     const educationRes = await query('SELECT * FROM user_education WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [userId]);
     const educations = educationRes.rows;
 
+    // Fetch user's email
+    const userEmailRes = await query('SELECT email FROM users WHERE id = $1', [userId]);
+    const userEmail = userEmailRes.rows[0]?.email || null;
+
     const consolidatedProfile = {
       ...profile, // Spread profile fields (id, first_name, last_name, avatar_url, headline etc.)
       // Note: profile.id will be the same as userId here.
       // The schema for profiles table has 'id' as its PK which is also the user_id FK.
-      // We might want to ensure the returned object has a clear userId if profile object itself doesn't explicitly contain it as 'userId'
       userId: userId, // Explicitly include userId
+      email: userEmail, // Add the email here
       skills: skills,
       experience: experiences, // Ensure this matches frontend state structure key
       education: educations,   // Ensure this matches frontend state structure key
