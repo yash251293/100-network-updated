@@ -23,6 +23,7 @@ import {
   Sparkles,
   Crown,
 } from "lucide-react"
+import { getToken } from "@/lib/authClient";
 
 export default function CompleteProfilePage() {
   const router = useRouter()
@@ -70,7 +71,14 @@ export default function CompleteProfilePage() {
 
       try {
         console.log(`[CompleteProfilePage][fetchProfileData] About to fetch /api/profile (isActive: ${isActive})`);
-        const response = await fetch('/api/profile');
+        const token = getToken();
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        } else {
+          console.warn("[CompleteProfilePage][fetchProfileData] No auth token found. API request will likely fail.");
+        }
+        const response = await fetch('/api/profile', { headers });
 
         if (!isActive) {
           console.log("[CompleteProfilePage][fetchProfileData] Stale request detected after fetch response. Bailing out.");
@@ -270,10 +278,18 @@ export default function CompleteProfilePage() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
+      const token = getToken();
+      if (!token) {
+        console.error("[CompleteProfilePage][handleSubmit] No auth token found. Submission aborted.");
+        alert("Authentication token not found. Please log in again.");
+        setIsLoading(false);
+        return;
+      }
       const response = await fetch('/api/profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(profileData), // profileData is already in component's state
       });
