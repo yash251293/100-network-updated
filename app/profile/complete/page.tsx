@@ -101,16 +101,6 @@ export default function CompleteProfilePage() {
               return Array.isArray(prevArr) ? prevArr : [];
             };
 
-            const getSafeArray = (fetchedArr: any, prevArr: any[]) => {
-              if (Array.isArray(fetchedArr)) {
-                if (fetchedArr.length > 0 && typeof fetchedArr[0] === 'object' && fetchedArr[0] !== null && 'name' in fetchedArr[0]) {
-                  return fetchedArr.map((item: any) => item.name);
-                }
-                return fetchedArr;
-              }
-              return Array.isArray(prevArr) ? prevArr : [];
-            };
-
             const processedExperience = (fetched.experience && fetched.experience.length > 0)
               ? fetched.experience.map((exp: any) => ({
                   ...exp,
