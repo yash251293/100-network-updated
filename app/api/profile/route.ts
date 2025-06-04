@@ -1,6 +1,29 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db'; // Assuming db.ts is in lib
 
+// Helper function for date formatting
+function formatDateToYearMonth(dateString: string | null | Date): string | null {
+  if (!dateString) return null;
+  try {
+    // Attempt to handle cases where dateString might already be a Date object (e.g., from DB)
+    // or a string that needs parsing.
+    const date = new Date(dateString);
+    // Check if date is valid after parsing. Invalid dates can result from bad strings.
+    if (isNaN(date.getTime())) {
+        // If the date is invalid (e.g. from a malformed string or already problematic date from DB),
+        // it's safer to return null or the original string, rather than "NaN-NaN".
+        console.warn("formatDateToYearMonth received invalid date string:", dateString);
+        return null;
+    }
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    return `${year}-${month}`;
+  } catch (e) {
+    console.error("Error formatting date:", dateString, e);
+    return null; // Or return original string if preferred on error
+  }
+}
+
 // Placeholder for actual authentication and user ID retrieval
 async function getUserIdFromRequest(request: Request): Promise<string | null> {
   // In a real app, you would:
@@ -68,14 +91,18 @@ export async function GET(request: Request) {
     };
     
     // Ensure field names from DB (e.g. company_name, school_name) are mapped to frontend state keys if different
-    // For example, if frontend expects 'company' but DB has 'company_name'
+    // And format dates
     consolidatedProfile.experience = experiences.map(exp => ({
         ...exp,
-        company: exp.company_name // Map company_name to company
+        company: exp.company_name, // Map company_name to company
+        startDate: formatDateToYearMonth(exp.start_date),
+        endDate: formatDateToYearMonth(exp.end_date)
     }));
     consolidatedProfile.education = educations.map(edu => ({
         ...edu,
-        school: edu.school_name // Map school_name to school
+        school: edu.school_name, // Map school_name to school
+        startDate: formatDateToYearMonth(edu.start_date),
+        endDate: formatDateToYearMonth(edu.end_date)
     }));
 
 
