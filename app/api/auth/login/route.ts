@@ -4,15 +4,12 @@ import { query } from '@/lib/db' // Adjusted path
 import jwt from 'jsonwebtoken';
 
 export async function POST(request: Request) {
-  let rawTextBody = ""; // Variable to store the raw text body
-  let body;
+  let body
   try {
-    rawTextBody = await request.text(); // Read body as text first
-    console.log("Received raw request body:", rawTextBody); // Log the raw text
-    body = JSON.parse(rawTextBody); // Manually parse the text
+    body = await request.json()
   } catch (error) {
-    console.error("Failed to parse request body. Raw text was:", rawTextBody, "Error:", error);
-    return NextResponse.json({ success: false, message: 'Invalid request body. Ensure it is valid JSON.' }, { status: 400 });
+    console.error("Failed to parse request body:", error)
+    return NextResponse.json({ success: false, message: 'Invalid request body. Ensure it is valid JSON.' }, { status: 400 })
   }
 
   const { email, password } = body
