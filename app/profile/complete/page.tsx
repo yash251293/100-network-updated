@@ -69,6 +69,7 @@ export default function CompleteProfilePage() {
   const [newIndustry, setNewIndustry] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
 
   // console.log("Rendering CompleteProfilePage (Iteration 4: Card Structure Test)"); // Original log for this version was about Card Structure
   console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile); // Existing detailed log
@@ -81,16 +82,18 @@ export default function CompleteProfilePage() {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith("image/")) {
       console.log("Selected file:", file.name);
+      setSelectedImageFile(file); // Store the file object
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePicturePreview(reader.result as string);
+        // Temporarily set profilePicture to dataURL for preview, will be replaced by actual URL after upload
         setProfileData((prev: any) => ({ ...prev, profilePicture: reader.result as string }));
       };
       reader.readAsDataURL(file);
     } else {
       console.log("No file selected or file is not an image.");
-      // Optionally clear preview or show an error
       setProfilePicturePreview(null);
+      setSelectedImageFile(null); // Clear the stored file
     }
   };
 
@@ -325,29 +328,67 @@ export default function CompleteProfilePage() {
         setIsLoading(false);
         return;
       }
+
+      let finalProfileData = { ...profileData };
+
+      if (selectedImageFile) {
+        console.log("New image file selected, attempting upload...");
+        const formDataForImage = new FormData();
+        formDataForImage.append('avatar', selectedImageFile);
+
+        try {
+          const uploadResponse = await fetch('/api/upload-avatar', {
+            method: 'POST',
+            body: formDataForImage,
+            // 'Content-Type': 'multipart/form-data' is set by browser for FormData
+          });
+
+          if (uploadResponse.ok) {
+            const uploadResult = await uploadResponse.json();
+            if (uploadResult.url) {
+              console.log("Image uploaded successfully. URL:", uploadResult.url);
+              finalProfileData.profilePicture = uploadResult.url;
+            } else {
+              throw new Error(uploadResult.error || "Upload succeeded but no URL returned.");
+            }
+          } else {
+            const uploadErrorData = await uploadResponse.json().catch(() => ({}));
+            console.error("Image upload failed:", uploadErrorData);
+            alert(`Image upload failed: ${uploadErrorData.error || uploadResponse.statusText}. Profile not saved.`);
+            setIsLoading(false);
+            return;
+          }
+        } catch (uploadError: any) {
+          console.error("Error during image upload:", uploadError);
+          alert(`An error occurred during image upload: ${uploadError.message}. Profile not saved.`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch('/api/profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(profileData), // profileData is already in component's state
+        body: JSON.stringify(finalProfileData),
       });
 
       if (response.ok) {
-        // const result = await response.json(); // Optional: if backend sends data
-        alert('Profile updated successfully!'); // Or use a toast notification
+        alert('Profile updated successfully!');
         router.push("/profile");
       } else {
-        const errorData = await response.json().catch(() => ({})); // Try to parse error, default to empty obj
+        const errorData = await response.json().catch(() => ({}));
         console.error("Failed to update profile:", errorData);
         alert(`Failed to update profile: ${errorData.message || errorData.error || response.statusText}`);
       }
-    } catch (error: any) { // Added : any for error.message
+    } catch (error: any) {
       console.error("Error submitting profile:", error);
       alert(`An unexpected error occurred: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setSelectedImageFile(null); // Reset selected file state
     }
   };
 

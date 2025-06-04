@@ -38,3 +38,6 @@ my-job-recommendation-project/
 
 # pnpm store (if not global, or if you want to explicitly ignore a local store)
 .pnpm-store/
+
+# User-uploaded content (local development)
+/public/uploads/avatars/
