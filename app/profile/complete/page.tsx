@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react" // Added useEffect
+import { useState, useEffect, useRef } from "react" // Added useEffect and useRef
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,9 +67,32 @@ export default function CompleteProfilePage() {
 
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
 
   // console.log("Rendering CompleteProfilePage (Iteration 4: Card Structure Test)"); // Original log for this version was about Card Structure
   console.log("[CompleteProfilePage] Rendering, isFetchingProfile:", isFetchingProfile); // Existing detailed log
+
+  const handleImageUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      console.log("Selected file:", file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicturePreview(reader.result as string);
+        setProfileData((prev: any) => ({ ...prev, profilePicture: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    } else {
+      console.log("No file selected or file is not an image.");
+      // Optionally clear preview or show an error
+      setProfilePicturePreview(null);
+    }
+  };
 
   useEffect(() => {
     console.log("[CompleteProfilePage][useEffect] Effect triggered.");
@@ -381,14 +404,26 @@ export default function CompleteProfilePage() {
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
                 <div className="relative">
                   <Avatar className="h-32 w-32 border-4 border-white shadow-2xl">
-                    <AvatarImage src={profileData.profilePicture || "/placeholder.svg"} />
+                    <AvatarImage
+                      src={profilePicturePreview || profileData.profilePicture || "/placeholder.svg"}
+                      alt={profileData.bio || "User profile picture"}
+                    />
                     <AvatarFallback className="text-3xl bg-gradient-to-br from-blue-100 to-purple-100">
                       <Camera className="h-12 w-12 text-blue-500" />
                     </AvatarFallback>
                   </Avatar>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
                   <Button
                     size="icon"
                     className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                    onClick={handleImageUploadClick}
+                    type="button"
                   >
                     <Upload className="h-5 w-5" />
                   </Button>
