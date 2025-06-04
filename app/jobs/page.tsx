@@ -164,12 +164,27 @@ export default function JobsPage() {
       const response = await fetch('/api/job-bookmarks?limit=500', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to fetch bookmarked jobs:', response.status, errorText);
-        // Don't clear bookmarks on transient error, user might just lose visual status
-        return;
+        let errorDetails = '';
+        try {
+          // Attempt to get more details, but don't let this fail loudly
+          const errorData = await response.json(); // Try JSON first
+          errorDetails = errorData.message || JSON.stringify(errorData);
+        } catch (e) {
+          // If .json() fails, try .text()
+          try {
+            errorDetails = await response.text();
+          } catch (e2) {
+            errorDetails = 'Could not retrieve error details.';
+          }
+        }
+        console.error(`Failed to fetch bookmarked jobs. Status: ${response.status}. Details: ${errorDetails}`);
+        // Optionally set a specific error state for bookmark loading here
+        // e.g., setErrorBookmarks(`Failed to load bookmarks: ${response.status}`);
+        return; // Exit the function
       }
+
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
