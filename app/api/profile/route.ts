@@ -99,8 +99,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    // TODO: Wrap all database operations in a transaction (BEGIN, COMMIT, ROLLBACK)
-    // await client.query('BEGIN');
+    await query('BEGIN'); // START TRANSACTION
     const profileData = await request.json();
     
     console.log(`API /api/profile POST: Saving data for userId: ${userId}`, profileData);
@@ -200,11 +199,11 @@ export async function POST(request: Request) {
     // Career preferences are now handled by the main profiles upsert.
     // The console.log above confirms processing.
 
-    // await client.query('COMMIT');
+    await query('COMMIT'); // COMMIT TRANSACTION
     return NextResponse.json({ message: 'Profile updated successfully' });
 
   } catch (error) {
-    // await client.query('ROLLBACK');
+    await query('ROLLBACK'); // ROLLBACK TRANSACTION ON ERROR
     console.error('POST /api/profile error:', error);
     return NextResponse.json({ error: 'Failed to update profile data', details: (error as Error).message }, { status: 500 });
   } finally {

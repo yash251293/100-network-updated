@@ -20,6 +20,11 @@ CREATE TABLE profiles (
     linkedin_url VARCHAR(255) UNIQUE,
     github_url VARCHAR(255) UNIQUE,
     website_url VARCHAR(255),
+    phone VARCHAR(255),
+    job_type VARCHAR(100),
+    experience_level VARCHAR(100),
+    remote_work_preference VARCHAR(100),
+    preferred_industries TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user
