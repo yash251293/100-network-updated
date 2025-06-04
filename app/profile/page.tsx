@@ -19,8 +19,78 @@ import {
   Eye,
   MessageCircle,
 } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getToken } from "@/lib/authClient";
 
 export default function ProfilePage() {
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      setError(null);
+      const token = getToken();
+
+      if (!token) {
+        console.warn("[ProfilePage] No auth token found. API request will likely fail or be unauthorized.");
+        setError("Authentication token not found. Please log in.");
+        setIsLoading(false);
+        // Optionally, redirect: router.push('/auth/login');
+        return;
+      }
+
+      const headers: HeadersInit = { 'Authorization': `Bearer ${token}` };
+
+      try {
+        const response = await fetch('/api/profile', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setProfileData(data);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Failed to fetch profile data, status:", response.status, "body:", errorData);
+          setError(errorData.error || errorData.message || 'Failed to fetch profile data');
+        }
+      } catch (err: any) {
+        console.error("Error fetching profile data:", err);
+        setError(err.message || 'An unexpected error occurred.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [router]); // Added router to dependency array if it's used for navigation
+
+  useEffect(() => {
+    if (!isLoading && !error && profileData) {
+      // Completeness check based on defined criteria (e.g., bio and headline)
+      const isProfileIncomplete = !profileData.bio || !profileData.headline;
+
+      console.log("Profile data for redirect check:", profileData);
+      console.log("Is profile incomplete?", isProfileIncomplete);
+
+      if (isProfileIncomplete) {
+        console.log("Redirecting to /profile/complete due to incomplete profile.");
+        router.push('/profile/complete');
+      }
+    }
+  }, [profileData, isLoading, error, router]); // Dependencies for the redirect effect
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center min-h-screen">Loading profile...</div>;
+  }
+  if (error) {
+    return <div className="flex justify-center items-center min-h-screen">Error: {error}</div>;
+  }
+  if (!profileData) {
+    return <div className="flex justify-center items-center min-h-screen">No profile data found.</div>;
+  }
+
   return (
     <ProtectedRoute>
       <div className="container max-w-4xl py-6">
@@ -36,8 +106,10 @@ export default function ProfilePage() {
               {/* Profile Picture */}
               <div className="relative -mt-20 mb-6 sm:mb-0">
                 <Avatar className="h-32 w-32 border-4 border-white">
-                  <AvatarImage src="/professional-user-avatar.png" alt="Your Name" />
-                  <AvatarFallback className="text-2xl">YN</AvatarFallback>
+                  <AvatarImage src={profileData.avatar_url || "/placeholder-user.jpg"} alt={profileData.user?.email || 'User'} />
+                  <AvatarFallback className="text-2xl">
+                    {profileData.user?.first_name?.[0] || ''}{profileData.user?.last_name?.[0] || ''}
+                  </AvatarFallback>
                 </Avatar>
                 <Button
                   size="icon"
@@ -52,11 +124,11 @@ export default function ProfilePage() {
               <div className="flex-1">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h1 className="text-2xl font-bold">Alex Johnson</h1>
-                    <p className="text-lg text-muted-foreground">Senior Software Engineer at TechCorp</p>
+                    <h1 className="text-2xl font-bold">{profileData.user?.first_name || ''} {profileData.user?.last_name || profileData.user?.email || 'User'}</h1>
+                    <p className="text-lg text-muted-foreground">{profileData.headline || 'No headline available'}</p>
                     <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <MapPin className="h-4 w-4 mr-1" />
-                      San Francisco, CA
+                      {profileData.location || 'Location not set'}
                     </div>
                   </div>
                   <Button variant="outline" className="ml-4">
@@ -69,15 +141,15 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap gap-4 mt-4 text-sm">
                   <div className="flex items-center text-blue-600">
                     <Mail className="h-4 w-4 mr-1" />
-                    alex.johnson@email.com
+                    {profileData.user?.email || 'Email not available'}
                   </div>
                   <div className="flex items-center text-muted-foreground">
                     <Phone className="h-4 w-4 mr-1" />
-                    (555) 123-4567
+                    {profileData.phone || 'Phone not set'}
                   </div>
                   <div className="flex items-center text-blue-600">
                     <Globe className="h-4 w-4 mr-1" />
-                    alexjohnson.dev
+                    {profileData.website_url || 'Website not set'}
                   </div>
                 </div>
 
@@ -113,10 +185,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground leading-relaxed">
-                Passionate software engineer with 7+ years of experience building scalable web applications. Specialized
-                in React, Node.js, and cloud technologies. I love solving complex problems and mentoring junior
-                developers. Currently focused on building AI-powered solutions that make a positive impact on people's
-                lives.
+                {profileData.bio || 'No bio available. Click edit to add one!'}
               </p>
             </CardContent>
           </Card>
