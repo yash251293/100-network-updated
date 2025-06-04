@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Bookmark as BookmarkIcon, Briefcase, MapPin, DollarSign, Building, BarChartBig } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { Skeleton } from "@/components/ui/skeleton"; // Added missing import
 
 interface Company {
   name: string;

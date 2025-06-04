@@ -16,9 +16,9 @@ This centralized approach in `lib/db.ts` ensures that database access is managed
 
 ## Schema Details (`schema.sql`)
 
-The database schema defines tables for managing users, their profiles, skills, work experience, and education.
+The database schema defines tables for managing users, their profiles, skills, work experience, education, and job-related functionalities.
 
-### Tables and Relationships:
+### Core User and Profile Tables:
 
 1.  **`users` Table:**
     *   Stores core user information.
@@ -33,75 +33,57 @@ The database schema defines tables for managing users, their profiles, skills, w
 
 2.  **`profiles` Table:**
     *   Stores extended user profile information.
-    *   **Relationship**: One-to-one with `users` table via `id` (actual FK is `user_id` but it functions as a 1:1 link when `user_id` is also PK or unique and references `users.id`). The current schema uses `id` as PK, which is also a FK to `users.id`.
+    *   **Relationship**: One-to-one with `users` table.
     *   `id`: UUID, Primary Key, Foreign Key referencing `users(id)` (ON DELETE CASCADE).
-    *   `first_name`: VARCHAR(100).
-    *   `last_name`: VARCHAR(100).
-    *   `avatar_url`: VARCHAR(255).
-    *   `headline`: VARCHAR(255).
-    *   `bio`: TEXT.
-    *   `location`: VARCHAR(255).
-    *   `linkedin_url`: VARCHAR(255), Unique.
-    *   `github_url`: VARCHAR(255), Unique.
-    *   `website_url`: VARCHAR(255).
-    *   `phone`: VARCHAR(255).
-    *   `job_type`: VARCHAR(100).
-    *   `experience_level`: VARCHAR(100).
-    *   `remote_work_preference`: VARCHAR(100).
-    *   `preferred_industries`: TEXT.
-    *   `created_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
-    *   `updated_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
+    *   Fields include: `first_name`, `last_name`, `avatar_url`, `headline`, `bio`, contact details, job preferences, etc.
 
 3.  **`skills` Table:**
     *   Master list of all available skills.
     *   `id`: SERIAL, Primary Key.
     *   `name`: VARCHAR(100), Unique, Not Null.
-    *   `created_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
 
 4.  **`user_skills` Table:**
-    *   Join table for user's skills.
-    *   **Relationship**: Many-to-many between `users` and `skills`.
-    *   `user_id`: UUID, Foreign Key referencing `users(id)` (ON DELETE CASCADE).
-    *   `skill_id`: INTEGER, Foreign Key referencing `skills(id)` (ON DELETE CASCADE).
-    *   `proficiency_level`: VARCHAR(50) (e.g., "Beginner", "Intermediate", "Advanced").
-    *   `created_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
-    *   Primary Key: (`user_id`, `skill_id`).
+    *   Join table for user's skills (Many-to-many between `users` and `skills`).
+    *   `user_id`: UUID (FK to `users.id`).
+    *   `skill_id`: INTEGER (FK to `skills.id`).
+    *   `proficiency_level`: VARCHAR(50).
 
 5.  **`user_experience` Table:**
     *   Stores user's work experience.
     *   `id`: SERIAL, Primary Key.
-    *   `user_id`: UUID, Foreign Key referencing `users(id)` (ON DELETE CASCADE).
-    *   `title`: VARCHAR(255), Not Null.
-    *   `company_name`: VARCHAR(255), Not Null.
-    *   `location`: VARCHAR(255).
-    *   `start_date`: DATE.
-    *   `end_date`: DATE.
-    *   `current_job`: BOOLEAN, defaults to `FALSE`.
-    *   `description`: TEXT.
-    *   `created_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
-    *   `updated_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
+    *   `user_id`: UUID (FK to `users.id`).
+    *   Fields include: `title`, `company_name`, `location`, dates, description.
 
 6.  **`user_education` Table:**
     *   Stores user's education history.
     *   `id`: SERIAL, Primary Key.
-    *   `user_id`: UUID, Foreign Key referencing `users(id)` (ON DELETE CASCADE).
-    *   `school_name`: VARCHAR(255), Not Null.
-    *   `degree`: VARCHAR(255).
-    *   `field_of_study`: VARCHAR(255).
-    *   `start_date`: DATE.
-    *   `end_date`: DATE.
-    *   `current_student`: BOOLEAN, defaults to `FALSE`.
-    *   `description`: TEXT.
-    *   `created_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
-    *   `updated_at`: TIMESTAMP WITH TIME ZONE, defaults to `CURRENT_TIMESTAMP`.
+    *   `user_id`: UUID (FK to `users.id`).
+    *   Fields include: `school_name`, `degree`, `field_of_study`, dates, description.
+
+### New Job Functionality Tables:
+
+The following tables were added to support job postings, applications, and related features:
+
+*   **`companies` Table**: Stores information about companies posting jobs.
+    *   Key fields: `id` (UUID PK), `name`, `description`, `logo_url`, `website_url`, etc.
+*   **`jobs` Table**: Stores details of job postings.
+    *   Key fields: `id` (UUID PK), `company_id` (FK to `companies.id`), `posted_by_user_id` (FK to `users.id`), `title`, `description`, `location`, `job_type`, salary fields, `status`, etc.
+*   **`job_skills_link` Table**: A join table for the many-to-many relationship between `jobs` and `skills`.
+    *   Key fields: `job_id` (FK to `jobs.id`), `skill_id` (FK to `skills.id`).
+*   **`job_applications` Table**: Stores applications submitted by users for jobs.
+    *   Key fields: `id` (UUID PK), `job_id` (FK to `jobs.id`), `user_id` (FK to `users.id`), `application_date`, `status`, `cover_letter`, `resume_url`.
+*   **`user_job_bookmarks` Table**: Allows users to bookmark jobs.
+    *   Key fields: `user_id` (FK to `users.id`), `job_id` (FK to `jobs.id`).
+
+The detailed structure, constraints, indexes, and triggers for all tables are defined in the `schema.sql` file.
 
 ### Triggers:
 
-*   Triggers are defined to automatically update the `updated_at` column to the current timestamp whenever a row is updated in `users`, `profiles`, `user_experience`, and `user_education`.
+*   Triggers are defined to automatically update the `updated_at` column to the current timestamp whenever a row is updated in `users`, `profiles`, `user_experience`, `user_education`, `companies`, `jobs`, and `job_applications`.
 
 ### Indexes:
 
-*   Appropriate indexes are defined on foreign keys and frequently queried columns (e.g., `users(email)`, `skills(name)`). Primary keys are automatically indexed.
+*   Appropriate indexes are defined on foreign keys and frequently queried columns (e.g., `users(email)`, `skills(name)`, `jobs(status)`, `jobs(location)`). Primary keys are automatically indexed.
 
 ## PostgreSQL Setup Instructions (`POSTGRESQL_SETUP.md`)
 
@@ -141,7 +123,8 @@ This document outlines the steps to set up a PostgreSQL database environment for
     -- Further grants for schema public may be needed depending on setup
     GRANT ALL PRIVILEGES ON SCHEMA public TO flexbone_user;
     GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO flexbone_user;
-    -- etc. for sequences and functions
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO flexbone_user; -- Added for SERIAL types
+    GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO flexbone_user; -- If any
     ```
 
 ### 5. Apply Schema:

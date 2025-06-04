@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Briefcase, Calendar, Globe, Inbox, LayoutDashboard, MessageSquare, Users, Building2 } from "lucide-react"
+import { Briefcase, Calendar, Globe, Inbox, LayoutDashboard, MessageSquare, Users, Building2, ClipboardList } from "lucide-react" // Added ClipboardList
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -31,7 +31,7 @@ const navItems = [
   {
     name: "Freelance",
     href: "/jobs/freelance",
-    icon: Globe,
+    icon: ClipboardList, // Changed from Globe to ClipboardList
   },
   {
     name: "Events",
@@ -72,7 +72,8 @@ export default function Sidebar() {
             href={item.href}
             className={cn(
               "flex items-center px-3 py-3 text-sm font-medium rounded-md",
-              pathname === item.href
+              // Using startsWith for more robust active link highlighting for parent routes
+              pathname.startsWith(item.href) && item.href !== "/" || pathname === item.href
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}

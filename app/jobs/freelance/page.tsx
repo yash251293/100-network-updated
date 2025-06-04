@@ -1,334 +1,247 @@
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookmarkIcon, Search, Briefcase, Users, PlusCircle } from "lucide-react"
-import Link from "next/link"
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BookmarkIcon as LucideBookmarkIcon, Search, Briefcase, Users, PlusCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import JobCard, { JobCardSkeleton, Job as JobType } from "@/components/JobCard"; // Using existing JobCard
+import { toast } from "sonner";
+
+// Budget filter options
+const budgetOptions = [
+  { value: "all", label: "All Budgets" },
+  { value: "0-500", label: "Under $500" },
+  { value: "500-1000", label: "$500 - $1,000" },
+  { value: "1000-2500", label: "$1,000 - $2,500" },
+  { value: "2500-5000", label: "$2,500 - $5,000" },
+  { value: "5000+", label: "Over $5,000" },
+];
+
+// Category options for freelance projects
+const projectCategories = [
+    { value: "all", label: "All Categories" },
+    { value: "Web Development", label: "Web Development" },
+    { value: "Mobile Development", label: "Mobile Development" },
+    { value: "Design", label: "Design" },
+    { value: "Content Writing", label: "Content Writing" },
+    { value: "Marketing", label: "Marketing" },
+    { value: "Data Analysis", label: "Data Analysis" },
+    { value: "AI & Machine Learning", label: "AI & Machine Learning"},
+    { value: "Consulting", label: "Consulting" },
+    { value: "Video & Animation", label: "Video & Animation" },
+    { value: "Other", label: "Other" },
+];
+
 
 export default function FreelancePage() {
+  const [activeTab, setActiveTab] = useState("gigs");
+
+  // State for "Gigs & Projects" tab
+  const [projects, setProjects] = useState<JobType[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const [errorProjects, setErrorProjects] = useState<string | null>(null);
+  const [projectSearchTerm, setProjectSearchTerm] = useState("");
+  const [debouncedProjectSearchTerm, setDebouncedProjectSearchTerm] = useState("");
+  const [projectCategoryFilter, setProjectCategoryFilter] = useState("");
+  const [projectBudgetFilter, setProjectBudgetFilter] = useState(""); // e.g., "0-500"
+  const [projectCurrentPage, setProjectCurrentPage] = useState(1);
+  const [projectTotalPages, setProjectTotalPages] = useState(1);
+  const [bookmarkedJobIds, setBookmarkedJobIds] = useState(new Set<string>());
+
+  // Debounce search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedProjectSearchTerm(projectSearchTerm);
+      if (activeTab === "gigs") setProjectCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [projectSearchTerm, activeTab]);
+
+  const fetchBookmarkedJobs = useCallback(async () => {
+    try {
+      const response = await fetch('/api/job-bookmarks?limit=200'); // Fetch a large list
+      if (!response.ok) {
+        console.error("Failed to fetch bookmarks", await response.json());
+        return;
+      }
+      const data = await response.json();
+      const ids = new Set<string>(data.data.map((bookmark: any) => bookmark.job_id));
+      setBookmarkedJobIds(ids);
+    } catch (err) {
+      console.error("Error fetching bookmarks:", err);
+    }
+  }, []);
+
+  const fetchProjects = useCallback(async () => {
+    setIsLoadingProjects(true);
+    setErrorProjects(null);
+    try {
+      const queryParams = new URLSearchParams({
+        jobType: "Freelance Project", // Hardcoded filter
+        page: String(projectCurrentPage),
+        limit: "6", // Show 6 projects per page
+      });
+      if (debouncedProjectSearchTerm) queryParams.set("searchTerm", debouncedProjectSearchTerm);
+
+      // API for GET /api/jobs needs to support 'category' (maps to experienceLevel in schema)
+      // and budget range (salaryMin, salaryMax) for these filters to work on backend.
+      // For now, we pass them, but API might not use them yet.
+      if (projectCategoryFilter && projectCategoryFilter !== "all") {
+        queryParams.set("experienceLevel", projectCategoryFilter); // Assuming category maps to experienceLevel for filtering
+      }
+      if (projectBudgetFilter && projectBudgetFilter !== "all") {
+        const [min, max] = projectBudgetFilter.split('-');
+        if (min) queryParams.set("salaryMin", min);
+        if (max && max !== "+") queryParams.set("salaryMax", max);
+        else if (max === "+") queryParams.set("salaryMin", min); // For "5000+" case, only min is set
+      }
+
+      const response = await fetch(`/api/jobs?${queryParams.toString()}`);
+      if (!response.ok) throw new Error((await response.json()).message || "Failed to fetch projects");
+      const data = await response.json();
+      setProjects(data.data || []);
+      setProjectTotalPages(data.pagination.totalPages || 1);
+    } catch (err: any) {
+      setErrorProjects(err.message);
+      setProjects([]);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  }, [projectCurrentPage, debouncedProjectSearchTerm, projectCategoryFilter, projectBudgetFilter]);
+
+  useEffect(() => {
+    if (activeTab === "gigs") {
+      fetchProjects();
+      fetchBookmarkedJobs();
+    }
+  }, [activeTab, fetchProjects, fetchBookmarkedJobs]);
+
+  const handleBookmarkToggleProjects = async (jobId: string) => {
+    const isCurrentlyBookmarked = bookmarkedJobIds.has(jobId);
+    const originalBookmarks = new Set(bookmarkedJobIds);
+    setBookmarkedJobIds(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlyBookmarked) newSet.delete(jobId);
+      else newSet.add(jobId);
+      return newSet;
+    });
+    try {
+      const method = isCurrentlyBookmarked ? 'DELETE' : 'POST';
+      const response = await fetch(`/api/jobs/${jobId}/bookmark`, { method });
+      if (!response.ok) {
+        setBookmarkedJobIds(originalBookmarks);
+        toast.error('Failed to update bookmark.');
+      } else {
+        toast.success(`Project ${isCurrentlyBookmarked ? 'unbookmarked' : 'bookmarked'}!`);
+      }
+    } catch (error) {
+      setBookmarkedJobIds(originalBookmarks);
+      toast.error('Error updating bookmark.');
+    }
+  };
+
+  const handleCategoryChange = (value: string) => { setProjectCategoryFilter(value); setProjectCurrentPage(1); };
+  const handleBudgetChange = (value: string) => { setProjectBudgetFilter(value); setProjectCurrentPage(1); };
+
+  const renderGigsContent = () => {
+    if (isLoadingProjects && projects.length === 0) {
+      return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{[...Array(4)].map((_, i) => <JobCardSkeleton key={i} />)}</div>;
+    }
+    if (errorProjects) return <p className="text-red-500 text-center py-8">Error: {errorProjects}</p>;
+    if (projects.length === 0) return <p className="text-muted-foreground text-center py-8">No projects found matching your criteria.</p>;
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {projects.map((project) => (
+          <JobCard
+            key={project.id}
+            job={project}
+            onBookmarkToggle={handleBookmarkToggleProjects}
+            isBookmarked={bookmarkedJobIds.has(project.id)}
+            className="h-full flex flex-col" // Ensure cards in grid take full height if content varies
+          />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="container max-w-5xl py-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold">Freelance Marketplace</h1>
           <p className="text-muted-foreground">Find work or hire talented professionals</p>
         </div>
         <Link href="/jobs/freelance/post">
-          <Button>
+          <Button className="w-full sm:w-auto">
             <PlusCircle className="h-4 w-4 mr-2" />
             Post a Project
           </Button>
         </Link>
       </div>
 
-      <Tabs defaultValue="gigs" className="mb-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
         <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="gigs" className="text-base py-3">
-            <Briefcase className="h-4 w-4 mr-2" />
-            Gigs & Projects
-          </TabsTrigger>
-          <TabsTrigger value="freelancers" className="text-base py-3">
-            <Users className="h-4 w-4 mr-2" />
-            Hire Freelancers
-          </TabsTrigger>
+          <TabsTrigger value="gigs" className="text-base py-3"><Briefcase className="h-4 w-4 mr-2" />Gigs & Projects</TabsTrigger>
+          <TabsTrigger value="freelancers" className="text-base py-3"><Users className="h-4 w-4 mr-2" />Hire Freelancers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="gigs">
-          <div className="flex space-x-4 mb-6">
+          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search projects by title, skills, or keywords" className="pl-10" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects by title, skills..."
+                className="pl-10 w-full"
+                value={projectSearchTerm}
+                onChange={(e) => setProjectSearchTerm(e.target.value)}
+              />
             </div>
-            <Select>
-              <SelectTrigger className="w-[180px]">
+            <Select value={projectCategoryFilter} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="web">Web Development</SelectItem>
-                <SelectItem value="mobile">Mobile Development</SelectItem>
-                <SelectItem value="design">Design</SelectItem>
-                <SelectItem value="writing">Content Writing</SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-                <SelectItem value="data">Data Analysis</SelectItem>
+                {projectCategories.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select>
-              <SelectTrigger className="w-[180px]">
+            <Select value={projectBudgetFilter} onValueChange={handleBudgetChange}>
+              <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Budget" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">Under $500</SelectItem>
-                <SelectItem value="medium">$500-$2,000</SelectItem>
-                <SelectItem value="high">$2,000-$5,000</SelectItem>
-                <SelectItem value="enterprise">$5,000+</SelectItem>
+                {budgetOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-4">
-            {/* Project 1 */}
-            <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <img src="/abstract-tech-logo.png" alt="TechVision" className="h-10 w-10 rounded" />
-                    <div>
-                      <h3 className="font-medium">React Native Developer for Fitness App</h3>
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm text-muted-foreground">$2,000-3,000 fixed price</p>
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Mobile Dev</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-sm mb-2">
-                    Looking for an experienced React Native developer to build a fitness tracking app with workout
-                    plans, progress tracking, and social features.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">React Native</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Firebase</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">UI/UX</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">API Integration</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Estimated duration: 4-6 weeks • Posted 2 days ago</p>
-                    <div className="flex space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <BookmarkIcon className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm">Apply</Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {renderGigsContent()}
+          {projects.length > 0 && projectTotalPages > 1 && (
+            <div className="mt-8 flex justify-center items-center space-x-4">
+              <Button variant="outline" onClick={() => setProjectCurrentPage(p => Math.max(1, p - 1))} disabled={projectCurrentPage === 1 || isLoadingProjects}>
+                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+              </Button>
+              <span className="text-sm">Page {projectCurrentPage} of {projectTotalPages}</span>
+              <Button variant="outline" onClick={() => setProjectCurrentPage(p => Math.min(projectTotalPages, p + 1))} disabled={projectCurrentPage === projectTotalPages || isLoadingProjects}>
+                Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
-
-            {/* Project 2 */}
-            <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <img src="/marketing-agency-logo.png" alt="GrowthBoost" className="h-10 w-10 rounded" />
-                    <div>
-                      <h3 className="font-medium">Content Writer for SaaS Blog Articles</h3>
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm text-muted-foreground">$50-75 per article</p>
-                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">Content</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-sm mb-2">
-                    We need a skilled content writer to create engaging, SEO-optimized blog articles for our SaaS
-                    clients in the marketing technology space.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">SEO</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">B2B</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">SaaS</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Marketing</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Ongoing work • Posted 1 week ago</p>
-                    <div className="flex space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <BookmarkIcon className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm">Apply</Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Project 3 */}
-            <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <img src="/data-company-logo.png" alt="DataInsight" className="h-10 w-10 rounded" />
-                    <div>
-                      <h3 className="font-medium">Data Visualization Expert for Financial Dashboard</h3>
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm text-muted-foreground">$100 - $200/hr</p>
-                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
-                          Data Science
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-sm mb-2">
-                    We are seeking a skilled data visualization expert to create an interactive financial dashboard
-                    using tools like Tableau or Power BI.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Tableau</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Power BI</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Data Visualization</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Financial Analysis</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Part-time • Posted 3 days ago</p>
-                    <div className="flex space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <BookmarkIcon className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm">Apply</Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 flex justify-center">
-            <Button variant="outline">Load More Projects</Button>
-          </div>
+          )}
         </TabsContent>
 
         <TabsContent value="freelancers">
-          <div className="flex space-x-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search freelancers by name, skills, or expertise" className="pl-10" />
-            </div>
-            <Select>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Expertise" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="web">Web Development</SelectItem>
-                <SelectItem value="mobile">Mobile Development</SelectItem>
-                <SelectItem value="design">Design</SelectItem>
-                <SelectItem value="writing">Content Writing</SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-                <SelectItem value="data">Data Analysis</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Hourly Rate" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Under $25/hr</SelectItem>
-                <SelectItem value="medium">$25-$50/hr</SelectItem>
-                <SelectItem value="high">$50-$100/hr</SelectItem>
-                <SelectItem value="expert">$100+/hr</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-4">
-            {/* Freelancer 1 */}
-            <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start">
-                <img src="/professional-man-headshot.png" alt="David Chen" className="h-20 w-20 rounded-full mr-4" />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-medium text-lg">David Chen</h3>
-                    <div className="flex items-center">
-                      <span className="text-yellow-500 mr-1">★</span>
-                      <span className="font-medium">4.9</span>
-                      <span className="text-muted-foreground text-sm">/5 (42 reviews)</span>
-                    </div>
-                  </div>
-                  <p className="font-medium text-sm text-muted-foreground mb-2">
-                    Full Stack Developer | React | Node.js | AWS
-                  </p>
-                  <p className="text-sm mb-3">
-                    I build scalable web applications with modern JavaScript frameworks. Specialized in React, Node.js,
-                    and cloud infrastructure.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">React</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Node.js</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">TypeScript</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">AWS</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">MongoDB</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">$65/hr</p>
-                    <Button size="sm">Contact</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Freelancer 2 */}
-            <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start">
-                <img src="/professional-woman-headshot.png" alt="Sarah Johnson" className="h-20 w-20 rounded-full mr-4" />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-medium text-lg">Sarah Johnson</h3>
-                    <div className="flex items-center">
-                      <span className="text-yellow-500 mr-1">★</span>
-                      <span className="font-medium">4.8</span>
-                      <span className="text-muted-foreground text-sm">/5 (36 reviews)</span>
-                    </div>
-                  </div>
-                  <p className="font-medium text-sm text-muted-foreground mb-2">
-                    UI/UX Designer | Brand Identity | Mobile Apps
-                  </p>
-                  <p className="text-sm mb-3">
-                    I create beautiful, intuitive interfaces for web and mobile applications with a focus on user
-                    experience and conversion.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">UI Design</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">UX Research</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Figma</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Adobe XD</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Prototyping</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">$75/hr</p>
-                    <Button size="sm">Contact</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Freelancer 3 */}
-            <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start">
-                <img src="/professional-man-glasses.png" alt="Michael Rodriguez" className="h-20 w-20 rounded-full mr-4" />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-medium text-lg">Michael Rodriguez</h3>
-                    <div className="flex items-center">
-                      <span className="text-yellow-500 mr-1">★</span>
-                      <span className="font-medium">4.7</span>
-                      <span className="text-muted-foreground text-sm">/5 (29 reviews)</span>
-                    </div>
-                  </div>
-                  <p className="font-medium text-sm text-muted-foreground mb-2">
-                    Content Strategist | SEO Writer | B2B SaaS
-                  </p>
-                  <p className="text-sm mb-3">
-                    I help B2B SaaS companies increase organic traffic and conversions with strategic content that ranks
-                    and converts.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">SEO</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Content Strategy</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Blog Writing</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Copywriting</span>
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">SaaS</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">$45/hr</p>
-                    <Button size="sm">Contact</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 flex justify-center">
-            <Button variant="outline">Load More Freelancers</Button>
+          <div className="text-center py-10 border rounded-lg bg-muted/20">
+            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold">Coming Soon!</h3>
+            <p className="text-muted-foreground mt-2">
+              The ability to browse, search, and hire talented freelancers will be available here soon.
+            </p>
+             <p className="text-sm text-muted-foreground mt-1">Stay tuned for updates.</p>
           </div>
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

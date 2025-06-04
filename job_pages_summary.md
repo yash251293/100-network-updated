@@ -2,123 +2,156 @@
 
 This document provides an analysis of job-related page components and their loading states, focusing on UI structure, data handling, API interactions, user feedback, and potential areas for improvement.
 
-**A critical overarching observation for these pages is that they currently function largely as visual mockups. Core features related to data display, user interaction, and form submission rely on static, hardcoded data or are non-functional, requiring significant backend integration and dynamic data fetching.**
+**Significant progress has been made in making these pages dynamic. Many of the previously noted critical issues regarding static data and non-functional forms have been addressed.**
 
 ## `app/jobs/page.tsx` (Main Job Listings)
 
 *   **UI Structure & Components**:
     *   Uses `Tabs` ("All Jobs", "Applied Jobs").
-    *   **"All Jobs" Tab**: Includes UI for Search `Input`, "Job type" & "Experience level" `Select` filters, and a "Filters" `Button`. Job listings are static cards with placeholder details and a non-functional `BookmarkIcon`.
-    *   **"Applied Jobs" Tab**: Includes UI for Search `Input` and "Status" `Select` filter. Applied job listings are from a hardcoded array, styled with helper functions `getStatusIcon` and `getStatusBadge`.
+    *   **"All Jobs" Tab**:
+        *   Features functional Search `Input`, "Job type", "Experience level", and "Location" `Input` filters.
+        *   Job listings are dynamically fetched and displayed using a reusable `JobCard.tsx` component.
+        *   Each `JobCard` includes a functional bookmark button.
+    *   **"Applied Jobs" Tab**:
+        *   Features a functional "Status" `Select` filter.
+        *   Applied job listings are dynamically fetched and displayed using a new internal `AppliedJobCard` component.
     *   Utilizes various components from `@/components/ui/` and `lucide-react`.
 
 *   **Data Fetching & Display**:
-    *   **CRITICAL ISSUE**:
-        *   **"All Jobs" Tab**: Job data is **entirely static and hardcoded** within the JSX.
-        *   **"Applied Jobs" Tab**: Uses a **hardcoded `appliedJobs` array** defined directly in the file.
-    *   Helper functions `getStatusIcon` and `getStatusBadge` are used for visual styling of application statuses in the "Applied Jobs" tab.
+    *   **"All Jobs" Tab**:
+        *   Dynamically fetches job listings from `/api/jobs` based on search term, filters, and pagination.
+        *   User's bookmarked job IDs are fetched from `/api/job-bookmarks` to correctly display bookmark status on job cards.
+    *   **"Applied Jobs" Tab**:
+        *   Dynamically fetches user's applied jobs from `/api/job-applications` based on status filter and pagination.
+    *   Helper functions `getStatusIcon` and `getStatusBadge` are used for styling application statuses.
 
 *   **API Interaction**:
-    *   **None.** No API calls are made to fetch job listings or applied jobs.
-    *   Bookmark icons on job cards are present but **non-functional**.
+    *   Makes API calls to `/api/jobs` for fetching and filtering all job listings.
+    *   Makes API calls to `/api/job-applications` for fetching and filtering applied jobs.
+    *   Makes API calls to `/api/job-bookmarks` to fetch initial bookmark statuses.
+    *   Interacts with `POST /api/jobs/{id}/bookmark` and `DELETE /api/jobs/{id}/bookmark` for bookmarking functionality.
 
 *   **Functionality**:
-    *   Search input fields and select filters are present in the UI but are **not functional**; they do not filter or alter the displayed static data.
+    *   Search, filters (job type, experience, location) for "All Jobs" are functional and trigger API refetches.
+    *   Status filter for "Applied Jobs" is functional.
+    *   Pagination is implemented for both tabs.
+    *   Bookmark functionality is fully implemented with optimistic UI updates and API calls.
 
 *   **Potential Issues & Improvements**:
-    *   **Dynamic Data**: **Essential**: Implement API calls to fetch real job listings and user-specific applied jobs.
-    *   **Functional Filters & Search**: **Essential**: Implement logic for search and filters to interact with the (dynamic) data.
-    *   **Bookmark Functionality**: Implement API calls and UI updates for bookmarking jobs.
-    *   **Pagination/Infinite Scrolling**: Needed for handling a large number of jobs.
-    *   **State Management**: For loading, error, and data states.
-    *   **Componentization**: Refactor job card layouts into reusable components.
+    *   **Advanced Filters**: The "Filters" button is still a placeholder; more advanced filtering options could be added.
+    *   **Real-time Updates**: For applied job statuses, real-time updates or polling could be considered.
+    *   **Global Auth Context**: Assumes user is authenticated for bookmarking/applied jobs; a global auth context would manage this more robustly.
 
 ## `app/jobs/[id]/page.tsx` (Individual Job Detail Page)
 
 *   **UI Structure & Components**:
     *   Detailed layout for a single job: Header (back, share, bookmark buttons), two-column main content.
-    *   **Left Column**: Job header card (logo, title, company, location, etc.), detailed job description card (responsibilities, requirements, benefits).
-    *   **Right Column (Sidebar)**: "Apply" / "Save" card, "Required Skills" card (using `Badge`), "About Company" card, "Similar Jobs" card (with static placeholders).
+    *   **Left Column**: Job header card (logo, title, company, location, etc.), detailed job description card (responsibilities, requirements, benefits parsed from text fields).
+    *   **Right Column (Sidebar)**: "Apply" / "Save" (Bookmark) card, "Required Skills" card, "About Company" card.
     *   Uses components from `@/components/ui/` and `lucide-react`.
+    *   Imports and uses `JobApplicationModal.tsx`.
 
 *   **Data Fetching & Display**:
-    *   **CRITICAL ISSUE**: Job data is sourced from a **local mock function `getJobData(id)`**, which returns static data from a predefined array based on the URL `id`.
-    *   If the `id` from the URL does not correspond to an entry in the mock data, the page **defaults to displaying job "1"**.
+    *   Dynamically fetches specific job details from `/api/jobs/{id}` based on the URL `id`.
+    *   Initial bookmark status for the current job is fetched.
+    *   Checks if the user has already applied for the job.
+    *   Job description fields (responsibilities, requirements, benefits) are parsed from potentially multi-line text into lists.
 
 *   **API Interaction**:
-    *   **None.** No API calls are made to fetch specific job details.
-    *   "Apply for this position", "Save for later", "Share", and "Bookmark" buttons are **non-functional** or link to non-existent pages (e.g., `/jobs/${job.id}/apply`).
+    *   Makes API calls to `/api/jobs/{id}` to fetch job details.
+    *   Interacts with `/api/job-bookmarks` (for initial status) and `POST/DELETE /api/jobs/{id}/bookmark` for bookmarking.
+    *   "Apply" button triggers a `POST` request to `/api/jobs/{id}/apply` via the `JobApplicationModal`.
+
+*   **Functionality**:
+    *   "Apply for this position" button opens a modal (`JobApplicationModal`) for submitting an application. Button is disabled if job is not 'Open' or already applied.
+    *   "Save for later" (Bookmark) button is fully functional with optimistic UI updates and API calls.
+    *   "Share" button copies the current URL to the clipboard.
+    *   Error handling for "Job not found" is implemented.
 
 *   **Potential Issues & Improvements**:
-    *   **Dynamic Data**: **Essential**: Implement API calls to fetch specific job details from a backend based on the job ID.
-    *   **Functional CTAs**: **Essential**: Implement functionality for all Call-To-Action buttons (Apply, Save, Share, Bookmark), including API interactions.
-    *   **Dynamic Similar Jobs**: Fetch and display actual similar job listings.
-    *   **Error Handling**: Implement robust error handling for invalid job IDs (e.g., display a "Job Not Found" page instead of defaulting to job "1").
-    *   **Loading State**: Implement a proper loading state (currently relies on `app/jobs/loading.tsx`, which needs improvement).
+    *   **Similar Jobs**: The "Similar Jobs" section is currently a placeholder and could be made dynamic.
+    *   **Toast Notifications**: Currently uses `console.log` for some feedback; `sonner` toasts are used in the modal and can be expanded.
 
-## `app/jobs/freelance/page.tsx` (Freelance Job Listings)
+## `app/jobs/freelance/page.tsx` (Freelance Marketplace Page)
 
 *   **UI Structure & Components**:
-    *   Header: "Freelance Marketplace" title, description, "Post a Project" `Button` (links to `/jobs/freelance/post`).
+    *   Header: "Freelance Marketplace" title, "Post a Project" `Button`.
     *   `Tabs`: "Gigs & Projects" and "Hire Freelancers".
-    *   **"Gigs & Projects" Tab**: UI for Search `Input`, "Category" & "Budget" `Select` filters. Lists static project cards with details and non-functional "Bookmark" / "Apply" buttons.
-    *   **"Hire Freelancers" Tab**: UI for Search `Input`, "Expertise" & "Hourly Rate" `Select` filters. Lists static freelancer cards with details and a non-functional "Contact" button.
-    *   Non-functional "Load More Projects/Freelancers" buttons.
+    *   **"Gigs & Projects" Tab**:
+        *   Functional Search `Input`, "Category" & "Budget" `Select` filters.
+        *   Dynamically lists freelance projects (which are jobs with `jobType: "Freelance Project"`) using `JobCard.tsx`.
+        *   Functional bookmarking for projects.
+        *   "Apply" button on cards links to the project detail page (`/jobs/{id}`).
+    *   **"Hire Freelancers" Tab**:
+        *   Content replaced with a "Coming Soon!" placeholder message. Static freelancer cards and filters removed.
 
 *   **Data Fetching & Display**:
-    *   **CRITICAL ISSUE**: All project data in the "Gigs & Projects" tab and all freelancer data in the "Hire Freelancers" tab is **entirely static and hardcoded** within the JSX.
+    *   **"Gigs & Projects" Tab**:
+        *   Dynamically fetches jobs with `jobType: "Freelance Project"` from `/api/jobs`.
+        *   Supports search by term and pagination.
+        *   Category and budget filters are implemented on the frontend and passed to the API (actual backend filtering for these specific fields depends on current API capabilities for `GET /api/jobs`).
+        *   Fetches initial bookmark statuses for displayed projects.
 
 *   **API Interaction**:
-    *   **None.** No API calls are made to fetch freelance projects or freelancer profiles.
-    *   "Bookmark", "Apply", "Contact", and "Load More" buttons are all **non-functional placeholders**.
+    *   Makes API calls to `/api/jobs` (with `jobType="Freelance Project"`) for fetching projects.
+    *   Handles bookmarking via `/api/jobs/{id}/bookmark`.
 
-*   **Potential Issues & Improvements**:
-    *   **Dynamic Data**: **Essential**: Implement API calls to fetch real freelance projects and freelancer profiles.
-    *   **Functional Filters & Search**: **Essential**: Connect UI filters and search to data fetching logic.
-    *   **Implement CTAs**: **Essential**: Make all buttons functional, including "Post a Project", "Bookmark", "Apply", "Contact".
-    *   **Pagination**: Implement the "Load More" functionality.
-    *   **State Management**: For loading, error, and data states.
-    *   **Componentization**: Project and freelancer cards should be reusable components.
+*   **Functionality**:
+    *   Search, category, and budget filters for projects are functional on the client side and attempt to pass relevant parameters to the API.
+    *   Pagination for projects is implemented.
+    *   Project bookmarking is functional.
+    *   "Post a Project" button links to the project creation form.
 
-## `app/jobs/freelance/post/page.tsx` (Post a Freelance Job Form)
+*   **Notes & Potential Improvements**:
+    *   **API Filter Support**: Effectiveness of category and budget filters depends on the `/api/jobs` endpoint's ability to process these specific parameters. This was noted as a simplification.
+    *   **"Hire Freelancers" Tab**: Needs future implementation.
+
+## `app/jobs/freelance/post/page.tsx` (Post a Freelance Project Form)
 
 *   **UI Structure & Components**:
-    *   Form layout for posting a new freelance project: "Project Title", "Category", "Project Description", "Required Skills", "Project Budget" (Fixed/Hourly options with min/max inputs), "Estimated Duration", and a UI for "Attachments".
+    *   Form layout for posting a new freelance project: "Project Title", "Category", "Project Description", "Required Skills", "Project Budget" (Fixed/Hourly options with min/max inputs), "Estimated Duration", and an `Input` for "Attachments".
     *   Includes "Save as Draft" and "Post Project" buttons.
 
 *   **User Input & Form Submission**:
-    *   **CRITICAL ISSUE: This page is a static JSX representation of a form. It has NO React state management (`useState`), NO event handlers (`onChange`, `onSubmit`), and NO form submission logic.** User input will not be captured or processed. The form is entirely non-interactive.
+    *   Fully functional form using `react-hook-form` for state management and `zod` for validation.
+    *   Client-side validation is implemented for all fields.
+    *   On submission, data is transformed and a `POST` request is made to `/api/jobs` with `jobType` set to "Freelance Project".
+    *   **Assumption**: A placeholder `FREELANCE_PLATFORM_COMPANY_ID` is used for the `companyId` field in the API request. An error is logged if this is not configured.
+    *   File attachments are acknowledged by the form but not actually uploaded to any backend storage.
 
 *   **API Interaction**:
-    *   **None.** The "Save as Draft" and "Post Project" buttons are **non-functional** and do not trigger any API calls.
+    *   "Post Project" button triggers a `POST` request to `/api/jobs`.
+    *   "Save as Draft" button is currently a placeholder (logs form data and shows an info toast).
+
+*   **Functionality & User Feedback**:
+    *   Form submission includes loading states on the button.
+    *   `sonner` toasts are used for success and error feedback during submission.
+    *   On success, the form is reset, and the user is redirected to the newly created project's detail page.
 
 *   **Potential Issues & Improvements**:
-    *   **Full Form Implementation**: **Essential**: This page requires complete implementation:
-        *   State management for all form fields.
-        *   Event handlers for input changes.
-        *   Client-side validation (required fields, budget, skills parsing).
-        *   `onSubmit` handler to gather form data and make an API `POST` request.
-    *   **Backend API Endpoint**: **Essential**: Create an API endpoint to handle new freelance project submissions.
-    *   **User Feedback**: Implement loading states and feedback (toasts) for form submission.
-    *   **File Attachments**: Implement actual file upload functionality if required.
-    *   **Skills Input**: Improve UX for skills input (e.g., tag input).
+    *   **`companyId` Handling**: The placeholder `companyId` strategy needs to be reviewed for a production system.
+    *   **File Attachments**: Implement actual file upload functionality.
+    *   **"Save as Draft"**: Implement full draft saving functionality.
 
 ## Loading Components
 
 ### `app/jobs/loading.tsx`
 
 *   **Description**:
-    *   This file currently **returns `null`**.
-    *   **Effect**: When navigating to `/jobs`, Next.js will not show a custom skeleton UI. This can result in a blank screen or the previous page's content being visible until `/jobs` page content (currently static) is ready, leading to a suboptimal user experience.
-*   **Improvement**:
-    *   **Essential**: Implement a proper skeleton UI that mimics the structure of `app/jobs/page.tsx` (e.g., placeholders for tabs, search/filter bars, and job cards) to provide better visual feedback during actual data loading phases in the future.
+    *   Provides a meaningful skeleton UI that mimics the structure of `app/jobs/page.tsx`.
+    *   Includes placeholders for the page title, tabs, search/filter bars, and multiple job card skeletons.
+*   **Status**: Implemented and functional, providing good UX during page load.
 
-### `app/jobs/freelance/loading.tsx`
+### `app/jobs/[id]/loading.tsx`
 
 *   **Description**:
-    *   Provides a **basic skeleton UI** using `Skeleton` components from `@/components/ui/skeleton`.
-    *   It mimics parts of the `app/jobs/freelance/page.tsx` structure, including placeholders for the header and several card-like structures.
-*   **Observation**:
-    *   This is a **good starting point** for a loading state for the freelance section. It provides better UX than a blank screen and can be further refined to more closely match the actual content structure if needed.
+    *   Provides a detailed skeleton UI for the individual job detail page (`app/jobs/[id]/page.tsx`).
+    *   Includes placeholders for the header section (back button, actions), a two-column layout with a job header card skeleton, description section skeletons, and sidebar card skeletons (skills, company info, similar jobs).
+*   **Status**: Implemented and functional, enhancing UX for job detail page loading.
 
-This analysis underscores that the job-related pages, while visually laid out, are heavily reliant on static data and lack fundamental dynamic functionality.
+### `app/jobs/freelance/loading.tsx`
+*   **Description**:
+    *   Provides a basic skeleton UI mimicking parts of the `app/jobs/freelance/page.tsx` structure.
+*   **Status**: Exists and offers better UX than a blank screen. Could be further refined if specific tab structures become very different.
+
+This analysis reflects the current dynamic and functional state of the job-related pages.
