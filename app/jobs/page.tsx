@@ -164,17 +164,36 @@ export default function JobsPage() {
   // Fetch initial bookmarks
   const fetchBookmarkedJobs = useCallback(async () => {
     // Assuming user is authenticated, API handles user context via token
+    // No specific error state for bookmarks is set here, errors are logged.
     try {
-      const response = await fetch('/api/job-bookmarks?limit=200'); // Fetch a large number of bookmarks
+      const response = await fetch('/api/job-bookmarks?limit=500'); // Fetch a reasonable max, or implement pagination if needed
+
       if (!response.ok) {
-        console.error("Failed to fetch bookmarks", await response.json());
-        return;
+        const errorText = await response.text();
+        console.error('Failed to fetch bookmarked jobs:', response.status, errorText);
+        // Optionally, set a specific error state for bookmarks if UI needs to reflect this
+        // For now, it just means bookmark statuses might not be accurate on the cards.
+        return; // Exit if not ok
       }
-      const data = await response.json();
-      const ids = new Set<string>(data.data.map((bookmark: any) => bookmark.job_id));
-      setBookmarkedJobIds(ids);
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (data && data.data && Array.isArray(data.data)) {
+          const ids = new Set<string>(data.data.map((bookmark: any) => bookmark.job_id));
+          setBookmarkedJobIds(ids);
+        } else {
+          console.error('Fetched bookmarks data is not in expected format:', data);
+        }
+      } else {
+        const responseText = await response.text();
+        console.error('Received non-JSON response when fetching bookmarks:', responseText);
+        // Optionally, set a specific error state here
+      }
     } catch (err) {
-      console.error("Error fetching bookmarks:", err);
+      // This catch block handles network errors or errors from the checks above (if they throw)
+      console.error("Error fetching or processing bookmarks:", err);
+      // Optionally, set a specific error state here
     }
   }, []);
 
