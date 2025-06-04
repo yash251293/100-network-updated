@@ -14,20 +14,43 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    if (!email.trim()) {
+      alert("Please enter your email address.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    // TODO: Add forgot password logic here
-    console.log("Forgot password request for:", email)
+      const data = await response.json();
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      setIsSubmitted(true)
-    }, 1000)
-  }
+      if (response.ok) {
+        setMessage(data.message || "If your email is registered, you will receive a password reset link shortly (check server console for development).");
+        setIsSubmitted(true);
+      } else {
+        setMessage(data.message || "An error occurred. Please try again.");
+        setIsSubmitted(false);
+        alert(`Error: ${data.message || response.statusText}`);
+      }
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      setMessage("An unexpected error occurred. Please try again.");
+      setIsSubmitted(false);
+      alert(`An unexpected error occurred: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isSubmitted) {
     return (
@@ -39,20 +62,21 @@ export default function ForgotPasswordPage() {
                 <Mail className="h-6 w-6 text-blue-600" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
-            <CardDescription>We've sent a password reset link to {email}</CardDescription>
+            <CardTitle className="text-2xl font-bold">Processing Request</CardTitle>
+            <CardDescription>{message}</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-muted-foreground mb-6">
-              Didn't receive the email? Check your spam folder or try again.
+              For development, the reset link is logged in your server console.
             </p>
             <div className="space-y-3">
-              <Button onClick={() => setIsSubmitted(false)} variant="outline" className="w-full">
-                Try again
-              </Button>
+              {/* <Button onClick={() => setIsSubmitted(false)} variant="outline" className="w-full">
+                Try another email?
+              </Button> */}
+              {/* Commenting out "Try again" as the generic success message means they should check console/email */}
               <Link href="/auth/login">
-                <Button variant="ghost" className="w-full">
-                  Back to sign in
+                <Button variant="outline" className="w-full">
+                  Back to Sign In
                 </Button>
               </Link>
             </div>
