@@ -1,3 +1,4 @@
+```typescript
 "use client"
 import { useState, useEffect } from "react" // Added useEffect
 import { useRouter } from "next/navigation"
@@ -97,16 +98,6 @@ export default function CompleteProfilePage() {
                   return fetchedArr.map((item: any) => item.name);
                 }
                 return fetchedArr; // Assumes array of strings if not objects with name
-              }
-              return Array.isArray(prevArr) ? prevArr : [];
-            };
-
-            const getSafeArray = (fetchedArr: any, prevArr: any[]) => {
-              if (Array.isArray(fetchedArr)) {
-                if (fetchedArr.length > 0 && typeof fetchedArr[0] === 'object' && fetchedArr[0] !== null && 'name' in fetchedArr[0]) {
-                  return fetchedArr.map((item: any) => item.name);
-                }
-                return fetchedArr;
               }
               return Array.isArray(prevArr) ? prevArr : [];
             };
@@ -919,3 +910,5 @@ export default function CompleteProfilePage() {
     </div>
   );
 }
+
+[end of app/profile/complete/page.tsx]
