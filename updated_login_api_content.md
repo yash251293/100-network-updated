@@ -1,3 +1,4 @@
+```typescript
 import { NextResponse } from 'next/server'
 import { compare } from 'bcryptjs'
 import { query } from '@/lib/db' // Adjusted path
@@ -65,3 +66,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: 'An error occurred during login. Please try again.' }, { status: 500 })
   }
 }
+```

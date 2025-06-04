@@ -1,3 +1,4 @@
+```typescript
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db'; // Assuming db.ts is in lib
 import { verifyAuthToken } from '@/lib/authUtils';
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
       experience: experiences, // Ensure this matches frontend state structure key
       education: educations,   // Ensure this matches frontend state structure key
     };
-    
+
     // Ensure field names from DB (e.g. company_name, school_name) are mapped to frontend state keys if different
     // And format dates
     consolidatedProfile.experience = experiences.map(exp => ({
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
   try {
     await query('BEGIN'); // START TRANSACTION
     const profileData = await request.json();
-    
+
     console.log(`API /api/profile POST: Saving data for userId: ${userId}`, profileData);
 
     // 1. Update/Insert into `profiles` table
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
       }
       console.log('New education inserted');
     }
-    
+
     // Career preferences are now handled by the main profiles upsert.
     // The console.log above confirms processing.
 
@@ -232,3 +233,4 @@ export async function POST(request: Request) {
     // if (client) client.release();
   }
 }
+```
