@@ -190,3 +190,135 @@ CREATE TRIGGER trigger_user_education_updated_at
 BEFORE UPDATE ON user_education
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_user_education();
+
+-- Companies Table
+CREATE TABLE companies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    logo_url VARCHAR(255),
+    website_url VARCHAR(255),
+    industry VARCHAR(100),
+    company_size VARCHAR(50),
+    hq_location VARCHAR(255),
+    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Company can exist even if creator user is deleted
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_companies_name ON companies(name);
+CREATE INDEX idx_companies_industry ON companies(industry);
+
+-- Trigger for companies updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_companies()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_companies_updated_at
+BEFORE UPDATE ON companies
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_companies();
+
+-- Jobs Table
+CREATE TABLE jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    posted_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    responsibilities TEXT,
+    requirements TEXT,
+    benefits TEXT,
+    location VARCHAR(255),
+    job_type VARCHAR(50) NOT NULL, -- e.g., Full-time, Part-time, Contract, Internship, Freelance Project
+    experience_level VARCHAR(50), -- e.g., Entry, Mid-level, Senior
+    salary_min INTEGER,
+    salary_max INTEGER,
+    salary_currency VARCHAR(3) DEFAULT 'USD',
+    salary_period VARCHAR(20) DEFAULT 'Annual', -- e.g., Annual, Hourly
+    application_deadline TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(20) NOT NULL DEFAULT 'Draft', -- e.g., Draft, Open, Closed, Filled
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    published_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_jobs_company_id ON jobs(company_id);
+CREATE INDEX idx_jobs_posted_by_user_id ON jobs(posted_by_user_id);
+CREATE INDEX idx_jobs_job_type ON jobs(job_type);
+CREATE INDEX idx_jobs_experience_level ON jobs(experience_level);
+CREATE INDEX idx_jobs_status ON jobs(status);
+CREATE INDEX idx_jobs_location ON jobs(location); -- For location-based searches
+CREATE INDEX idx_jobs_published_at ON jobs(published_at); -- For ordering by publication date
+
+-- Trigger for jobs updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_jobs()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_jobs_updated_at
+BEFORE UPDATE ON jobs
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_jobs();
+
+-- Job Skills Link Table (Many-to-Many for Jobs and existing Skills table)
+CREATE TABLE job_skills_link (
+    job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    skill_id INTEGER NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (job_id, skill_id)
+);
+
+CREATE INDEX idx_job_skills_link_job_id ON job_skills_link(job_id);
+CREATE INDEX idx_job_skills_link_skill_id ON job_skills_link(skill_id);
+
+-- Job Applications Table
+CREATE TABLE job_applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- The applicant
+    application_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) NOT NULL DEFAULT 'Applied', -- e.g., Applied, Under Review, Interview Scheduled, Offer Extended, Rejected, Withdrawn
+    cover_letter TEXT,
+    resume_url VARCHAR(255),
+    notes TEXT, -- Internal notes by hiring team, or applicant's notes
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_job_applications_job_id ON job_applications(job_id);
+CREATE INDEX idx_job_applications_user_id ON job_applications(user_id);
+CREATE INDEX idx_job_applications_status ON job_applications(status);
+
+-- Trigger for job_applications updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_job_applications()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_job_applications_updated_at
+BEFORE UPDATE ON job_applications
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_job_applications();
+
+-- User Job Bookmarks Table
+CREATE TABLE user_job_bookmarks (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, job_id)
+);
+
+CREATE INDEX idx_user_job_bookmarks_user_id ON user_job_bookmarks(user_id);
+CREATE INDEX idx_user_job_bookmarks_job_id ON user_job_bookmarks(job_id);
