@@ -30,7 +30,22 @@ export default function CompleteProfilePage() {
   const [isLoading, setIsLoading] = useState(false) // For form submission
   const [isFetchingProfile, setIsFetchingProfile] = useState(true); // For initial data fetch
 
-  const [profileData, setProfileData] = useState({});
+  // Define a more comprehensive initial state
+  const initialProfileData = {
+    profilePicture: "",
+    bio: "",
+    location: "",
+    website: "",
+    phone: "",
+    skills: [],
+    experience: [], // Will be populated by useEffect with default structure if API is empty
+    education: [],  // Will be populated by useEffect with default structure if API is empty
+    industries: [],
+    jobType: "",
+    experienceLevel: "",
+    remoteWork: "",
+  };
+  const [profileData, setProfileData] = useState<any>(initialProfileData); // Use <any> for now
 
   const [newSkill, setNewSkill] = useState("")
   const [newIndustry, setNewIndustry] = useState("")
@@ -70,33 +85,63 @@ export default function CompleteProfilePage() {
           console.log("[CompleteProfilePage][fetchProfileData] Fetched data (parsed JSON):", fetched); // Keep existing log
 
           setProfileData(prev => {
-            if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData][setProfileData] Stale request inside setter. Bailing from update."); return prev; } // Check again
-            console.log("[CompleteProfilePage][fetchProfileData] Calling setProfileData. Previous data:", prev); // Keep existing log
-            const newData = {
-              ...prev,
-              profilePicture: fetched.avatar_url || "",
-              bio: fetched.bio || "",
-              location: fetched.location || "",
-              website: fetched.website_url || "",
-              skills: fetched.skills ? fetched.skills.map((s: any) => s.name) : [],
-              experience: fetched.experience && fetched.experience.length > 0 ? fetched.experience : [{ title: "", company: "", location: "", startDate: "", endDate: "", current: false, description: "" }],
-              education: fetched.education && fetched.education.length > 0 ? fetched.education : [{ school: "", degree: "", field: "", startDate: "", endDate: "", current: false }],
+            if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData][setProfileData] Stale request inside setter. Bailing from update."); return prev; }
+            console.log("[CompleteProfilePage][fetchProfileData] Calling setProfileData. Previous data:", prev);
+
+            // Helper to ensure arrays are arrays, defaulting to previous or empty array
+            const getSafeArray = (fetchedArr: any, prevArr: any[]) => {
+              if (Array.isArray(fetchedArr)) {
+                // Assuming if it's an array of objects with 'name', map it, otherwise take as is (e.g. array of strings)
+                // This logic might need adjustment based on actual API structure for skills/industries
+                if (fetchedArr.length > 0 && typeof fetchedArr[0] === 'object' && fetchedArr[0] !== null && 'name' in fetchedArr[0]) {
+                  return fetchedArr.map((item: any) => item.name);
+                }
+                return fetchedArr; // Assumes array of strings if not objects with name
+              }
+              return Array.isArray(prevArr) ? prevArr : [];
             };
-            console.log("[CompleteProfilePage][fetchProfileData] New data for setProfileData:", newData); // Keep existing log
+
+            const newExperience = (fetched.experience && fetched.experience.length > 0)
+              ? fetched.experience
+              : (prev.experience && prev.experience.length > 0 ? prev.experience : [{ title: "", company: "", location: "", startDate: "", endDate: "", current: false, description: "" }]);
+
+            const newEducation = (fetched.education && fetched.education.length > 0)
+              ? fetched.education
+              : (prev.education && prev.education.length > 0 ? prev.education : [{ school: "", degree: "", field: "", startDate: "", endDate: "", current: false }]);
+
+            const newData = {
+              profilePicture: fetched.avatar_url || prev.profilePicture || "",
+              bio: fetched.bio || prev.bio || "",
+              location: fetched.location || prev.location || "",
+              website: fetched.website_url || prev.website || "",
+              phone: fetched.phone || prev.phone || "",
+              skills: getSafeArray(fetched.skills, prev.skills),
+              experience: newExperience,
+              education: newEducation,
+              industries: getSafeArray(fetched.industries, prev.industries), // Use helper for industries too
+              jobType: fetched.job_type || prev.jobType || "", // Assuming API field is job_type
+              experienceLevel: fetched.experience_level || prev.experienceLevel || "", // Assuming API field is experience_level
+              remoteWork: fetched.remote_work_preference || prev.remoteWork || "", // Assuming API field is remote_work_preference
+            };
+            console.log("[CompleteProfilePage][fetchProfileData] New data for setProfileData:", newData);
             return newData;
           });
           if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request after setProfileData call. (Note: state update was dispatched)."); return; }
-          console.log("[CompleteProfilePage][fetchProfileData] setProfileData has been called."); // Keep existing log
+          console.log("[CompleteProfilePage][fetchProfileData] setProfileData has been called.");
         } else {
           if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request in response NOT ok. Bailing out."); return; }
-          console.error("[CompleteProfilePage][fetchProfileData] Failed to fetch profile data. Status:", response.status, "StatusText:", response.statusText); // Keep existing log
+          console.error("[CompleteProfilePage][fetchProfileData] Failed to fetch profile data. Status:", response.status, "StatusText:", response.statusText);
           const errorBody = await response.text();
           if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request after fetching error body. Bailing out."); return; }
-          console.error("[CompleteProfilePage][fetchProfileData] Error response body:", errorBody); // Keep existing log
+          console.error("[CompleteProfilePage][fetchProfileData] Error response body:", errorBody);
+          // On failure, ensure the state still adheres to the initial structure if it was somehow corrupted
+          setProfileData(prev => ({ ...initialProfileData, ...prev }));
         }
       } catch (error) {
         if (!isActive) { console.log("[CompleteProfilePage][fetchProfileData] Stale request in catch block. Bailing out."); return; }
-        console.error("[CompleteProfilePage][fetchProfileData] Error during fetch or processing:", error); // Keep existing log
+        console.error("[CompleteProfilePage][fetchProfileData] Error during fetch or processing:", error);
+        // On error, ensure the state still adheres to the initial structure
+        setProfileData(prev => ({ ...initialProfileData, ...prev }));
       } finally {
         if (isActive) {
           console.log("[CompleteProfilePage][fetchProfileData] Entering finally block for ACTIVE request.");
@@ -799,6 +844,48 @@ export default function CompleteProfilePage() {
           <CardContent className="p-8 md:p-12">
             {renderStep()}
           </CardContent>
+          {/* Navigation and Progress */}
+          <div className="px-8 md:px-12 pb-8 pt-4"> {/* Adjusted padding for better spacing */}
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+              <div className="flex-1"> {/* Allow step indicator to take available space */}
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Step {currentStep} of {totalSteps}: <span className="font-semibold text-gray-800">{stepTitles[currentStep - 1]?.title || ''}</span>
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div className="flex space-x-3 ml-6"> {/* Added margin for separation */}
+                {currentStep > 1 && (
+                  <Button variant="outline" onClick={prevStep} disabled={isLoading || isFetchingProfile}>
+                    Previous
+                  </Button>
+                )}
+                {currentStep < totalSteps && (
+                  <Button
+                    onClick={nextStep}
+                    disabled={isLoading || isFetchingProfile}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                  >
+                    Next
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+                {currentStep === totalSteps && (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isLoading || isFetchingProfile}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                  >
+                    {isLoading ? "Submitting..." : "Submit Profile"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
     </div>

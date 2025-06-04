@@ -153,6 +153,76 @@ You can then use the `schema.sql` file to create the tables:
 ```bash
 psql -U flexbone_user -d flexbone_db -h localhost -f path/to/your/schema.sql
 ```
-You will be prompted for the `flexbone_password`.```json
-{"action": "submit_subtask_report", "action_input": {"summary": "Created a markdown file named `POSTGRESQL_SETUP.md` containing detailed instructions and commands for setting up PostgreSQL for the project. The guide covers:\n\n1.  **Installation of PostgreSQL:** Commands are provided for Ubuntu/Debian systems (using `apt`) and macOS (using `brew`).\n2.  **Starting the PostgreSQL Service:** Instructions for `systemctl` (Linux) and `brew services` or `pg_ctl` (macOS).\n3.  **Creating the Database and User:**\n    *   Database Name: `flexbone_db`\n    *   User: `flexbone_user`\n    *   Password: `flexbone_password` (with a strong advisory to change it for production environments).\n    SQL commands to be run via `psql` are provided for these operations.\n4.  **Granting Privileges:** SQL commands to grant `ALL PRIVILEGES` to `flexbone_user` on `flexbone_db` are included. It also includes commands to grant privileges on the `public` schema and future objects within it, which is important for when the user applies the `schema.sql`.\n\nThe instructions are organized clearly with operating system-specific sections and notes for common issues or variations (like Homebrew paths on different Mac architectures). It also includes a final command showing how to use the previously created `schema.sql` file with the new database and user.", "succeeded": true}}
+You will be prompted for the `flexbone_password`.
+
+## 5. Configure Client Authentication (pg_hba.conf)
+
+PostgreSQL uses a client authentication configuration file named `pg_hba.conf` to control which hosts are allowed to connect, which users can connect, which databases they can access, and the authentication method.
+
+If you are unable to connect to the database as `flexbone_user` from your application or `psql` (even with the correct password), you might need to adjust this file.
+
+**A. Find `pg_hba.conf`:**
+
+You can find the location of this file by running the following command in `psql`:
+```sql
+SHOW hba_file;
 ```
+Common locations:
+*   Ubuntu/Debian: `/etc/postgresql/<VERSION>/main/pg_hba.conf` (e.g., `/etc/postgresql/14/main/pg_hba.conf`)
+*   macOS (Homebrew): `/usr/local/var/postgres/pg_hba.conf` or `/opt/homebrew/var/postgres/pg_hba.conf`
+
+**B. Edit `pg_hba.conf`:**
+
+You will need superuser privileges to edit this file (e.g., use `sudo nano <path_to_pg_hba.conf>`).
+
+Add or modify lines to allow `flexbone_user` to connect to `flexbone_db`. For local development, allowing connections from `localhost` (127.0.0.1 for IPv4, ::1 for IPv6) is common.
+
+Look for lines similar to these:
+```
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     peer
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            scram-sha-256
+# IPv6 local connections:
+host    all             all             ::1/128                 scram-sha-256
+```
+
+You need to ensure that `flexbone_user` can connect to `flexbone_db` using password authentication (e.g., `md5` or `scram-sha-256`).
+
+Add these lines **before** any overly permissive `host all all` lines that might use `reject` or a more restrictive method for your local connection type. The order of rules matters.
+
+```
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   flexbone_db     flexbone_user                           md5  # Or scram-sha-256 if your server default is that
+host    flexbone_db     flexbone_user   127.0.0.1/32            md5  # Or scram-sha-256
+host    flexbone_db     flexbone_user   ::1/128                 md5  # Or scram-sha-256
+```
+
+*   `local`: For Unix domain socket connections (connecting without specifying a hostname, e.g., `psql -U flexbone_user -d flexbone_db`).
+*   `host`: For TCP/IP connections (e.g., from your application or `psql -h localhost ...`).
+*   `md5` is a common password authentication method. `scram-sha-256` is more secure and the default on newer PostgreSQL versions. If `md5` doesn't work, try `scram-sha-256`. Check your PostgreSQL version's default or other entries in the file for clues. **Using `trust` is insecure and should be avoided.**
+
+**C. Reload PostgreSQL Configuration:**
+
+After saving changes to `pg_hba.conf`, you must reload the PostgreSQL configuration for the changes to take effect. You don't usually need to restart the entire server.
+
+From your terminal (not inside `psql`):
+```bash
+# Ubuntu/Debian (using systemctl)
+sudo systemctl reload postgresql
+
+# macOS (using Homebrew services)
+# If you started PostgreSQL using `brew services`:
+brew services reload postgresql
+# Or, using pg_ctl (path might vary):
+# pg_ctl -D /usr/local/var/postgres reload
+# pg_ctl -D /opt/homebrew/var/postgres reload
+```
+Or, you can execute this SQL command as a superuser in `psql`:
+```sql
+SELECT pg_reload_conf();
+```
+
+After these steps, try connecting as `flexbone_user` again.
