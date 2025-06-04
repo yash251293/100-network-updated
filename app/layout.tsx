@@ -47,15 +47,18 @@ export default function RootLayout({
     // This helps prevent flash of unstyled content or incorrect layout.
     return (
       <html lang="en" suppressHydrationWarning>
-        <body className={inter.className}>
-          {/* You can put a global loader here if you wish */}
-          {/* For now, rendering children directly might cause a flash,
-              but for unauthenticated routes like login, it might be acceptable
-              if they don't rely on isUserAuthenticated state for their direct layout.
-              A safer bet is often to return null or a loading spinner.
-              Let's return a simple loading text.
+        <body className={`${inter.className} h-screen`}> {/* Ensure inter.className is preserved and body can be full height */}
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="text-xl font-semibold text-foreground animate-pulse">
+              Loading...
+            </div>
+          </div>
+          {/* Optional: Include <ThemeProvider> here as well if the loading screen should respect themes,
+               but that adds complexity. For now, bg-background should work with the default theme.
+               If ThemeProvider is essential for bg-background to work correctly, it might need to wrap this.
+               However, the main ThemeProvider is outside this !isMounted block.
+               Let's keep it simple and assume bg-background works or falls back gracefully.
           */}
-          <div>Loading...</div>
         </body>
       </html>
     );
