@@ -1,144 +1,170 @@
 # Authentication Pages Analysis
 
-This document provides an analysis of the authentication-related page components (`Login`, `Signup`, `Forgot Password`), focusing on their UI structure, form handling, API interactions, user feedback, and potential areas for improvement.
+This document provides an analysis of the authentication-related page components (`Login`, `Signup`, `Forgot Password`, `Reset Password`), focusing on their UI structure, form handling, API interactions, user feedback, and potential areas for improvement.
 
 ## `app/(auth)/auth/login/page.tsx`
 
 *   **UI Structure & Components**:
-    *   The page uses a `Card` component from `@/components/ui/card` to frame the login form.
-    *   The card contains `CardHeader` (with logo, `CardTitle`, `CardDescription`), and `CardContent`.
-    *   Inputs for "Email" and "Password" use `Label` and `Input` from `@/components/ui/input`.
-    *   Password input includes a visibility toggle button using `Eye` and `EyeOff` icons from `lucide-react`.
-    *   A "Forgot password?" link (`next/link`) navigates to `/auth/forgot-password`.
-    *   A "Sign in" `Button` from `@/components/ui/button` is used for submission.
-    *   A link to the signup page (`/auth/signup`) is provided below the form.
-    *   The overall page layout uses flexbox to center the card on a gradient background, consistent with `app/(auth)/layout.tsx`.
+    *   Uses `Card` for layout, with `CardHeader` (logo, title, description) and `CardContent`.
+    *   Inputs for "Email" and "Password" with `Label` and `Input`.
+    *   Password visibility toggle (`Eye`/`EyeOff` icons).
+    *   Links for "Forgot password?" and "Sign up".
+    *   "Sign in" `Button` for submission.
+    *   Gradient background, centered card layout.
 
 *   **User Input & Form Submission**:
-    *   Form data (`email`, `password`) is managed using `React.useState`.
-    *   Input changes are handled by a generic `handleChange` function that updates the `formData` state.
-    *   Form submission is handled by `handleSubmit`, which is an async function triggered by `onSubmit` on the `<form>` element. It prevents default form submission.
-    *   A boolean state `isLoading` is used to disable the submit button and provide visual feedback during API calls.
+    *   `formData` (`email`, `password`) managed by `React.useState`.
+    *   `handleChange` updates `formData`.
+    *   `handleSubmit` (async) triggered by `onSubmit`.
+    *   `isLoading` state for visual feedback during API calls.
 
 *   **API Interaction**:
-    *   On submit, it makes a `POST` request to `/api/auth/login` using `fetch`.
-    *   The request body is a JSON string of the `formData`.
-    *   `Content-Type` header is set to `application/json`.
+    *   `POST` request to `/api/auth/login` with `formData`.
+    *   `Content-Type: application/json`.
 
 *   **API Response Handling & User Feedback**:
-    *   If `response.ok` is true:
-        *   It parses the JSON response and expects a `data.token`.
-        *   The `token` is passed to the `login()` function from `@/lib/authClient` (which stores it in localStorage).
-        *   An `alert()` shows the success message from the API or a default "Login successful!".
-        *   The user is redirected to `/explore` using `router.push()`.
-        *   If `data.token` is missing, an error alert is shown.
-    *   If `response.ok` is false:
-        *   It attempts to parse an error JSON from the response.
-        *   An `alert()` displays the error message from `errorData.message` or `response.statusText`.
-    *   Generic catch block for network or unexpected errors also uses `alert()`.
-    *   The submit button text changes to "Signing in..." when `isLoading` is true.
+    *   **Success**:
+        *   Parses JSON response, expects `data.token`.
+        *   Calls `login(data.token)` from `lib/authClient` to store the token in `localStorage`.
+        *   Displays a success `toast()` notification (e.g., "Login Successful").
+        *   Redirects to `/explore` using `router.push()`.
+        *   If `data.token` is missing, an error `toast()` is shown.
+    *   **Error**:
+        *   Attempts to parse error JSON.
+        *   Displays an error `toast()` with the message.
+    *   Generic catch block also uses error `toast()`.
+    *   Submit button text changes to "Signing in..." when `isLoading`.
 
 *   **Client-Side Validation & State Management**:
-    *   **State**: `showPassword` (boolean), `formData` (object), `isLoading` (boolean).
-    *   **Validation**: Uses HTML5 `required` attribute on input fields. No other client-side validation (e.g., email format, password complexity) is implemented before submitting.
+    *   **State**: `showPassword`, `formData`, `isLoading`, `isCheckingAuth`.
+    *   **Validation**: HTML5 `required` attribute.
+    *   **Authentication Check**: `useEffect` hook checks if the user is already authenticated using `isAuthenticated()` from `lib/authClient`. If so, it redirects to `/feed` to prevent already logged-in users from seeing the login page.
 
 *   **Potential Issues & Improvements**:
-    *   **User Feedback**: Replace `alert()` calls with a more user-friendly notification system (e.g., using the `useToast` hook available in the project) for success and error messages.
-    *   **Token Handling**: The page correctly uses `login(data.token)` from `authClient`, which relies on the API providing a token. The current API provides a "fake-jwt-token". This whole flow will need to be robust once real JWTs are in place.
-    *   **Client-Side Validation**: Add client-side validation for email format to provide instant feedback before API submission.
-    *   **Error Display**: Display error messages more gracefully within the form (e.g., below respective fields or as a general form error message) instead of `alert()`.
-    *   **Loading State**: The button's disabled state and text change are good. Consider a more global loading indicator if API calls are slow.
+    *   **Client-Side Validation**: Add client-side validation for email format.
+    *   **Error Display**: Consider displaying specific error messages inline with form fields for better UX, in addition to toasts.
 
 ## `app/(auth)/auth/signup/page.tsx`
 
 *   **UI Structure & Components**:
-    *   Similar UI structure to the Login page, using `Card`, `Label`, `Input`, `Button`.
+    *   Similar UI to Login page (`Card`, `Label`, `Input`, `Button`).
     *   Fields: "First Name", "Last Name", "Email", "Password", "Confirm Password".
-    *   Password and Confirm Password fields have visibility toggles (`Eye`/`EyeOff` icons).
-    *   Includes password strength validation criteria display with `Check`/`X` icons from `lucide-react`.
-    *   Link to the login page (`/auth/login`) is provided.
+    *   Password and Confirm Password fields have visibility toggles.
+    *   Displays password strength validation criteria (`Check`/`X` icons).
+    *   Link to login page.
 
 *   **User Input & Form Submission**:
-    *   Form data (`firstName`, `lastName`, `email`, `password`, `confirmPassword`) managed via `React.useState`.
-    *   `handleChange` updates `formData`. When `password` field changes, it also updates `passwordValidation` state.
+    *   `formData` managed via `React.useState`.
+    *   `handleChange` updates `formData` and `passwordValidation` state.
     *   `handleSubmit`:
-        *   Prevents default form submission.
-        *   First, checks if `formData.password` matches `formData.confirmPassword`. If not, shows an `alert` and returns.
-        *   Sets `isLoading` to true.
-        *   Makes a `POST` request to `/api/auth/signup`.
+        *   Prevents default.
+        *   Client-side check: if `formData.password` !== `formData.confirmPassword`, shows an error `toast()` and returns.
+        *   Sets `isLoading` true.
+        *   `POST` request to `/api/auth/signup`.
 
 *   **API Interaction**:
-    *   `POST` request to `/api/auth/signup` with `firstName`, `lastName`, `email`, and `password`.
-    *   `Content-Type` is `application/json`.
+    *   `POST` request to `/api/auth/signup` with `firstName`, `lastName`, `email`, `password`.
+    *   `Content-Type: application/json`.
 
 *   **API Response Handling & User Feedback**:
-    *   If `response.ok`:
+    *   **Success**:
         *   Parses JSON response.
-        *   Shows an `alert` with `data.message` or a default success message.
-        *   Redirects to `/explore` using `router.push()`.
-    *   If `response.ok` is false:
+        *   Shows a success `toast()` (e.g., "Signup Successful").
+        *   Redirects to `/explore`.
+    *   **Error**:
         *   Attempts to parse error JSON.
-        *   Shows an `alert` with `errorData.message` or `response.statusText`.
-    *   Generic error handling also uses `alert()`.
-    *   Submit button text changes to "Creating account..." when `isLoading` is true.
-    *   Visual feedback for password strength criteria (length, uppercase, lowercase, number) and password match.
+        *   Shows an error `toast()` with the message.
+    *   Generic error handling also uses error `toast()`.
+    *   Submit button text changes to "Creating account..." when `isLoading`.
+    *   Visual feedback for password strength and match.
 
 *   **Client-Side Validation & State Management**:
-    *   **State**: `showPassword`, `showConfirmPassword`, `formData`, `isLoading`, `passwordValidation` (object with boolean flags for length, uppercase, lowercase, number).
+    *   **State**: `showPassword`, `showConfirmPassword`, `formData`, `isLoading`, `passwordValidation`.
     *   **Validation**:
-        *   Compares `password` and `confirmPassword` fields.
-        *   Dynamically validates password against criteria (length, uppercase, lowercase, number) as the user types.
-        *   The submit button is disabled if `isLoading`, `isPasswordValid` is false, or passwords don't match.
-        *   HTML5 `required` attribute on inputs.
+        *   Compares `password` and `confirmPassword`.
+        *   Dynamically validates password strength criteria.
+        *   Submit button disabled based on `isLoading`, `isPasswordValid`, or password mismatch.
+        *   HTML5 `required` attribute.
 
 *   **Potential Issues & Improvements**:
-    *   **User Feedback**: Replace `alert()` with toasts.
-    *   **Redirection after Signup**: Redirecting to `/explore` might be premature. The success message mentions "Please check your email to verify." Consider redirecting to a dedicated "verification pending" page or to the login page.
-    *   **Error Display**: Improve error message display as with the login page.
-    *   **Zod/React Hook Form**: For more complex forms and validation, consider using `react-hook-form` with a Zod schema to manage form state, validation, and submission more robustly. This would streamline the current manual state management for `formData` and `passwordValidation`.
+    *   **Redirection after Signup**: Default success message is "Please check your email to verify your account." Redirecting to `/explore` might be fine, but ensure the overall UX for email verification (if fully implemented) is clear.
+    *   **Zod/React Hook Form**: For more complex forms, consider `react-hook-form` with Zod for streamlined state management and validation.
 
 ## `app/(auth)/auth/forgot-password/page.tsx`
 
 *   **UI Structure & Components**:
-    *   Uses `Card` for layout.
-    *   **Initial View**: Displays a form with an "Email" input (`Input`, `Label`), and a "Send reset link" `Button`. Includes a "Back to sign in" link (`ArrowLeft` icon).
-    *   **Submitted View**: If `isSubmitted` is true, it shows a confirmation message ("Check your email") with the entered email, an icon (`Mail`), and options to "Try again" or go "Back to sign in".
+    *   Uses `Card`.
+    *   **Initial View**: Email input, "Send reset link" button, "Back to sign in" link.
+    *   **Submitted View**: If `message` state is set (after API call), it shows the message (success or error) and options to "Try again" or "Back to sign in".
 
 *   **User Input & Form Submission**:
-    *   Form data (`email`) managed via `React.useState`.
+    *   `email` managed via `React.useState`.
     *   `handleSubmit`:
-        *   Prevents default. Sets `isLoading` true.
-        *   **Currently, it does not make an API call.** It simulates an API call using `setTimeout` for 1 second.
-        *   After the timeout, it sets `isLoading` false and `isSubmitted` true.
+        *   Prevents default, sets `isLoading` true.
+        *   Makes a `POST` request to `/api/auth/request-password-reset` with the email.
 
 *   **API Interaction**:
-    *   **None implemented.** The `handleSubmit` function has a `// TODO: Add forgot password logic here` comment. This is a critical missing piece.
+    *   `POST` request to `/api/auth/request-password-reset`.
 
 *   **API Response Handling & User Feedback**:
-    *   Since there's no real API call, response handling is simulated.
-    *   The UI switches to a confirmation screen upon "successful" (simulated) submission.
-    *   Button text changes to "Sending..." when `isLoading` is true.
+    *   Sets `message` state based on API response (success or error).
+    *   Displays the `message` to the user.
+    *   Button text changes to "Sending..." when `isLoading`.
+    *   **Important**: This page still contains `alert()` calls for client-side validation errors (empty email) and for API/unexpected errors. These need to be replaced with `toast()` notifications. (Tracked in `TODO_fix_alerts_in_forgot_password.md`).
 
 *   **Client-Side Validation & State Management**:
-    *   **State**: `email` (string), `isLoading` (boolean), `isSubmitted` (boolean).
-    *   **Validation**: HTML5 `required` attribute on the email input. No format validation.
+    *   **State**: `email` (string), `isLoading` (boolean), `message` (string).
+    *   **Validation**: Checks if email is empty using an `alert()`. HTML5 `required` attribute.
 
 *   **Potential Issues & Improvements**:
-    *   **Core Functionality Missing**: The primary issue is the lack of actual password reset functionality. This requires:
-        *   A backend API endpoint to handle password reset requests (generate a unique token, store it with user ID and expiration, and send an email with a reset link).
-        *   Another page (e.g., `/auth/reset-password/[token]`) where the user can enter a new password.
-        *   An API endpoint to validate the token and update the password.
-    *   **API Call Implementation**: Implement `fetch` or a similar method to call the (to-be-created) password reset API endpoint.
-    *   **User Feedback**: Once a real API call is implemented, use toasts for success/error messages instead of relying on the view switch alone for success, or `alert()` for potential errors.
-    *   **Client-Side Validation**: Add email format validation.
-    *   **Security**: Ensure the reset token mechanism is secure (e.g., short-lived, single-use tokens).
+    *   **User Feedback**: **Replace remaining `alert()` calls with `toast()` notifications.**
+    *   **Client-Side Validation**: Add email format validation client-side before submission.
+
+## `app/(auth)/auth/reset-password/page.tsx`
+
+*   **UI Structure & Components**:
+    *   Uses `Card`.
+    *   Inputs for "New Password" and "Confirm New Password".
+    *   Password visibility toggles.
+    *   "Reset Password" button.
+    *   Displays success or error messages inline based on `message` state.
+
+*   **User Input & Form Submission**:
+    *   `password`, `confirmPassword` managed via `React.useState`.
+    *   `token` is retrieved from URL query parameters using `useSearchParams()` from `next/navigation`.
+    *   `handleSubmit`:
+        *   Prevents default, sets `isLoading` true.
+        *   Validates if passwords match and if password is not empty.
+        *   Makes a `POST` request to `/api/auth/reset-password` with `token`, and `newPassword`.
+
+*   **API Interaction**:
+    *   `POST` request to `/api/auth/reset-password`.
+
+*   **API Response Handling & User Feedback**:
+    *   Sets `message` state (string, includes type like 'success' or 'error') based on API response.
+    *   Displays this message inline within the UI (e.g., green text for success, red for error). Does not use `toast()` or `alert()`.
+    *   Redirects to `/auth/login` on successful password reset after a short delay.
+    *   Button text changes to "Resetting..." when `isLoading`.
+
+*   **Client-Side Validation & State Management**:
+    *   **State**: `token`, `password`, `confirmPassword`, `message`, `isLoading`, `showPassword`, `showConfirmPassword`.
+    *   **Validation**:
+        *   Checks if token exists from URL.
+        *   Checks if password and confirm password match.
+        *   Checks if password field is empty.
+        *   Password complexity/strength rules are not enforced client-side beyond being non-empty, but API enforces min 8 characters.
+
+*   **Potential Issues & Improvements**:
+    *   **User Feedback Consistency**: Consider using `toast()` notifications for consistency with other auth pages, though inline messages are also acceptable.
+    *   **Client-Side Password Strength**: Add client-side visual feedback for password strength if desired.
 
 ---
 
 **General Observations for All Auth Pages**:
 
-*   **UI Consistency**: Good use of shared UI components (`Card`, `Button`, `Input`) from `components/ui/`, leading to a consistent look and feel. The logo is also consistently displayed.
-*   **State Management**: Relies on basic `React.useState` for form data and UI state. For more complex forms or global error states, `react-hook-form` and/or a context/global state solution could be beneficial.
-*   **User Feedback**: The primary method for feedback (success/error) is `alert()`. This should be replaced with a more integrated and user-friendly notification system like toasts.
-*   **API Integration**: All pages use `fetch` for API calls. Error handling is basic (parsing JSON and showing messages).
-*   **No Centralized Form Logic**: Each page implements its own `handleChange`, `handleSubmit`, and state management. Shared logic could be abstracted into custom hooks if forms become more complex or share more behavior.
+*   **UI Consistency**: Good use of shared UI components.
+*   **State Management**: Primarily `React.useState`.
+*   **User Feedback**: Transitioning from `alert()` to `toast()` notifications is mostly complete, with `forgot-password` page being the main exception. `reset-password` uses inline messages.
+*   **API Integration**: All pages use `fetch`.
+*   **Error Handling**: Generally involves parsing JSON and showing messages.
+*   **Security**: Relies on API for security measures. Client-side tokens are handled by `lib/authClient.ts`.
