@@ -147,7 +147,6 @@ export async function GET(request: NextRequest) {
   const queryParams: any[] = [];
   let paramIndex = 1;
 
-  // CTEs for skill aggregation
   const cteClause = `
     WITH DistinctJobSkills AS (
         SELECT DISTINCT jsl.job_id, s.name AS skill_name
@@ -166,20 +165,20 @@ export async function GET(request: NextRequest) {
       j.id, j.title, j.location, j.job_type, j.experience_level,
       j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
       j.published_at, j.description, j.status, j.created_at,
-      c.name as company_name, c.logo_url as company_logo_url,
+      c.id as company_id, -- Added company_id
+      c.name as company_name,
+      c.logo_url as company_logo_url,
       COALESCE(ajs.skills_list, '') AS skills_list
     FROM jobs j
     JOIN companies c ON j.company_id = c.id
     LEFT JOIN AggregatedJobSkills ajs ON j.id = ajs.job_id
   `;
 
-  // Base for count query, without skill aggregation for count itself
   let countSelect = `SELECT COUNT(DISTINCT j.id) as total_items FROM jobs j JOIN companies c ON j.company_id = c.id`;
 
   const whereClauses: string[] = [];
-  const countWhereClauses: string[] = []; // Separate for count, as skill filtering subquery differs
+  const countWhereClauses: string[] = [];
 
-  // Skill filtering (if skillsString is provided)
   const skillsArray = skillsString?.split(',').map(s => s.trim()).filter(s => s.length > 0);
   if (skillsArray && skillsArray.length > 0) {
     const skillPlaceholders = skillsArray.map((_, i) => `$${paramIndex + i}`).join(', ');
@@ -188,18 +187,17 @@ export async function GET(request: NextRequest) {
         SELECT jsl_filter.job_id
         FROM job_skills_link jsl_filter
         JOIN skills s_filter ON jsl_filter.skill_id = s_filter.id
-        WHERE s_filter.name ILIKE ANY(ARRAY[${skillPlaceholders}]) -- Using ILIKE ANY for case-insensitivity
+        WHERE s_filter.name ILIKE ANY(ARRAY[${skillPlaceholders}])
         GROUP BY jsl_filter.job_id
         HAVING COUNT(DISTINCT LOWER(s_filter.name)) = ${skillsArray.length}
       )
     `;
     whereClauses.push(skillFilterSubQuery);
-    countWhereClauses.push(skillFilterSubQuery); // Apply same logic to count
-    skillsArray.forEach(skill => queryParams.push(skill)); // Add each skill for ILIKE ANY
+    countWhereClauses.push(skillFilterSubQuery);
+    skillsArray.forEach(skill => queryParams.push(skill));
     paramIndex += skillsArray.length;
   }
 
-  // Other filters
   if (status) {
     whereClauses.push(`j.status = $${paramIndex}`);
     countWhereClauses.push(`j.status = $${paramIndex}`);
@@ -240,7 +238,6 @@ export async function GET(request: NextRequest) {
     paramIndex++;
   }
 
-  // Build final queries
   let finalDataQuery = cteClause + baseSelect;
   if (whereClauses.length > 0) {
     finalDataQuery += ` WHERE ${whereClauses.join(' AND ')}`;
@@ -251,19 +248,14 @@ export async function GET(request: NextRequest) {
     finalCountQuery += ` WHERE ${countWhereClauses.join(' AND ')}`;
   }
 
-  // Sorting (only for data query)
   const allowedSortBy = ['published_at', 'title', 'salary_min', 'created_at', 'company_name'];
   const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'published_at';
   const sortColumn = safeSortBy === 'company_name' ? 'c.name' : `j.${safeSortBy}`;
   finalDataQuery += ` ORDER BY ${sortColumn} ${sortOrder.toUpperCase()}`;
 
-  // Pagination (only for data query)
   finalDataQuery += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-  const finalQueryParams = [...queryParams, limit, offset]; // Params for data query
-
-  // Params for count query (all except limit and offset)
+  const finalQueryParams = [...queryParams, limit, offset];
   const finalCountQueryParams = queryParams.slice(0, queryParams.length);
-
 
   try {
     const jobsResult = await query(finalDataQuery, finalQueryParams);
@@ -272,14 +264,25 @@ export async function GET(request: NextRequest) {
     const totalItems = parseInt(countResult.rows[0].total_items, 10);
     const totalPages = Math.ceil(totalItems / limit);
 
-    const jobsWithSkills = jobsResult.rows.map(job => ({
-      ...job,
-      description: job.description?.substring(0, 150) + (job.description?.length > 150 ? '...' : ''), // Truncated description
-      skills_list: job.skills_list ? job.skills_list.split(', ') : [],
-    }));
+    const transformedJobs = jobsResult.rows.map(row => {
+      const {
+        company_id, company_name, company_logo_url, skills_list, description,
+        ...jobProps
+      } = row;
+      return {
+        ...jobProps,
+        description: description?.substring(0, 150) + (description?.length > 150 ? '...' : ''),
+        company: {
+          id: company_id,
+          name: company_name,
+          logo_url: company_logo_url,
+        },
+        skills: skills_list ? skills_list.split(',').map((s:string) => s.trim()) : [],
+      };
+    });
 
     return NextResponse.json({
-      data: jobsWithSkills,
+      data: transformedJobs,
       pagination: { totalItems, totalPages, currentPage: page, pageSize: limit },
     });
   } catch (error: any) {
