@@ -172,10 +172,21 @@ export async function POST(request: Request) {
     if (profileData.experience && profileData.experience.length > 0) {
       for (const exp of profileData.experience) {
         if (!exp.title || !exp.company) continue; // Skip if essential fields are missing
+
+        let processedStartDate = exp.startDate || null;
+        if (processedStartDate && /^\d{4}-\d{2}$/.test(processedStartDate)) {
+          processedStartDate = processedStartDate + "-01";
+        }
+
+        let processedEndDate = exp.endDate || null;
+        if (processedEndDate && /^\d{4}-\d{2}$/.test(processedEndDate)) {
+          processedEndDate = processedEndDate + "-01";
+        }
+
         await query(
           `INSERT INTO user_experience (user_id, title, company_name, location, start_date, end_date, current_job, description)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [userId, exp.title, exp.company, exp.location, exp.startDate || null, exp.endDate || null, exp.current || false, exp.description]
+          [userId, exp.title, exp.company, exp.location, processedStartDate, processedEndDate, exp.current || false, exp.description]
         );
       }
       console.log('New experiences inserted');
@@ -187,10 +198,21 @@ export async function POST(request: Request) {
     if (profileData.education && profileData.education.length > 0) {
       for (const edu of profileData.education) {
         if (!edu.school) continue; // Skip if essential fields are missing
+
+        let processedEduStartDate = edu.startDate || null;
+        if (processedEduStartDate && /^\d{4}-\d{2}$/.test(processedEduStartDate)) {
+          processedEduStartDate = processedEduStartDate + "-01";
+        }
+
+        let processedEduEndDate = edu.endDate || null;
+        if (processedEduEndDate && /^\d{4}-\d{2}$/.test(processedEduEndDate)) {
+          processedEduEndDate = processedEduEndDate + "-01";
+        }
+
         await query(
           `INSERT INTO user_education (user_id, school_name, degree, field_of_study, start_date, end_date, current_student, description)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [userId, edu.school, edu.degree, edu.field, edu.startDate || null, edu.endDate || null, edu.current || false, edu.description || '']
+          [userId, edu.school, edu.degree, edu.field, processedEduStartDate, processedEduEndDate, edu.current || false, edu.description || '']
         );
       }
       console.log('New education inserted');
