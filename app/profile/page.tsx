@@ -101,8 +101,11 @@ export default function ProfilePage() {
                   size="icon"
                   variant="outline"
                   className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-white"
+                  asChild
                 >
-                  <Edit className="h-4 w-4" />
+                  <Link href="/profile/complete">
+                    <Edit className="h-4 w-4" />
+                  </Link>
                 </Button>
               </div>
 
@@ -168,8 +171,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-xl font-semibold">About</h2>
-              <Button variant="ghost" size="icon">
-                <Edit className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <Edit className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -183,8 +188,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-xl font-semibold">Experience</h2>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <Plus className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -226,8 +233,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-xl font-semibold">Education</h2>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <Plus className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -261,8 +270,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-xl font-semibold">Projects</h2>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <Plus className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -303,8 +314,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Skills</h2>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <Plus className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -328,8 +341,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Certifications</h2>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <Plus className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -362,8 +377,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Languages</h2>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <Plus className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -387,8 +404,10 @@ export default function ProfilePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Recommendations</h2>
-              <Button variant="ghost" size="icon">
-                <MessageCircle className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile/complete">
+                  <MessageCircle className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
