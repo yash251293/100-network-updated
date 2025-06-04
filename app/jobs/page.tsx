@@ -3,14 +3,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookmarkIcon as LucideBookmarkIcon, Filter, Search, Clock, CheckCircle, XCircle, Calendar, Briefcase, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react"; // Added ExternalLink
+import { BookmarkIcon as LucideBookmarkIcon, Filter, Search, Clock, CheckCircle, XCircle, Calendar, Briefcase, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import JobCard, { JobCardSkeleton, Job as JobType } from "@/components/JobCard";
 import { formatDistanceToNow } from 'date-fns';
-import Image from "next/image"; // For AppliedJobCard
+import Image from "next/image";
+import { getToken } from "@/lib/authClient"; // Added
+import { toast } from "sonner"; // Added
+import { Skeleton } from "@/components/ui/skeleton"; // Added for AppliedJobCardSkeleton
 
 // Types for Applied Job (assuming structure from API)
 interface AppliedJob {
@@ -18,7 +21,7 @@ interface AppliedJob {
   job_id: string;
   user_id: string;
   application_date: string;
-  status: string; // e.g., "Applied", "Under Review"
+  status: string;
   cover_letter?: string | null;
   resume_url?: string | null;
   notes?: string | null;
@@ -26,13 +29,11 @@ interface AppliedJob {
   job_location?: string | null;
   company_name: string;
   company_logo_url?: string | null;
-  applicant_email?: string; // from users table
-  applicant_first_name?: string | null; // from profiles table
-  applicant_last_name?: string | null; // from profiles table
+  applicant_email?: string;
+  applicant_first_name?: string | null;
+  applicant_last_name?: string | null;
 }
 
-
-// Helper functions for Applied Jobs status (can be moved to a utils file)
 const getStatusIcon = (status: string) => {
   const statusLower = status?.toLowerCase();
   switch (statusLower) {
@@ -40,8 +41,8 @@ const getStatusIcon = (status: string) => {
     case "under review": return <Clock className="h-4 w-4 text-orange-600" />;
     case "interview scheduled": return <Calendar className="h-4 w-4 text-green-600" />;
     case "rejected": return <XCircle className="h-4 w-4 text-red-600" />;
-    case "offer extended": return <CheckCircle className="h-4 w-4 text-purple-600" />; // Example for new status
-    case "withdrawn": return <XCircle className="h-4 w-4 text-gray-500" />; // Example for new status
+    case "offer extended": return <CheckCircle className="h-4 w-4 text-purple-600" />;
+    case "withdrawn": return <XCircle className="h-4 w-4 text-gray-500" />;
     default: return <Clock className="h-4 w-4 text-gray-600" />;
   }
 };
@@ -59,8 +60,6 @@ const getStatusBadge = (status: string) => {
   return <Badge className={`${variants[statusLower] || 'bg-gray-100 text-gray-800'} border-0`}>{status || "Unknown"}</Badge>;
 };
 
-
-// Applied Job Card Component (Simplified for this page)
 interface AppliedJobCardProps {
   application: AppliedJob;
 }
@@ -92,7 +91,7 @@ function AppliedJobCard({ application }: AppliedJobCardProps) {
             {application.company_name} {application.job_location && `• ${application.job_location}`}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Applied: {formatDistanceToNow(new Date(application.application_date), { addSuffix: true })}
+            Applied: {application.application_date ? formatDistanceToNow(new Date(application.application_date), { addSuffix: true }) : 'N/A'}
           </p>
           {application.resume_url && (
             <a
@@ -119,18 +118,15 @@ function AppliedJobCardSkeleton() {
           <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
         </div>
-        <Skeleton className="h-6 w-24 rounded-md" /> {/* Status Badge */}
+        <Skeleton className="h-6 w-24 rounded-md" />
       </div>
-      <Skeleton className="h-4 w-1/3" /> {/* Applied Date */}
+      <Skeleton className="h-4 w-1/3" />
     </div>
   );
 }
 
-
 export default function JobsPage() {
   const [activeTab, setActiveTab] = useState("all");
-
-  // "All Jobs" tab state
   const [jobs, setJobs] = useState<JobType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,8 +138,6 @@ export default function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [bookmarkedJobIds, setBookmarkedJobIds] = useState(new Set<string>());
-
-  // "Applied Jobs" tab state
   const [appliedJobsList, setAppliedJobsList] = useState<AppliedJob[]>([]);
   const [isLoadingApplied, setIsLoadingApplied] = useState(true);
   const [errorApplied, setErrorApplied] = useState<string | null>(null);
@@ -151,8 +145,6 @@ export default function JobsPage() {
   const [appliedCurrentPage, setAppliedCurrentPage] = useState(1);
   const [appliedTotalPages, setAppliedTotalPages] = useState(1);
 
-
-  // Debounce search term for "All Jobs"
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -161,21 +153,23 @@ export default function JobsPage() {
     return () => clearTimeout(handler);
   }, [searchTerm, activeTab]);
 
-  // Fetch initial bookmarks
   const fetchBookmarkedJobs = useCallback(async () => {
-    // Assuming user is authenticated, API handles user context via token
-    // No specific error state for bookmarks is set here, errors are logged.
+    const token = getToken();
+    if (!token) {
+      // Not strictly an error, user might not be logged in. Clear existing bookmarks.
+      setBookmarkedJobIds(new Set());
+      return;
+    }
     try {
-      const response = await fetch('/api/job-bookmarks?limit=500'); // Fetch a reasonable max, or implement pagination if needed
-
+      const response = await fetch('/api/job-bookmarks?limit=500', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to fetch bookmarked jobs:', response.status, errorText);
-        // Optionally, set a specific error state for bookmarks if UI needs to reflect this
-        // For now, it just means bookmark statuses might not be accurate on the cards.
-        return; // Exit if not ok
+        // Don't clear bookmarks on transient error, user might just lose visual status
+        return;
       }
-
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
@@ -188,15 +182,11 @@ export default function JobsPage() {
       } else {
         const responseText = await response.text();
         console.error('Received non-JSON response when fetching bookmarks:', responseText);
-        // Optionally, set a specific error state here
       }
     } catch (err) {
-      // This catch block handles network errors or errors from the checks above (if they throw)
       console.error("Error fetching or processing bookmarks:", err);
-      // Optionally, set a specific error state here
     }
   }, []);
-
 
   const fetchJobs = useCallback(async () => {
     setIsLoading(true);
@@ -207,8 +197,7 @@ export default function JobsPage() {
       if (jobType) queryParams.set("jobType", jobType);
       if (experienceLevel) queryParams.set("experienceLevel", experienceLevel);
       if (locationFilter) queryParams.set("location", locationFilter);
-
-      const response = await fetch(`/api/jobs?${queryParams.toString()}`);
+      const response = await fetch(`/api/jobs?${queryParams.toString()}`); // Public, no token needed
       if (!response.ok) throw new Error((await response.json()).message || `Failed to fetch jobs`);
       const data = await response.json();
       setJobs(data.data || []);
@@ -222,14 +211,21 @@ export default function JobsPage() {
   }, [currentPage, debouncedSearchTerm, jobType, experienceLevel, locationFilter]);
 
   const fetchAppliedJobs = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setErrorApplied("Please log in to see your applications.");
+      setAppliedJobsList([]);
+      setIsLoadingApplied(false);
+      return;
+    }
     setIsLoadingApplied(true);
     setErrorApplied(null);
     try {
       const queryParams = new URLSearchParams({ page: String(appliedCurrentPage), limit: "5" });
-      if (appliedStatusFilter) queryParams.set("status", appliedStatusFilter);
-      // Add other filters like search if API supports for applied jobs
-
-      const response = await fetch(`/api/job-applications?${queryParams.toString()}`);
+      if (appliedStatusFilter && appliedStatusFilter !== "all") queryParams.set("status", appliedStatusFilter);
+      const response = await fetch(`/api/job-applications?${queryParams.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!response.ok) throw new Error((await response.json()).message || `Failed to fetch applied jobs`);
       const data = await response.json();
       setAppliedJobsList(data.data || []);
@@ -245,39 +241,42 @@ export default function JobsPage() {
   useEffect(() => {
     if (activeTab === "all") {
       fetchJobs();
-      fetchBookmarkedJobs(); // Fetch bookmarks when "All Jobs" tab is active
+      fetchBookmarkedJobs();
     } else if (activeTab === "applied") {
       fetchAppliedJobs();
     }
   }, [activeTab, fetchJobs, fetchAppliedJobs, fetchBookmarkedJobs]);
 
-
   const handleBookmarkToggle = async (jobId: string) => {
+    const token = getToken();
+    if (!token) {
+      toast.error("Please log in to bookmark jobs.");
+      return;
+    }
     const isCurrentlyBookmarked = bookmarkedJobIds.has(jobId);
     const originalBookmarks = new Set(bookmarkedJobIds);
-
     setBookmarkedJobIds(prev => {
       const newSet = new Set(prev);
       if (isCurrentlyBookmarked) newSet.delete(jobId);
       else newSet.add(jobId);
       return newSet;
     });
-
     try {
       const method = isCurrentlyBookmarked ? 'DELETE' : 'POST';
-      const response = await fetch(`/api/jobs/${jobId}/bookmark`, { method });
+      const response = await fetch(`/api/jobs/${jobId}/bookmark`, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!response.ok) {
         setBookmarkedJobIds(originalBookmarks);
-        console.error('Failed to update bookmark', await response.json());
-        // Add toast error
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to update bookmark.');
       } else {
-        console.log('Bookmark updated successfully');
-        // Add toast success
+        toast.success(`Job ${isCurrentlyBookmarked ? 'unbookmarked' : 'bookmarked'}!`);
       }
     } catch (error) {
       setBookmarkedJobIds(originalBookmarks);
-      console.error('Error updating bookmark', error);
-      // Add toast error
+      toast.error('Error updating bookmark.');
     }
   };
 
@@ -286,11 +285,10 @@ export default function JobsPage() {
   const handleLocationChange = (event: React.ChangeEvent<HTMLInputElement>) => { setLocationFilter(event.target.value); setCurrentPage(1); };
   const handleAppliedStatusChange = (value: string) => { setAppliedStatusFilter(value === "all" ? "" : value); setAppliedCurrentPage(1); };
 
-
   const renderAllJobsContent = () => {
     if (isLoading && jobs.length === 0) return <div className="space-y-4">{[...Array(5)].map((_, i) => <JobCardSkeleton key={i} />)}</div>;
     if (error) return <p className="text-red-500 text-center py-8">Error: {error}</p>;
-    if (jobs.length === 0) return <p className="text-muted-foreground text-center py-8">No jobs found matching your criteria.</p>;
+    if (jobs.length === 0 && !isLoading) return <p className="text-muted-foreground text-center py-8">No jobs found matching your criteria.</p>;
     return (
       <div className="space-y-4">
         {jobs.map((job) => (
@@ -303,7 +301,7 @@ export default function JobsPage() {
   const renderAppliedJobsContent = () => {
     if (isLoadingApplied && appliedJobsList.length === 0) return <div className="space-y-4">{[...Array(3)].map((_, i) => <AppliedJobCardSkeleton key={i} />)}</div>;
     if (errorApplied) return <p className="text-red-500 text-center py-8">Error: {errorApplied}</p>;
-    if (appliedJobsList.length === 0) return (
+    if (appliedJobsList.length === 0 && !isLoadingApplied) return (
         <div className="text-center py-12">
             <Briefcase className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-lg font-medium">No applications yet</h3>
@@ -354,20 +352,19 @@ export default function JobsPage() {
             <Input placeholder="Location (e.g., city, remote)" value={locationFilter} onChange={handleLocationChange} />
           </div>
           {renderAllJobsContent()}
-          {jobs.length > 0 && totalPages > 1 && (
+          {jobs.length > 0 && totalPages > 1 && !isLoading && (
             <div className="flex items-center justify-center space-x-4 pt-4">
-              <Button variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isLoading}><ChevronLeft className="h-4 w-4 mr-1" /> Previous</Button>
+              <Button variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4 mr-1" /> Previous</Button>
               <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-              <Button variant="outline" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || isLoading}>Next <ChevronRight className="h-4 w-4 ml-1" /></Button>
+              <Button variant="outline" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4 ml-1" /></Button>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="applied" className="space-y-6">
           <div className="flex space-x-4">
-            {/* Search for applied jobs can be added if API supports it */}
             <Select value={appliedStatusFilter} onValueChange={handleAppliedStatusChange}>
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -382,11 +379,11 @@ export default function JobsPage() {
             </Select>
           </div>
           {renderAppliedJobsContent()}
-           {appliedJobsList.length > 0 && appliedTotalPages > 1 && (
+           {appliedJobsList.length > 0 && appliedTotalPages > 1 && !isLoadingApplied && (
             <div className="flex items-center justify-center space-x-4 pt-4">
-              <Button variant="outline" onClick={() => setAppliedCurrentPage(p => Math.max(1, p - 1))} disabled={appliedCurrentPage === 1 || isLoadingApplied}><ChevronLeft className="h-4 w-4 mr-1" /> Previous</Button>
+              <Button variant="outline" onClick={() => setAppliedCurrentPage(p => Math.max(1, p - 1))} disabled={appliedCurrentPage === 1}><ChevronLeft className="h-4 w-4 mr-1" /> Previous</Button>
               <span className="text-sm text-muted-foreground">Page {appliedCurrentPage} of {appliedTotalPages}</span>
-              <Button variant="outline" onClick={() => setAppliedCurrentPage(p => Math.min(appliedTotalPages, p + 1))} disabled={appliedCurrentPage === appliedTotalPages || isLoadingApplied}>Next <ChevronRight className="h-4 w-4 ml-1" /></Button>
+              <Button variant="outline" onClick={() => setAppliedCurrentPage(p => Math.min(appliedTotalPages, p + 1))} disabled={appliedCurrentPage === appliedTotalPages}>Next <ChevronRight className="h-4 w-4 ml-1" /></Button>
             </div>
           )}
         </TabsContent>

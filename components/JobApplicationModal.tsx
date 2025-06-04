@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast"; // Assuming useToast is available
+import { useToast } from "@/components/ui/use-toast";
+import { getToken } from '@/lib/authClient'; // Added
 
 interface JobApplicationModalProps {
   isOpen: boolean;
@@ -19,16 +20,30 @@ export default function JobApplicationModal({ isOpen, onClose, jobId, jobTitle }
   const [coverLetter, setCoverLetter] = useState("");
   const [resumeUrl, setResumeUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast(); // From Shadcn/ui by default
+  const { toast } = useToast();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    const token = getToken();
+    if (!token) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to submit an application.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const response = await fetch(`/api/jobs/${jobId}/apply`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // Added Authorization header
+        },
         body: JSON.stringify({ coverLetter, resumeUrl }),
       });
 
@@ -38,11 +53,11 @@ export default function JobApplicationModal({ isOpen, onClose, jobId, jobTitle }
         toast({
           title: "Application Submitted!",
           description: `Your application for "${jobTitle}" has been submitted.`,
-          variant: "default", // 'default' is often green or neutral
+          variant: "default",
         });
         setCoverLetter("");
         setResumeUrl("");
-        onClose();
+        onClose(); // Close modal on success
       } else {
         toast({
           title: "Application Failed",
@@ -63,7 +78,7 @@ export default function JobApplicationModal({ isOpen, onClose, jobId, jobTitle }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Apply for: {jobTitle}</DialogTitle>

@@ -9,24 +9,25 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
-  Bookmark as BookmarkIcon, // Renamed to avoid conflict with state variable
+  Bookmark as BookmarkIcon,
   Share2,
   MapPin,
-  Briefcase, // Changed from Clock for job type
+  Briefcase,
   DollarSign,
-  Users, // Kept for applicants, though API doesn't provide this for a single job yet
+  Users,
   Building2,
-  CalendarDays, // Changed from Calendar for consistency
+  CalendarDays,
   CheckCircle,
   AlertCircle,
-  Info, // For "Nice to have"
-  Award, // For "Benefits"
-  Building, // For company logo placeholder
+  Info,
+  Award,
+  Building,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import { useToast } from "@/components/ui/use-toast";
-import JobApplicationModal from "@/components/JobApplicationModal"; // Import the modal
+import JobApplicationModal from "@/components/JobApplicationModal";
+import { getToken } from "@/lib/authClient"; // Added
 
 // Interface for Job Details from API (based on /api/jobs/[id] route)
 interface CompanyDetails {
@@ -43,9 +44,9 @@ interface JobDetails {
   id: string;
   title: string;
   description: string | null;
-  responsibilities: string | null; // Assuming these are TEXT, might need parsing if structured
-  requirements: string | null;   // Assuming these are TEXT
-  benefits: string | null;       // Assuming these are TEXT
+  responsibilities: string | null;
+  requirements: string | null;
+  benefits: string | null;
   location: string | null;
   jobType: string;
   experienceLevel: string | null;
@@ -53,30 +54,26 @@ interface JobDetails {
   salaryMax: number | null;
   salaryCurrency: string | null;
   salaryPeriod: string | null;
-  applicationDeadline: string | null; // ISO String
+  applicationDeadline: string | null;
   status: string;
-  publishedAt: string | null; // ISO String
-  createdAt: string; // ISO String
-  updatedAt: string; // ISO String
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
   postedByUserId: string;
   company: CompanyDetails;
-  skills: string[]; // Array of skill names
+  skills: string[];
 }
 
-// Helper to parse text fields that might contain lists
 const parseListField = (text: string | null | undefined): string[] => {
   if (!text) return [];
-  // Assuming items are separated by newlines or common list markers
-  // This is a basic split, can be made more robust
-  return text.split(/\n(?=\s*[-*•–—]|\s*\d+\.\s*)/) // Split by newline followed by list marker
-             .map(item => item.replace(/^[\s*-*•–—]*/, '').replace(/^\d+\.\s*/, '').trim()) // Remove markers and trim
+  return text.split(/\n(?=\s*[-*•–—]|\s*\d+\.\s*)/)
+             .map(item => item.replace(/^[\s*-*•–—]*/, '').replace(/^\d+\.\s*/, '').trim())
              .filter(item => item.length > 0);
 };
 
-
 export default function JobDetailPage() {
   const params = useParams();
-  const jobId = params?.id as string; // Type assertion
+  const jobId = params?.id as string;
   const { toast } = useToast();
 
   const [jobDetails, setJobDetails] = useState<JobDetails | null>(null);
@@ -84,15 +81,16 @@ export default function JobDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [hasApplied, setHasApplied] = useState(false); // To disable apply button
+  const [hasApplied, setHasApplied] = useState(false);
 
   const fetchJobAndStatus = useCallback(async () => {
     if (!jobId) return;
     setIsLoading(true);
     setError(null);
+    const token = getToken(); // Get token for auth calls
 
     try {
-      // Fetch job details
+      // Fetch job details (public, no token needed)
       const jobRes = await fetch(`/api/jobs/${jobId}`);
       if (!jobRes.ok) {
         if (jobRes.status === 404) throw new Error("Job not found");
@@ -101,33 +99,49 @@ export default function JobDetailPage() {
       const jobData = await jobRes.json();
       setJobDetails(jobData.data);
 
-      // Fetch initial bookmark status
-      // For simplicity, we assume /api/job-bookmarks returns a list of bookmarked job IDs or full objects
-      // A more specific endpoint like /api/jobs/${jobId}/bookmark-status would be better.
-      try {
-        const bookmarkRes = await fetch(`/api/job-bookmarks`); // This API returns full job objects with job_id
-        if (bookmarkRes.ok) {
-          const bookmarksData = await bookmarkRes.json();
-          const isMarked = bookmarksData.data.some((b: any) => b.job_id === jobId);
-          setIsBookmarked(isMarked);
-        } else {
-          console.warn("Could not fetch bookmark status.");
+      if (token) { // Only fetch user-specific data if token exists
+        // Fetch initial bookmark status
+        try {
+          const bookmarkRes = await fetch(`/api/job-bookmarks`, { // Fetches all user's bookmarks
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (bookmarkRes.ok) {
+            const bookmarksData = await bookmarkRes.json();
+            const isMarked = bookmarksData.data.some((b: any) => b.job_id === jobId);
+            setIsBookmarked(isMarked);
+          } else {
+            console.warn("Could not fetch bookmark status.");
+          }
+        } catch (bookmarkError) {
+           console.warn("Error checking bookmark status:", bookmarkError);
         }
-      } catch (bookmarkError) {
-         console.warn("Error checking bookmark status:", bookmarkError);
-      }
 
-      // Check if user has already applied (Example check, API might be different)
-      try {
-        const applicationCheckRes = await fetch(`/api/job-applications?jobId=${jobId}`); // This API should filter by current user via token
-        if(applicationCheckRes.ok) {
-            const applicationsData = await applicationCheckRes.json();
-            if(applicationsData.data && applicationsData.data.length > 0) {
-                setHasApplied(true);
-            }
+        // Check if user has already applied
+        try {
+          const applicationCheckRes = await fetch(`/api/job-applications?jobId=${jobId}`, {
+             headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if(applicationCheckRes.ok) {
+              const applicationsData = await applicationCheckRes.json();
+              // Check if any application in the returned data is by the current user for this job
+              // The API should ideally filter by current user via token, so if data.length > 0, it's an application by this user.
+              if(applicationsData.data && applicationsData.data.length > 0) {
+                  setHasApplied(true);
+              } else {
+                  setHasApplied(false); // Explicitly set to false if no applications found
+              }
+          } else {
+            console.warn("Could not fetch application status.");
+            setHasApplied(false);
+          }
+        } catch(appCheckError) {
+          console.warn("Error checking application status:", appCheckError);
+          setHasApplied(false);
         }
-      } catch(appCheckError) {
-        console.warn("Error checking application status:", appCheckError);
+      } else {
+        // No token, user is not logged in or token is unavailable
+        setIsBookmarked(false);
+        setHasApplied(false); // Cannot determine application status without login
       }
 
     } catch (err: any) {
@@ -143,21 +157,31 @@ export default function JobDetailPage() {
 
   const handleToggleBookmark = async () => {
     if (!jobDetails) return;
+    const token = getToken();
+    if (!token) {
+      toast({ title: "Authentication Required", description: "Please log in to bookmark jobs.", variant: "destructive" });
+      return;
+    }
+
     const originalBookmarkStatus = isBookmarked;
-    setIsBookmarked(!isBookmarked); // Optimistic update
+    setIsBookmarked(!isBookmarked);
 
     try {
       const method = !originalBookmarkStatus ? 'POST' : 'DELETE';
-      const response = await fetch(`/api/jobs/${jobDetails.id}/bookmark`, { method });
+      const response = await fetch(`/api/jobs/${jobDetails.id}/bookmark`, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!response.ok) {
-        setIsBookmarked(originalBookmarkStatus); // Revert on failure
-        toast({ title: "Error", description: "Failed to update bookmark.", variant: "destructive" });
+        setIsBookmarked(originalBookmarkStatus);
+        const errorData = await response.json();
+        toast({ title: "Error", description: errorData.message || "Failed to update bookmark.", variant: "destructive" });
       } else {
         toast({ title: "Success", description: `Job ${!originalBookmarkStatus ? 'bookmarked' : 'unbookmarked'}!` });
       }
     } catch (err) {
-      setIsBookmarked(originalBookmarkStatus); // Revert on failure
-      toast({ title: "Error", description: "An error occurred.", variant: "destructive" });
+      setIsBookmarked(originalBookmarkStatus);
+      toast({ title: "Error", description: "An error occurred while updating bookmark.", variant: "destructive" });
     }
   };
 
@@ -177,18 +201,12 @@ export default function JobDetailPage() {
     return `${min || max} ${currency}${period}`;
   };
 
-
   if (isLoading) {
-    // loading.tsx handles the main skeleton. This return is for client-side loading state post-initial load.
-    // Or, if not using Suspense with route groups, this would be the primary loading display.
-    // For now, returning null relies on loading.tsx for the initial skeleton.
     return null;
   }
-
   if (error) {
     return <div className="container max-w-4xl py-6 text-center text-red-500">{error}</div>;
   }
-
   if (!jobDetails) {
     return <div className="container max-w-4xl py-6 text-center">Job details not available.</div>;
   }
@@ -196,8 +214,6 @@ export default function JobDetailPage() {
   const responsibilitiesList = parseListField(jobDetails.responsibilities);
   const requirementsList = parseListField(jobDetails.requirements);
   const benefitsList = parseListField(jobDetails.benefits);
-  // For "Nice to have", assuming it might be part of description or a separate field if API provides it
-  // For now, let's assume it's not a dedicated field in JobDetails type.
 
   return (
     <>
@@ -208,9 +224,7 @@ export default function JobDetailPage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div className="flex-1">
-            {/* Title can be here or inside the card */}
-          </div>
+          <div className="flex-1"></div>
           <div className="flex space-x-2">
             <Button variant="outline" size="icon" onClick={handleShare} aria-label="Share job">
               <Share2 className="h-4 w-4" />
@@ -258,47 +272,27 @@ export default function JobDetailPage() {
               <CardHeader><CardTitle>Job Description</CardTitle></CardHeader>
               <CardContent className="space-y-6 prose dark:prose-invert max-w-none">
                 {jobDetails.description && <p className="leading-relaxed whitespace-pre-line">{jobDetails.description}</p>}
-
-                {responsibilitiesList.length > 0 && (<>
-                  <Separator />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 flex items-center"><CheckCircle className="h-5 w-5 text-green-600 mr-2" />Key Responsibilities</h3>
-                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                      {responsibilitiesList.map((item, i) => <li key={`resp-${i}`}>{item}</li>)}
-                    </ul>
-                  </div>
-                </>)}
-
-                {requirementsList.length > 0 && (<>
-                  <Separator />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 flex items-center"><AlertCircle className="h-5 w-5 text-orange-600 mr-2" />Requirements</h3>
-                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                      {requirementsList.map((item, i) => <li key={`req-${i}`}>{item}</li>)}
-                    </ul>
-                  </div>
-                </>)}
-
-                {benefitsList.length > 0 && (<>
-                  <Separator />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3 flex items-center"><Award className="h-5 w-5 text-indigo-600 mr-2" />Benefits & Perks</h3>
-                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                      {benefitsList.map((item, i) => <li key={`ben-${i}`}>{item}</li>)}
-                    </ul>
-                  </div>
-                </>)}
+                {responsibilitiesList.length > 0 && (<> <Separator /> <div> <h3 className="text-lg font-semibold mb-3 flex items-center"><CheckCircle className="h-5 w-5 text-green-600 mr-2" />Key Responsibilities</h3> <ul className="list-disc pl-5 space-y-1 text-muted-foreground"> {responsibilitiesList.map((item, i) => <li key={`resp-${i}`}>{item}</li>)} </ul> </div> </>)}
+                {requirementsList.length > 0 && (<> <Separator /> <div> <h3 className="text-lg font-semibold mb-3 flex items-center"><AlertCircle className="h-5 w-5 text-orange-600 mr-2" />Requirements</h3> <ul className="list-disc pl-5 space-y-1 text-muted-foreground"> {requirementsList.map((item, i) => <li key={`req-${i}`}>{item}</li>)} </ul> </div> </>)}
+                {benefitsList.length > 0 && (<> <Separator /> <div> <h3 className="text-lg font-semibold mb-3 flex items-center"><Award className="h-5 w-5 text-indigo-600 mr-2" />Benefits & Perks</h3> <ul className="list-disc pl-5 space-y-1 text-muted-foreground"> {benefitsList.map((item, i) => <li key={`ben-${i}`}>{item}</li>)} </ul> </div> </>)}
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-6 lg:sticky lg:top-6"> {/* Sticky sidebar */}
+          <div className="space-y-6 lg:sticky lg:top-6">
             <Card>
               <CardContent className="p-6">
                 <Button
                   className="w-full mb-3"
                   size="lg"
-                  onClick={() => setShowApplyModal(true)}
+                  onClick={() => {
+                    const token = getToken();
+                    if (!token) {
+                      toast({ title: "Authentication Required", description: "Please log in to apply for jobs.", variant: "destructive" });
+                      return;
+                    }
+                    setShowApplyModal(true);
+                  }}
                   disabled={jobDetails.status !== 'Open' || hasApplied}
                 >
                   {hasApplied ? "Already Applied" : (jobDetails.status !== 'Open' ? `Not Accepting Applications` : "Apply for this position")}
@@ -341,14 +335,6 @@ export default function JobDetailPage() {
                 {jobDetails.company.description && <><Separator className="my-2" /><p className="text-muted-foreground">{jobDetails.company.description}</p></>}
               </CardContent>
             </Card>
-
-            {/* Similar Jobs - Placeholder/Future improvement */}
-            {/* <Card>
-              <CardHeader><CardTitle className="text-lg">Similar Jobs</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">Feature coming soon.</p>
-              </CardContent>
-            </Card> */}
           </div>
         </div>
       </div>
@@ -357,7 +343,7 @@ export default function JobDetailPage() {
           isOpen={showApplyModal}
           onClose={() => {
             setShowApplyModal(false);
-            fetchJobAndStatus(); // Re-check application status after modal closes
+            fetchJobAndStatus();
           }}
           jobId={jobDetails.id}
           jobTitle={jobDetails.title}
