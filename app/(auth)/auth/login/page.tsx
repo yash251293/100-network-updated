@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react" // Added useEffect
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -56,20 +57,20 @@ export default function LoginPage() {
         const data = await response.json()
         if (data.token) {
           login(data.token) // Store the token
-          alert(data.message || "Login successful!")
+          toast({ title: "Login Successful", description: data.message || "You are now logged in." })
           router.push('/explore')
         } else {
           // This case should ideally not happen if the API guarantees a token on success
           console.error("Login successful, but no token received.")
-          alert("Login succeeded but failed to retrieve session token. Please try again.")
+          toast({ variant: "destructive", title: "Login Error", description: "Login succeeded but failed to retrieve session token. Please try again." })
         }
       } else {
         const errorData = await response.json().catch(() => ({}))
-        alert(`Login failed: ${errorData.message || response.statusText}`)
+        toast({ variant: "destructive", title: "Login Failed", description: errorData.message || response.statusText })
       }
     } catch (error) {
       console.error("Login error:", error)
-      alert("An unexpected error occurred during login. Please try again.")
+      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred during login. Please try again." })
     } finally {
       setIsLoading(false)
     }

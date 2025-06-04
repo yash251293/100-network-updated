@@ -1,4 +1,5 @@
 "use client"
+import { toast } from "@/hooks/use-toast";
 import { useState, useEffect, useRef } from "react" // Added useEffect and useRef
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -324,7 +325,7 @@ export default function CompleteProfilePage() {
       const token = getToken();
       if (!token) {
         console.error("[CompleteProfilePage][handleSubmit] No auth token found. Submission aborted.");
-        alert("Authentication token not found. Please log in again.");
+        toast({ variant: "destructive", title: "Authentication Error", description: "Authentication token not found. Please log in again." });
         setIsLoading(false);
         return;
       }
@@ -354,13 +355,13 @@ export default function CompleteProfilePage() {
           } else {
             const uploadErrorData = await uploadResponse.json().catch(() => ({}));
             console.error("Image upload failed:", uploadErrorData);
-            alert(`Image upload failed: ${uploadErrorData.error || uploadResponse.statusText}. Profile not saved.`);
+            toast({ variant: "destructive", title: "Image Upload Failed", description: `${uploadErrorData.error || uploadResponse.statusText}. Profile not saved.` });
             setIsLoading(false);
             return;
           }
         } catch (uploadError: any) {
           console.error("Error during image upload:", uploadError);
-          alert(`An error occurred during image upload: ${uploadError.message}. Profile not saved.`);
+          toast({ variant: "destructive", title: "Image Upload Error", description: `An error occurred during image upload: ${uploadError.message}. Profile not saved.` });
           setIsLoading(false);
           return;
         }
@@ -376,16 +377,16 @@ export default function CompleteProfilePage() {
       });
 
       if (response.ok) {
-        alert('Profile updated successfully!');
+        toast({ title: "Profile Updated", description: "Your profile has been updated successfully!" });
         router.push("/profile");
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error("Failed to update profile:", errorData);
-        alert(`Failed to update profile: ${errorData.message || errorData.error || response.statusText}`);
+        toast({ variant: "destructive", title: "Update Failed", description: `Failed to update profile: ${errorData.message || errorData.error || response.statusText}` });
       }
     } catch (error: any) {
       console.error("Error submitting profile:", error);
-      alert(`An unexpected error occurred: ${error.message}`);
+      toast({ variant: "destructive", title: "Error", description: `An unexpected error occurred: ${error.message}` });
     } finally {
       setIsLoading(false);
       setSelectedImageFile(null); // Reset selected file state

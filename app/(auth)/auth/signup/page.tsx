@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { toast } from "@/hooks/use-toast";
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -34,7 +35,7 @@ export default function SignupPage() {
     e.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!")
+      toast({ variant: "destructive", title: "Signup Error", description: "Passwords don't match!" })
       return // No need to set isLoading true if passwords don't match
     }
     setIsLoading(true)
@@ -54,15 +55,15 @@ export default function SignupPage() {
 
       if (response.ok) {
         const data = await response.json()
-        alert(data.message || "Signup successful! Please check your email to verify.")
+        toast({ title: "Signup Successful", description: data.message || "Please check your email to verify your account." })
         router.push('/explore') // Or to a verification pending page
       } else {
         const errorData = await response.json().catch(() => ({})) // Try to parse error JSON
-        alert(`Signup failed: ${errorData.message || response.statusText}`)
+        toast({ variant: "destructive", title: "Signup Failed", description: errorData.message || response.statusText })
       }
     } catch (error) {
       console.error("Signup error:", error)
-      alert("An unexpected error occurred during signup. Please try again.")
+      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred during signup. Please try again." })
     } finally {
       setIsLoading(false)
     }

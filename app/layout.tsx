@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation"; // Added usePathname
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
@@ -88,6 +89,7 @@ export default function RootLayout({
             // OR for authenticated users who are on an /auth route.
             <main>{children}</main>
           )}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
