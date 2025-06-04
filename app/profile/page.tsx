@@ -22,6 +22,7 @@ import {
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/authClient";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const [profileData, setProfileData] = useState<any>(null);
@@ -65,21 +66,6 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, [router]); // Added router to dependency array if it's used for navigation
-
-  useEffect(() => {
-    if (!isLoading && !error && profileData) {
-      // Completeness check based on defined criteria (e.g., bio and headline)
-      const isProfileIncomplete = !profileData.bio || !profileData.headline;
-
-      console.log("Profile data for redirect check:", profileData);
-      console.log("Is profile incomplete?", isProfileIncomplete);
-
-      if (isProfileIncomplete) {
-        console.log("Redirecting to /profile/complete due to incomplete profile.");
-        router.push('/profile/complete');
-      }
-    }
-  }, [profileData, isLoading, error, router]); // Dependencies for the redirect effect
 
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-screen">Loading profile...</div>;
@@ -131,10 +117,14 @@ export default function ProfilePage() {
                       {profileData.location || 'Location not set'}
                     </div>
                   </div>
-                  <Button variant="outline" className="ml-4">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
+                  <Link href="/profile/complete" passHref>
+                    <Button variant="outline" className="ml-4" asChild>
+                      <a>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Profile
+                      </a>
+                    </Button>
+                  </Link>
                 </div>
 
                 {/* Contact Info */}
