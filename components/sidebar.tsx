@@ -57,7 +57,7 @@ export default function Sidebar() {
   return (
     <div className="w-64 border-r bg-background h-full flex flex-col">
       <div className="p-4">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/feed" className="flex items-center gap-2">
           <img
             src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/100N%20logo-hXZbA69LLfyoIxuGBxaKL2lq5TY9q7.png"
             alt="100N"

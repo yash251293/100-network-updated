@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" // Added useEffect
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { login } from "@/lib/authClient" // Import login function
+import { login, isAuthenticated } from "@/lib/authClient" // Added isAuthenticated
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,12 +14,32 @@ import { Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      console.log("[LoginPage] User already authenticated, redirecting to /feed");
+      router.push('/feed');
+      // No need to setIsCheckingAuth(false) here as the component will unmount.
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [router]);
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+        <div>Checking authentication...</div> {/* Or a spinner */}
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-// usePathname import will be removed
+import { usePathname } from "next/navigation"; // Added usePathname
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  // const pathname = usePathname(); // Declaration removed
+  const pathname = usePathname(); // Added pathname
 
   useEffect(() => {
     setIsMounted(true);
@@ -73,7 +73,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {isUserAuthenticated ? (
+          {isUserAuthenticated && !pathname.startsWith('/auth') ? (
             <div className="flex h-screen bg-background">
               <Sidebar />
               <div className="flex flex-col flex-1">
@@ -84,6 +84,8 @@ export default function RootLayout({
               </div>
             </div>
           ) : (
+            // This simpler <main> will be used for unauthenticated users
+            // OR for authenticated users who are on an /auth route.
             <main>{children}</main>
           )}
         </ThemeProvider>
