@@ -92,9 +92,9 @@ export default function ProfilePage() {
               {/* Profile Picture */}
               <div className="relative -mt-20 mb-6 sm:mb-0">
                 <Avatar className="h-32 w-32 border-4 border-white">
-                  <AvatarImage src={profileData.avatar_url || "/placeholder-user.jpg"} alt={profileData.user?.email || 'User'} />
+                  <AvatarImage src={profileData.avatar_url || "/placeholder-user.jpg"} alt={ (profileData.first_name && profileData.last_name) ? `${profileData.first_name} ${profileData.last_name}` : (profileData.first_name || profileData.last_name || 'User Avatar') } />
                   <AvatarFallback className="text-2xl">
-                    {profileData.user?.first_name?.[0] || ''}{profileData.user?.last_name?.[0] || ''}
+                    {(profileData.first_name?.[0] || '') + (profileData.last_name?.[0] || '') || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <Button
@@ -113,7 +113,7 @@ export default function ProfilePage() {
               <div className="flex-1">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h1 className="text-2xl font-bold">{profileData.user?.first_name || ''} {profileData.user?.last_name || profileData.user?.email || 'User'}</h1>
+                    <h1 className="text-2xl font-bold">{(profileData.first_name && profileData.last_name) ? `${profileData.first_name} ${profileData.last_name}` : (profileData.first_name || profileData.last_name || 'User Name')}</h1>
                     <p className="text-lg text-muted-foreground">{profileData.headline || 'No headline available'}</p>
                     <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <MapPin className="h-4 w-4 mr-1" />
@@ -132,7 +132,7 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap gap-4 mt-4 text-sm">
                   <div className="flex items-center text-blue-600">
                     <Mail className="h-4 w-4 mr-1" />
-                    {profileData.user?.email || 'Email not available'}
+                    {profileData.email || 'Email not available'}
                   </div>
                   <div className="flex items-center text-muted-foreground">
                     <Phone className="h-4 w-4 mr-1" />
