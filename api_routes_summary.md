@@ -21,6 +21,8 @@ This document provides a detailed analysis of the API routes found in `app/api/`
 *   **`POST /api/jobs/{id}/bookmark`**: Bookmarks a specific job.
 *   **`DELETE /api/jobs/{id}/bookmark`**: Removes a bookmark from a specific job.
 *   **`GET /api/job-bookmarks`**: Fetches all jobs bookmarked by the current user.
+*   **`GET /api/companies`**: Searches or lists companies.
+*   **`POST /api/companies`**: Creates a new company.
 
 ---
 
@@ -142,7 +144,7 @@ This document provides a detailed analysis of the API routes found in `app/api/`
 
 *   **Purpose**: Fetches a list of job postings with filtering and pagination.
 *   **HTTP Method**: `GET`
-*   **Authentication**: Not strictly required to view jobs, but user context might be used for personalized results in future (e.g., bookmark status - handled client-side for now).
+*   **Authentication**: Not strictly required to view jobs.
 *   **Query Parameters (Zod Schema: `getJobsQuerySchema`)**:
     *   `searchTerm` (string, optional)
     *   `jobType` (string, optional)
@@ -156,17 +158,15 @@ This document provides a detailed analysis of the API routes found in `app/api/`
     *   `sortBy` (enum: 'published_at', 'title', 'salary_min', 'created_at', default 'published_at')
     *   `sortOrder` (enum: 'asc', 'desc', default 'desc')
 *   **Database Interaction**:
-    *   Dynamically builds SQL query.
+    *   Uses CTEs for skill aggregation.
     *   SELECTs from `jobs (j)` and `companies (c)`.
-    *   LEFT JOINs `job_skills_link (jsl)` and `skills (s)` to aggregate skill names (`STRING_AGG`).
-    *   WHERE clauses for filters: `status`, `searchTerm` (searches `j.title`, `j.description`, `c.name`), `jobType`, `experienceLevel`, `location`, `companyId`.
-    *   Skill filtering: If `skills` provided, finds jobs matching ALL specified skills using a subquery or CTE.
-    *   GROUP BY `j.id, c.id` (and other non-aggregated columns).
+    *   LEFT JOINs `AggregatedJobSkills` CTE.
+    *   WHERE clauses for filters. Skill filtering uses subquery for matching ALL skills.
     *   ORDER BY (sanitized `sortBy`) and LIMIT/OFFSET for pagination.
     *   Separate `COUNT(DISTINCT j.id)` query for total items matching filters.
 *   **Response Structure**:
     *   **Success (200 OK)**: `NextResponse.json({ data: jobsWithSkills, pagination: { totalItems, totalPages, currentPage, pageSize } })`.
-        *   `jobsWithSkills`: Array of job objects. `skills_list` (comma-separated) is split into an array. Description is truncated.
+        *   `jobsWithSkills`: Array of job objects. `skills_list` is an array. Description is truncated.
     *   **Error (400 Bad Request)**: For invalid query parameters (Zod).
     *   **Error (500 Internal Server Error)**: For database errors.
 *   **Validation**: Uses Zod schema for query parameters. `sortBy` is sanitized.
@@ -181,12 +181,11 @@ This document provides a detailed analysis of the API routes found in `app/api/`
 *   **Authentication**: Not strictly required.
 *   **Database Interaction**:
     *   SELECTs fields from `jobs (j)` and `companies (c)`.
-    *   LEFT JOINs `job_skills_link (jsl)` and `skills (s)` to aggregate skill names.
+    *   Uses CTEs for skill aggregation similar to `GET /api/jobs`.
     *   WHERE `j.id = $1`.
-    *   GROUP BY `j.id, c.id` (and other non-aggregated columns).
 *   **Response Structure**:
     *   **Success (200 OK)**: `NextResponse.json({ success: true, data: jobDetails })`.
-        *   `jobDetails`: Object containing job fields, a nested `company` object, and `skills` array (from `skills_list`).
+        *   `jobDetails`: Object containing job fields, a nested `company` object, and `skills` array.
     *   **Error (400 Bad Request)**: If `id` is not a valid UUID (Zod validation).
     *   **Error (404 Not Found)**: If job with the given ID is not found.
     *   **Error (500 Internal Server Error)**: For database errors.
@@ -203,18 +202,10 @@ This document provides a detailed analysis of the API routes found in `app/api/`
 *   **Request Body (Zod Schema: `updateJobSchema` - all fields optional)**: Same fields as `POST /api/jobs`.
 *   **Database Interaction**:
     *   Uses transaction.
-    *   Verifies job ownership by comparing `posted_by_user_id` with authenticated `userId`.
-    *   Dynamically constructs `UPDATE jobs` statement for provided fields. Sets `updated_at = CURRENT_TIMESTAMP`.
-    *   If `skills` array is in request body:
-        *   Deletes all existing skills for the job from `job_skills_link`.
-        *   If new `skills` array is not empty, iterates, finds/creates skills in `skills` table, and inserts into `job_skills_link`.
-*   **Response Structure**:
-    *   **Success (200 OK)**: `NextResponse.json({ success: true, message: 'Job updated successfully' })`.
-    *   **Error (400 Bad Request)**: For invalid `id` or body (Zod), or if `companyId` is invalid.
-    *   **Error (401 Unauthorized)**: Authentication failure.
-    *   **Error (403 Forbidden)**: If user does not own the job.
-    *   **Error (404 Not Found)**: If job not found.
-    *   **Error (500 Internal Server Error)**: For database errors.
+    *   Verifies job ownership.
+    *   Dynamically constructs `UPDATE jobs` statement. Sets `updated_at = CURRENT_TIMESTAMP`.
+    *   Handles `skills` update (delete existing, insert new).
+*   **Response Structure**: Success (200 OK); Error (400, 401, 403, 404, 500).
 *   **Validation**: Zod for path param and body. Ownership check.
 
 ---
@@ -225,17 +216,8 @@ This document provides a detailed analysis of the API routes found in `app/api/`
 *   **HTTP Method**: `DELETE`
 *   **Authentication**: Required. User must be the one who posted the job.
 *   **Path Parameter**: `id` (Job ID, UUID).
-*   **Database Interaction**:
-    *   Verifies job ownership.
-    *   `DELETE FROM jobs WHERE id = $1`.
-    *   Related data in `job_skills_link`, `job_applications`, `user_job_bookmarks` should be handled by `ON DELETE CASCADE` in DB schema.
-*   **Response Structure**:
-    *   **Success (200 OK)**: `NextResponse.json({ success: true, message: 'Job deleted successfully' })`.
-    *   **Error (400 Bad Request)**: If `id` is invalid (Zod).
-    *   **Error (401 Unauthorized)**: Authentication failure.
-    *   **Error (403 Forbidden)**: If user does not own the job.
-    *   **Error (404 Not Found)**: If job not found.
-    *   **Error (500 Internal Server Error)**: For database errors.
+*   **Database Interaction**: Verifies job ownership. `DELETE FROM jobs WHERE id = $1`. Cascading deletes for related data.
+*   **Response Structure**: Success (200 OK); Error (400, 401, 403, 404, 500).
 *   **Validation**: Zod for path param. Ownership check.
 
 ---
@@ -244,105 +226,100 @@ This document provides a detailed analysis of the API routes found in `app/api/`
 
 *   **Purpose**: Allows an authenticated user to apply for a specific job.
 *   **HTTP Method**: `POST`
-*   **Authentication**: Required (uses `verifyAuthToken` to get `userId`).
+*   **Authentication**: Required.
 *   **Path Parameter**: `id` (Job ID, UUID).
-*   **Request Body (Zod Schema: `applicationBodySchema`)**:
-    *   `coverLetter` (string, optional)
-    *   `resumeUrl` (string URL, optional)
-*   **Database Interaction**:
-    *   Checks if job exists and its `status` is 'Open'.
-    *   Checks if user has already applied for this job in `job_applications`.
-    *   Inserts new record into `job_applications` (`job_id`, `user_id`, `cover_letter`, `resume_url`, `application_date`, `status` set to 'Applied').
-*   **Response Structure**:
-    *   **Success (201 Created)**: `NextResponse.json({ success: true, message: 'Application submitted successfully', applicationId: newApplicationId })`.
-    *   **Error (400 Bad Request)**: Invalid `id`/body (Zod), job not open, or already applied.
-    *   **Error (401 Unauthorized)**: Authentication failure.
-    *   **Error (404 Not Found)**: Job not found.
-    *   **Error (500 Internal Server Error)**: Database errors.
-*   **Validation**: Zod for path param and body. Business logic checks (job status, duplicate application).
+*   **Request Body (Zod Schema: `applicationBodySchema`)**: `coverLetter` (optional), `resumeUrl` (optional URL).
+*   **Database Interaction**: Checks job status ('Open'), checks for duplicate application, inserts into `job_applications`.
+*   **Response Structure**: Success (201 Created) with `applicationId`; Error (400, 401, 404, 500).
+*   **Validation**: Zod for path/body. Business logic checks.
 
 ---
 
 ## `app/api/job-applications/route.ts` (`GET /api/job-applications`)
 
-*   **Purpose**: Fetches job applications with filtering and pagination, based on user roles/permissions.
+*   **Purpose**: Fetches job applications with filtering/pagination, based on user roles.
 *   **HTTP Method**: `GET`
-*   **Authentication**: Required (uses `verifyAuthToken`). `requestingUserId` is extracted.
-*   **Query Parameters (Zod Schema: `getApplicationsQuerySchema`)**:
-    *   `userId` (UUID string, optional): To fetch applications for a specific user.
-    *   `jobId` (UUID string, optional): To fetch applications for a specific job.
-    *   `status` (string, optional)
-    *   `page` (number, default 1), `limit` (number, default 10)
-    *   `sortBy` (enum: 'application_date', 'j.title', 'c.name', default 'application_date')
-    *   `sortOrder` (enum: 'asc', 'desc', default 'desc')
-*   **Authorization**:
-    *   If `userId` param is present: `userId` must match `requestingUserId` (unless admin).
-    *   If `jobId` param is present: `requestingUserId` must be `posted_by_user_id` for the job (unless admin).
-    *   If neither `userId` nor `jobId`: Defaults to applications for `requestingUserId`.
-*   **Database Interaction**:
-    *   SELECTs from `job_applications (ja)`.
-    *   JOINs `jobs (j)`, `companies (c)`, `users (u)`, and `profiles (p)` to include job title, company name, applicant email, applicant name.
-    *   WHERE clauses based on validated and authorized query params.
-    *   ORDER BY (sanitized) and LIMIT/OFFSET.
-    *   Separate `COUNT(DISTINCT ja.id)` query for total items.
-*   **Response Structure**:
-    *   **Success (200 OK)**: `NextResponse.json({ data: applications, pagination: { totalItems, totalPages, ... } })`.
-    *   **Error (400 Bad Request)**: Invalid query params (Zod).
-    *   **Error (401 Unauthorized)**: Authentication failure.
-    *   **Error (403 Forbidden)**: Authorization failure.
-    *   **Error (404 Not Found)**: If `jobId` provided for auth check is not found.
-    *   **Error (500 Internal Server Error)**: Database errors.
+*   **Authentication**: Required.
+*   **Query Parameters (Zod Schema: `getApplicationsQuerySchema`)**: `userId`, `jobId`, `status`, pagination, sorting.
+*   **Authorization**: Users see their own applications; job posters see applications for their jobs.
+*   **Database Interaction**: SELECTs from `job_applications` with JOINs to `jobs`, `companies`, `users`, `profiles`. Dynamic WHERE, ORDER BY, LIMIT/OFFSET. Count query for pagination.
+*   **Response Structure**: Success (200 OK) with applications data and pagination; Error (400, 401, 403, 404, 500).
 *   **Validation**: Zod for query params. Authorization logic.
 
 ---
 
 ## `app/api/jobs/[id]/bookmark/route.ts` (`POST /api/jobs/{id}/bookmark`, `DELETE /api/jobs/{id}/bookmark`)
 
-*   **Purpose**:
-    *   `POST`: Allows an authenticated user to bookmark a job.
-    *   `DELETE`: Allows an authenticated user to remove a job bookmark.
-*   **HTTP Method(s)**: `POST`, `DELETE`
-*   **Authentication**: Required (uses `verifyAuthToken` to get `userId`).
-*   **Path Parameter**: `id` (Job ID, UUID, validated by Zod).
-*   **Database Interaction**:
-    *   Checks if job with `id` exists in `jobs` table (returns 404 if not).
-    *   **`POST`**: `INSERT INTO user_job_bookmarks (user_id, job_id) ... ON CONFLICT (user_id, job_id) DO NOTHING`.
-    *   **`DELETE`**: `DELETE FROM user_job_bookmarks WHERE user_id = $1 AND job_id = $2`.
-*   **Response Structure**:
-    *   **`POST` Success (201 Created)**: `NextResponse.json({ success: true, message: 'Job bookmarked successfully' })`. (Returns 201 even if `ON CONFLICT` did nothing, indicating state is achieved).
-    *   **`DELETE` Success (200 OK)**: `NextResponse.json({ success: true, message: 'Bookmark removed successfully' })` (if `rowCount > 0`).
-    *   **`DELETE` Not Found (404)**: `NextResponse.json({ success: false, message: 'Bookmark not found...' })` (if `rowCount === 0`).
-    *   **Error (400 Bad Request)**: Invalid `id` (Zod).
-    *   **Error (401 Unauthorized)**: Authentication failure.
-    *   **Error (404 Not Found)**: If job to be bookmarked/unbookmarked doesn't exist.
-    *   **Error (500 Internal Server Error)**: Database errors.
+*   **Purpose**: `POST` to bookmark a job; `DELETE` to unbookmark.
+*   **HTTP Method(s)**: `POST`, `DELETE`.
+*   **Authentication**: Required.
+*   **Path Parameter**: `id` (Job ID, UUID).
+*   **Database Interaction**: Checks job existence. `POST` uses `INSERT ... ON CONFLICT DO NOTHING` into `user_job_bookmarks`. `DELETE` removes from `user_job_bookmarks`.
+*   **Response Structure**: `POST` Success (201); `DELETE` Success (200 if found, 404 if not); Error (400, 401, 404, 500).
 *   **Validation**: Zod for path param. Job existence check.
 
 ---
 
 ## `app/api/job-bookmarks/route.ts` (`GET /api/job-bookmarks`)
 
-*   **Purpose**: Fetches all jobs bookmarked by the currently authenticated user, with pagination.
+*   **Purpose**: Fetches jobs bookmarked by the current user.
 *   **HTTP Method**: `GET`
-*   **Authentication**: Required (uses `verifyAuthToken` to get `userId`).
-*   **Query Parameters (Zod Schema: `getBookmarksQuerySchema`)**:
-    *   `page` (number, default 1), `limit` (number, default 10)
-    *   `sortBy` (enum: 'bookmark_date', 'job_publish_date', 'job_title', default 'bookmark_date')
-    *   `sortOrder` (enum: 'asc', 'desc', default 'desc')
+*   **Authentication**: Required.
+*   **Query Parameters (Zod Schema: `getBookmarksQuerySchema`)**: Pagination, sorting.
+*   **Database Interaction**: Uses CTEs for skill aggregation. SELECTs from `user_job_bookmarks` with JOINs to `jobs`, `companies`, and `AggregatedJobSkills` CTE. WHERE `ujb.user_id = $userId`. ORDER BY, LIMIT/OFFSET. Count query for pagination.
+*   **Response Structure**: Success (200 OK) with bookmarked jobs data and pagination; Error (400, 401, 500).
+*   **Validation**: Zod for query params.
+
+---
+---
+
+## Company Related API Endpoints
+
+---
+
+## `app/api/companies/route.ts` (`GET /api/companies`)
+
+*   **Purpose**: Searches or lists companies.
+*   **HTTP Method**: `GET`
+*   **Authentication**: Required.
+*   **Query Parameters (Zod Schema: `getCompaniesQuerySchema`)**:
+    *   `search` (string, optional): Search term for company name.
+    *   `limit` (number, optional, default 10): Number of companies to return.
 *   **Database Interaction**:
-    *   SELECTs from `user_job_bookmarks (ujb)`.
-    *   JOINs `jobs (j)`, `companies (c)`.
-    *   LEFT JOINs `job_skills_link (jsl)` and `skills (s)` to aggregate skill names.
-    *   WHERE `ujb.user_id = $userId`.
-    *   GROUP BY `ujb.created_at, j.id, c.id` (and other non-aggregated columns).
-    *   ORDER BY (sanitized `sortBy` mapped to actual columns) and LIMIT/OFFSET.
-    *   Separate `COUNT(*)` query on `user_job_bookmarks` for the user.
+    *   If `search` term provided: `SELECT id, name, logo_url FROM companies WHERE name ILIKE $1 ORDER BY name ASC LIMIT $2`.
+    *   If no `search` term: `SELECT id, name, logo_url FROM companies ORDER BY name ASC LIMIT $1`.
 *   **Response Structure**:
-    *   **Success (200 OK)**: `NextResponse.json({ data: bookmarkedJobs, pagination: { totalItems, ... } })`.
-        *   `bookmarkedJobs`: Array of job objects, each including `bookmark_date`, job details, company details, and `skills_list` (converted to array). Job description truncated.
-    *   **Error (400 Bad Request)**: Invalid query params (Zod).
-    *   **Error (401 Unauthorized)**: Authentication failure.
-    *   **Error (500 Internal Server Error)**: Database errors.
-*   **Validation**: Zod for query params. `sortBy` mapped and sanitized.
+    *   **Success (200 OK)**: `NextResponse.json({ success: true, data: companies })`.
+    *   **Error (400 Bad Request)**: For invalid query parameters (Zod).
+    *   **Error (401 Unauthorized)**: For authentication failure.
+    *   **Error (500 Internal Server Error)**: For other server errors.
+*   **Validation**: Uses Zod schema for query parameters.
+
+---
+
+## `app/api/companies/route.ts` (`POST /api/companies`)
+
+*   **Purpose**: Creates a new company.
+*   **HTTP Method**: `POST`
+*   **Authentication**: Required (uses `verifyAuthToken` to set `created_by_user_id`).
+*   **Request Body (Zod Schema: `createCompanySchema`)**:
+    *   `name` (string, required, min 1 char)
+    *   `description` (string, optional, nullable)
+    *   `logoUrl` (string URL, optional, nullable)
+    *   `websiteUrl` (string URL, optional, nullable)
+    *   `industry` (string, optional, nullable)
+    *   `companySize` (string, optional, nullable)
+    *   `hqLocation` (string, optional, nullable)
+*   **Database Interaction**:
+    *   Checks for duplicate company name (case-insensitive `LOWER(name)`). If duplicate, returns 409.
+    *   Inserts new company into `companies` table, including `created_by_user_id`.
+    *   Returns the newly created company data.
+*   **Response Structure**:
+    *   **Success (201 Created)**: `NextResponse.json({ success: true, message: 'Company created successfully', data: newCompany })`.
+    *   **Error (400 Bad Request)**: For validation errors (Zod).
+    *   **Error (401 Unauthorized)**: For authentication failure.
+    *   **Error (409 Conflict)**: If company name already exists.
+    *   **Error (500 Internal Server Error)**: For other server errors.
+*   **Validation**: Uses Zod schema for request body. Duplicate name check.
 
 This detailed analysis should provide a good foundation for understanding the API's current state and identifying key areas for enhancement.
