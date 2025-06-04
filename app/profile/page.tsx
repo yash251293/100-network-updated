@@ -144,6 +144,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Stats */}
+                {/* Data for this section is not currently fetched from the API */}
                 <div className="flex gap-6 mt-4 text-sm">
                   <div className="flex items-center">
                     <Users className="h-4 w-4 mr-1 text-muted-foreground" />
@@ -189,53 +190,37 @@ export default function ProfilePage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Briefcase className="h-6 w-6 text-blue-600" />
+              {(profileData.experience && profileData.experience.length > 0) ? (
+                profileData.experience.map((exp: any, index: number) => (
+                  <div key={index} className="flex space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Briefcase className="h-6 w-6 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium">{exp.title || 'N/A'}</h3>
+                      <p className="text-muted-foreground">{exp.company || 'N/A'} • {exp.employment_type || 'N/A'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {exp.start_date ? new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'} -
+                        {exp.current ? 'Present' : (exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A')}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">{exp.location || 'N/A'}</p>
+                      <p className="text-sm mt-2 whitespace-pre-line">{exp.description || 'No description provided.'}</p>
+                      {/* Skills for this experience item - assuming exp.skills is an array of strings if it exists */}
+                      {exp.skills && exp.skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {exp.skills.map((skill: string, skillIndex: number) => (
+                            <Badge key={skillIndex} variant="secondary">{skill}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">Senior Software Engineer</h3>
-                  <p className="text-muted-foreground">TechCorp • Full-time</p>
-                  <p className="text-sm text-muted-foreground">Jan 2022 - Present • 3 yrs</p>
-                  <p className="text-sm text-muted-foreground mt-1">San Francisco, CA</p>
-                  <p className="text-sm mt-2">
-                    Lead development of microservices architecture serving 1M+ users. Mentored 5 junior developers and
-                    improved team productivity by 40%.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <Badge variant="secondary">React</Badge>
-                    <Badge variant="secondary">Node.js</Badge>
-                    <Badge variant="secondary">AWS</Badge>
-                    <Badge variant="secondary">TypeScript</Badge>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Briefcase className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">Software Engineer</h3>
-                  <p className="text-muted-foreground">StartupXYZ • Full-time</p>
-                  <p className="text-sm text-muted-foreground">Jun 2019 - Dec 2021 • 2 yrs 7 mos</p>
-                  <p className="text-sm text-muted-foreground mt-1">Remote</p>
-                  <p className="text-sm mt-2">
-                    Built and maintained e-commerce platform handling $10M+ in annual revenue. Implemented CI/CD
-                    pipelines and reduced deployment time by 60%.
-                  </p>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <Badge variant="secondary">Vue.js</Badge>
-                    <Badge variant="secondary">Python</Badge>
-                    <Badge variant="secondary">Docker</Badge>
-                    <Badge variant="secondary">PostgreSQL</Badge>
-                  </div>
-                </div>
-              </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">No professional experience added yet. Click the '+' icon to add your first experience!</p>
+              )}
             </CardContent>
           </Card>
 
@@ -248,26 +233,33 @@ export default function ProfilePage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="flex space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <GraduationCap className="h-6 w-6 text-purple-600" />
+              {(profileData.education && profileData.education.length > 0) ? (
+                profileData.education.map((edu: any, index: number) => (
+                  <div key={index} className="flex space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <GraduationCap className="h-6 w-6 text-purple-600" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium">{edu.degree || 'N/A'}</h3>
+                      <p className="text-muted-foreground">{edu.school || 'N/A'} • {edu.field_of_study || 'N/A'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {edu.start_date ? new Date(edu.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'} -
+                        {edu.current ? 'Present' : (edu.end_date ? new Date(edu.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A')}
+                      </p>
+                      <p className="text-sm mt-2 whitespace-pre-line">{edu.description || 'No description provided.'}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">Bachelor of Science in Computer Science</h3>
-                  <p className="text-muted-foreground">University of California, Berkeley</p>
-                  <p className="text-sm text-muted-foreground">2015 - 2019</p>
-                  <p className="text-sm mt-2">
-                    Graduated Magna Cum Laude. Relevant coursework: Data Structures, Algorithms, Software Engineering,
-                    Database Systems.
-                  </p>
-                </div>
-              </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">No educational background added yet. Click the '+' icon to add your education!</p>
+              )}
             </CardContent>
           </Card>
 
           {/* Projects Section */}
+          {/* Data for this section is not currently fetched from the API */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-xl font-semibold">Projects</h2>
@@ -318,57 +310,23 @@ export default function ProfilePage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">JavaScript</span>
-                    <span className="text-xs text-muted-foreground">Expert</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "95%" }}></div>
-                  </div>
+              {(profileData.skills && profileData.skills.length > 0) ? (
+                <div className="flex flex-wrap gap-2">
+                  {profileData.skills.map((skill: any, index: number) => (
+                    <Badge key={index} variant="secondary" className="text-sm">
+                      {skill.name || 'N/A'}
+                      {skill.proficiency_level && ` (${skill.proficiency_level})`}
+                    </Badge>
+                  ))}
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">React</span>
-                    <span className="text-xs text-muted-foreground">Expert</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "90%" }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Node.js</span>
-                    <span className="text-xs text-muted-foreground">Advanced</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "85%" }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">AWS</span>
-                    <span className="text-xs text-muted-foreground">Advanced</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "80%" }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Python</span>
-                    <span className="text-xs text-muted-foreground">Intermediate</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "70%" }}></div>
-                  </div>
-                </div>
-              </div>
+              ) : (
+                <p className="text-muted-foreground">No skills added yet. Click the '+' icon to add your skills!</p>
+              )}
             </CardContent>
           </Card>
 
           {/* Certifications Section */}
+          {/* Data for this section is not currently fetched from the API */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Certifications</h2>
@@ -402,6 +360,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Languages Section */}
+          {/* Data for this section is not currently fetched from the API */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Languages</h2>
@@ -426,6 +385,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Recommendations Section */}
+          {/* Data for this section is not currently fetched from the API */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-lg font-semibold">Recommendations</h2>
