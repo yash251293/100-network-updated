@@ -1,113 +1,103 @@
 # Configuration Summary
 
+This document summarizes key configuration files and aspects of the project.
+
 ## `next.config.mjs`
 
+The Next.js configuration file.
 -   **ESLint**:
-    -   `ignoreDuringBuilds`: true
+    -   `ignoreDuringBuilds: true` (ESLint checks will not run during the `next build` process).
 -   **TypeScript**:
-    -   `ignoreBuildErrors`: true
+    -   `ignoreBuildErrors: true` (TypeScript errors will not block the build process).
 -   **Images**:
-    -   `unoptimized`: true
+    -   `unoptimized: true` (Disables Next.js Image Optimization API, images are served as-is. Useful for static exports or when using external image optimization services).
 
 ## `tailwind.config.ts`
 
--   **darkMode**: `["class"]`
--   **Content Paths**:
+Configuration for Tailwind CSS.
+-   **darkMode**: `["class"]` (Enables dark mode based on a class applied to an ancestor element, typically `<html>`).
+-   **Content Paths**: Specifies files to scan for Tailwind class usage:
     -   `./pages/**/*.{js,ts,jsx,tsx,mdx}`
     -   `./components/**/*.{js,ts,jsx,tsx,mdx}`
     -   `./app/**/*.{js,ts,jsx,tsx,mdx}`
-    -   `*.{js,ts,jsx,tsx,mdx}`
+    -   `./*.{js,ts,jsx,tsx,mdx}` (For root level files, if any)
 -   **Theme Extensions**:
-    -   **Colors**: Extensive custom color palette defined (background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, chart, sidebar).
-    -   **BorderRadius**: `lg`, `md`, `sm` defined using `var(--radius)`.
-    -   **Keyframes**: `accordion-down`, `accordion-up`.
-    -   **Animation**: `accordion-down`, `accordion-up`.
+    -   **Colors**: Defines an extensive custom color palette including `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, `chart`, and `sidebar` colors with variants.
+    *   **BorderRadius**: Configures `lg`, `md`, `sm` border radiuses using CSS variable `var(--radius)`.
+    *   **Keyframes**: Defines `accordion-down` and `accordion-up` keyframes for animations.
+    *   **Animation**: Defines `accordion-down` and `accordion-up` utility classes using the keyframes.
 -   **Plugins**:
-    -   `require("tailwindcss-animate")`
+    -   `require("tailwindcss-animate")` (Adds utilities for animations).
 
 ## `tsconfig.json`
 
--   **Compiler Options**:
-    -   `target`: "ES6"
-    -   `lib`: `["dom", "dom.iterable", "esnext"]`
-    -   `allowJs`: true
-    -   `skipLibCheck`: true
-    -   `strict`: true
-    -   `noEmit`: true
-    -   `esModuleInterop`: true
-    -   `module`: "esnext"
-    -   `moduleResolution`: "bundler"
-    -   `resolveJsonModule`: true
-    -   `isolatedModules`: true
-    -   `jsx`: "preserve"
-    -   `incremental`: true
-    -   `plugins`: `[{"name": "next"}]`
-    -   `paths`: `{"@/*": ["./*"]}`
--   **Include**: `["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]`
--   **Exclude**: `["node_modules"]`
+TypeScript compiler configuration.
+-   **Compiler Options (Key Options)**:
+    -   `target`: "ES6" (Output JavaScript will be ES6 compatible).
+    -   `lib`: `["dom", "dom.iterable", "esnext"]` (Specifies library files to be included in the compilation).
+    -   `allowJs`: `true` (Allows JavaScript files to be compiled).
+    -   `skipLibCheck`: `true` (Skips type checking of declaration files).
+    -   `strict`: `true` (Enables all strict type-checking options).
+    -   `noEmit`: `true` (Does not emit output files, Next.js handles this).
+    -   `esModuleInterop`: `true` (Enables compatibility with CommonJS modules).
+    -   `module`: "esnext" (Specifies module code generation).
+    -   `moduleResolution`: "bundler" (Module resolution strategy).
+    -   `resolveJsonModule`: `true` (Allows importing .json files).
+    -   `isolatedModules`: `true` (Ensures each file can be transpiled independently).
+    *   `jsx`: "preserve" (Preserves JSX for downstream processing, e.g., by Babel/Next.js).
+    *   `paths`: `{"@/*": ["./*"]}` (Sets up a path alias for easier imports, e.g., `@/components/...`).
+-   **Include/Exclude**: Specifies files included and excluded from compilation (e.g., `node_modules` is excluded).
+-   **Plugins**: `[{"name": "next"}]` (Integrates with Next.js type checking).
 
-## `components.json`
+## `components.json` (Shadcn/UI Configuration)
 
+Configuration file for the Shadcn/UI component library.
 -   **$schema**: `https://ui.shadcn.com/schema.json`
--   **style**: "default"
--   **rsc**: true
--   **tsx**: true
+-   **style**: "default" (Specifies the visual style for components).
+-   **rsc**: `true` (Indicates support for React Server Components).
+-   **tsx**: `true` (Components are TypeScript files).
 -   **Tailwind Configuration**:
-    -   `config`: "tailwind.config.ts"
-    -   `css`: "app/globals.css"
-    -   `baseColor`: "neutral"
-    -   `cssVariables`: true
-    -   `prefix`: ""
--   **Aliases**:
+    -   `config`: "tailwind.config.ts" (Path to Tailwind config).
+    -   `css`: "app/globals.css" (Path to global CSS file where Tailwind variables are defined).
+    -   `baseColor`: "neutral" (Base color palette for components).
+    -   `cssVariables`: `true` (Enables use of CSS variables for theming).
+    -   `prefix`: "" (No prefix for Tailwind utility classes generated by Shadcn/UI).
+-   **Aliases**: Defines import aliases used by Shadcn/UI:
     -   `components`: "@/components"
     -   `utils`: "@/lib/utils"
     -   `ui`: "@/components/ui"
-    -   `lib`: "@/lib"
+    -   `lib`: "@/lib" (Note: might conflict if project has other specific uses for `@/lib`)
     -   `hooks`: "@/hooks"
--   **iconLibrary**: "lucide"
+-   **iconLibrary**: `"lucide"` (Specifies `lucide-react` as the default icon library).
 
 ## `package.json`
 
--   **Name**: "my-v0-project"
--   **Version**: "0.1.0"
--   **Private**: true
--   **Scripts**:
-    -   `dev`: "next dev"
-    -   `build`: "next build"
-    -   `start`: "next start"
-    -   `lint`: "next lint"
--   **Main Dependencies**:
-    -   `@hookform/resolvers`: "^3.9.1"
-    -   `@radix-ui/*`: Various versions (UI components)
-    -   `autoprefixer`: "^10.4.20"
-    -   `class-variance-authority`: "^0.7.1"
-    -   `clsx`: "^2.1.1"
-    -   `cmdk`: "1.0.4"
-    -   `date-fns`: "4.1.0"
-    -   `embla-carousel-react`: "8.5.1"
-    -   `input-otp`: "1.4.1"
-    -   `lucide-react`: "^0.454.0"
-    -   `next`: "15.2.4"
-    -   `next-themes`: "^0.4.4"
-    -   `pg`: "^8.12.0"
-    -   `react`: "^19"
-    -   `react-day-picker`: "8.10.1"
-    -   `react-dom`: "^19"
-    -   `react-hook-form`: "^7.54.1"
-    -   `react-resizable-panels`: "^2.1.7"
-    -   `recharts`: "2.15.0"
-    -   `sonner`: "^1.7.1"
-    -   `tailwind-merge`: "^2.5.5"
-    -   `tailwindcss-animate`: "^1.0.7"
-    -   `vaul`: "^0.9.6"
-    -   `zod`: "^3.24.1"
-    -   `bcryptjs`: "^2.4.3"
--   **DevDependencies**:
-    -   `@types/bcryptjs`: "^2.4.6"
-    -   `@types/node`: "^22"
-    -   `@types/pg`: "^8.11.0"
-    -   `@types/react`: "^19"
-    -   `@types/react-dom`: "^19"
-    -   `postcss`: "^8"
-    -   `tailwindcss`: "^3.4.17"
-    -   `typescript`: "^5"
+Defines project metadata, scripts, dependencies, and devDependencies.
+-   **Scripts (Key Scripts)**:
+    -   `dev`: "next dev" (Starts Next.js development server).
+    -   `build`: "next build" (Builds the application for production).
+    -   `start`: "next start" (Starts Next.js production server).
+    -   `lint`: "next lint" (Runs ESLint checks).
+-   **Main Dependencies (Key Functional Libraries)**:
+    -   `next`, `react`, `react-dom` (Core framework).
+    -   `@radix-ui/*` (Primitives for building accessible UI components, used by Shadcn/UI).
+    -   `lucide-react` (Icon library).
+    -   `next-themes` (Theme management for light/dark mode).
+    *   `pg` (Node.js PostgreSQL client).
+    *   `bcryptjs` (Password hashing).
+    *   `jsonwebtoken` (JWT generation and verification).
+    *   `nodemailer` (Email sending).
+    *   `react-hook-form`, `zod`, `@hookform/resolvers` (Form handling and validation).
+    -   `class-variance-authority`, `clsx`, `tailwind-merge`, `tailwindcss-animate` (Styling utilities).
+-   **DevDependencies (Key Build/Type Tools)**:
+    -   `typescript`, `@types/*` (TypeScript and type definitions).
+    -   `tailwindcss`, `autoprefixer`, `postcss` (Tailwind CSS tooling).
+    -   `eslint`, `eslint-config-next` (Linting).
+
+---
+**External Setup & Environment:**
+
+For a complete understanding of the project's operational requirements, refer to:
+*   **`POSTGRESQL_SETUP.md`**: Contains detailed instructions for setting up the PostgreSQL database, including user and database creation, and schema application.
+*   **`environment_setup_notes.md`**: Explains necessary environment variables that must be configured for the application to run correctly, such as `JWT_SECRET` for secure authentication and `POSTGRES_URL` for database connectivity.
+---
