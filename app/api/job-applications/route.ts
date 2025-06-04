@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { query } from '@/lib/db';
-import { verifyAuthToken, AuthError } from '@/lib/authUtils';
+import { verifyAuthToken } from '@/lib/authUtils'; // Removed AuthError import
 
 const getApplicationsQuerySchema = z.object({
   userId: z.string().uuid().optional(),
@@ -14,24 +14,15 @@ const getApplicationsQuerySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  // 1. Authentication
-  let authPayload;
-  try {
-    authPayload = await verifyAuthToken(request);
-  } catch (e) {
-    if (e instanceof AuthError) {
-      return NextResponse.json({ success: false, message: e.message }, { status: e.status });
-    }
-    return NextResponse.json({ success: false, message: 'Authentication failed' }, { status: 401 });
-  }
+  const authHeader = request.headers.get('Authorization');
+  const authPayload = verifyAuthToken(authHeader);
 
-  if (!authPayload || !authPayload.userId) {
-    return NextResponse.json({ success: false, message: 'User not authenticated or user ID missing' }, { status: 401 });
+  if (!authPayload) {
+    return NextResponse.json({ success: false, message: 'Authentication failed: Invalid or missing token' }, { status: 401 });
   }
-  const requestingUserId = authPayload.userId;
+  const { userId: requestingUserId } = authPayload;
   // const isAdmin = authPayload.isAdmin || false; // Future: for admin overrides
 
-  // 2. Query Parameter Validation
   const { searchParams } = new URL(request.url);
   const params = Object.fromEntries(searchParams.entries());
   const validationResult = getApplicationsQuerySchema.safeParse(params);
@@ -45,8 +36,8 @@ export async function GET(request: NextRequest) {
   }
 
   const {
-    userId: queryUserId, // User whose applications are being requested
-    jobId: queryJobId,     // Job for which applications are being requested
+    userId: queryUserId,
+    jobId: queryJobId,
     status,
     page,
     limit,
@@ -59,98 +50,81 @@ export async function GET(request: NextRequest) {
   const whereClauses: string[] = [];
   let paramIndex = 1;
 
-  // 3. Authorization
-  // Scenario 1: User requests their own applications
-  if (queryUserId) {
-    if (queryUserId !== requestingUserId /* && !isAdmin */) {
-      return NextResponse.json({ success: false, message: 'Forbidden: You can only view your own applications.' }, { status: 403 });
-    }
-    whereClauses.push(`ja.user_id = $${paramIndex++}`);
-    queryParams.push(queryUserId);
-    countQueryParams.push(queryUserId);
-  }
-  // Scenario 2: Job poster requests applications for their job
-  else if (queryJobId) {
-    try {
-      const jobCheckResult = await query('SELECT posted_by_user_id FROM jobs WHERE id = $1', [queryJobId]);
-      if (jobCheckResult.rows.length === 0) {
-        return NextResponse.json({ success: false, message: 'Job not found.' }, { status: 404 });
+  try { // Added try block for authorization logic that might throw DB errors
+    if (queryUserId) {
+      if (queryUserId !== requestingUserId /* && !isAdmin */) {
+        return NextResponse.json({ success: false, message: 'Forbidden: You can only view your own applications.' }, { status: 403 });
       }
-      if (jobCheckResult.rows[0].posted_by_user_id !== requestingUserId /* && !isAdmin */) {
-        return NextResponse.json({ success: false, message: 'Forbidden: You can only view applications for jobs you posted.' }, { status: 403 });
-      }
-      whereClauses.push(`ja.job_id = $${paramIndex++}`);
-      queryParams.push(queryJobId);
-      countQueryParams.push(queryJobId);
-    } catch (dbError: any) {
-      console.error("Database error checking job ownership:", dbError);
-      return NextResponse.json({ success: false, message: 'Server error validating access.' }, { status: 500 });
-    }
-  }
-  // Scenario 3: Default - user requests their own applications if no specific filters given
-  else {
-    // if (!isAdmin) { // If not admin, default to own applications
       whereClauses.push(`ja.user_id = $${paramIndex++}`);
-      queryParams.push(requestingUserId);
-      countQueryParams.push(requestingUserId);
-    // } else {
-      // Admin can see all if no specific filter, or this part can be removed if admin must specify a filter
-    // }
-  }
+      queryParams.push(queryUserId);
+      countQueryParams.push(queryUserId);
+    }
+    else if (queryJobId) {
+        const jobCheckResult = await query('SELECT posted_by_user_id FROM jobs WHERE id = $1', [queryJobId]);
+        if (jobCheckResult.rows.length === 0) {
+          return NextResponse.json({ success: false, message: 'Job not found.' }, { status: 404 });
+        }
+        if (jobCheckResult.rows[0].posted_by_user_id !== requestingUserId /* && !isAdmin */) {
+          return NextResponse.json({ success: false, message: 'Forbidden: You can only view applications for jobs you posted.' }, { status: 403 });
+        }
+        whereClauses.push(`ja.job_id = $${paramIndex++}`);
+        queryParams.push(queryJobId);
+        countQueryParams.push(queryJobId);
+    }
+    else {
+        whereClauses.push(`ja.user_id = $${paramIndex++}`);
+        queryParams.push(requestingUserId);
+        countQueryParams.push(requestingUserId);
+    }
 
-  if (status) {
-    whereClauses.push(`ja.status = $${paramIndex++}`);
-    queryParams.push(status);
-    countQueryParams.push(status);
-  }
+    if (status) {
+      whereClauses.push(`ja.status = $${paramIndex++}`);
+      queryParams.push(status);
+      countQueryParams.push(status);
+    }
 
-  // 4. Database Query Construction
-  const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
-  let baseQuery = `
-    SELECT
-      ja.id as application_id, ja.job_id, ja.user_id, ja.application_date, ja.status,
-      ja.cover_letter, ja.resume_url, ja.notes, ja.created_at, ja.updated_at,
-      j.title as job_title, j.location as job_location,
-      c.name as company_name, c.logo_url as company_logo_url,
-      u.email as applicant_email, -- Added applicant email
-      p.first_name as applicant_first_name, -- Added applicant first name
-      p.last_name as applicant_last_name -- Added applicant last name
-    FROM job_applications ja
-    JOIN jobs j ON ja.job_id = j.id
-    JOIN companies c ON j.company_id = c.id
-    JOIN users u ON ja.user_id = u.id -- Join with users table
-    LEFT JOIN profiles p ON u.id = p.id -- Left Join with profiles table
-  `;
+    let baseQuery = `
+      SELECT
+        ja.id as application_id, ja.job_id, ja.user_id, ja.application_date, ja.status,
+        ja.cover_letter, ja.resume_url, ja.notes, ja.created_at, ja.updated_at,
+        j.title as job_title, j.location as job_location,
+        c.name as company_name, c.logo_url as company_logo_url,
+        u.email as applicant_email,
+        p.first_name as applicant_first_name,
+        p.last_name as applicant_last_name
+      FROM job_applications ja
+      JOIN jobs j ON ja.job_id = j.id
+      JOIN companies c ON j.company_id = c.id
+      JOIN users u ON ja.user_id = u.id
+      LEFT JOIN profiles p ON u.id = p.id
+    `;
 
-  let countQuery = `
-    SELECT COUNT(DISTINCT ja.id) as total_items
-    FROM job_applications ja
-    JOIN jobs j ON ja.job_id = j.id
-    JOIN companies c ON j.company_id = c.id
-    JOIN users u ON ja.user_id = u.id -- Join with users table
-    LEFT JOIN profiles p ON u.id = p.id -- Left Join with profiles table
-  `;
+    let countQuery = `
+      SELECT COUNT(DISTINCT ja.id) as total_items
+      FROM job_applications ja
+      JOIN jobs j ON ja.job_id = j.id
+      JOIN companies c ON j.company_id = c.id
+      JOIN users u ON ja.user_id = u.id
+      LEFT JOIN profiles p ON u.id = p.id
+    `;
 
-  if (whereClauses.length > 0) {
-    const whereString = `WHERE ${whereClauses.join(' AND ')}`;
-    baseQuery += ` ${whereString}`;
-    countQuery += ` ${whereString}`;
-  }
+    if (whereClauses.length > 0) {
+      const whereString = `WHERE ${whereClauses.join(' AND ')}`;
+      baseQuery += ` ${whereString}`;
+      countQuery += ` ${whereString}`;
+    }
 
-  // ORDER BY clause - ensure sortBy is a valid column name
-  const allowedSortBy: { [key: string]: string } = {
-    'application_date': 'ja.application_date',
-    'j.title': 'j.title',
-    'c.name': 'c.name'
-  };
-  const safeSortBy = allowedSortBy[sortBy] || 'ja.application_date'; // Default sort
+    const allowedSortBy: { [key: string]: string } = {
+      'application_date': 'ja.application_date', 'j.title': 'j.title', 'c.name': 'c.name'
+    };
+    const safeSortBy = allowedSortBy[sortBy] || 'ja.application_date';
 
-  baseQuery += ` ORDER BY ${safeSortBy} ${sortOrder.toUpperCase()}`;
-  baseQuery += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-  queryParams.push(limit, offset);
+    baseQuery += ` ORDER BY ${safeSortBy} ${sortOrder.toUpperCase()}`;
+    baseQuery += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    queryParams.push(limit, offset);
 
-  try {
     const applicationsResult = await query(baseQuery, queryParams);
     const countResult = await query(countQuery, countQueryParams);
 
@@ -159,19 +133,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       data: applicationsResult.rows,
-      pagination: {
-        totalItems,
-        totalPages,
-        currentPage: page,
-        pageSize: limit,
-      },
+      pagination: { totalItems, totalPages, currentPage: page, pageSize: limit },
     });
 
   } catch (error: any) {
-    console.error('Error fetching job applications:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to fetch job applications. ' + (error.message || 'Unknown error'),
-    }, { status: 500 });
+    console.error('Error in GET /api/job-applications:', error);
+    if (error instanceof z.ZodError) { // Should be caught by earlier checks
+        return NextResponse.json({ success: false, message: 'Validation error', errors: error.errors }, { status: 400 });
+    }
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }

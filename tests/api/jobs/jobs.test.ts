@@ -11,14 +11,7 @@ jest.mock('@/lib/db', () => ({
 jest.mock('@/lib/authUtils', () => ({
   __esModule: true,
   verifyAuthToken: jest.fn(),
-  AuthError: class MockedAuthError extends Error { // Basic mock for AuthError
-      public status: number;
-      constructor(message: string, status = 401) {
-          super(message);
-          this.name = 'AuthError';
-          this.status = status;
-      }
-  }
+  // AuthError is no longer explicitly mocked here as the new pattern doesn't rely on throwing it from the mock
 }));
 
 const mockQuery = query as jest.Mock;
@@ -32,8 +25,8 @@ describe('API Route: POST /api/jobs', () => {
   });
 
   it('should create a job successfully with one new skill', async () => {
-    // Arrange: Mock verifyAuthToken to simulate successful authentication
-    mockVerifyAuthToken.mockResolvedValue({ userId: 'test-user-id-123' });
+    // Arrange: Mock verifyAuthToken to simulate successful authentication (synchronous)
+    mockVerifyAuthToken.mockReturnValue({ userId: 'test-user-id-123' });
 
     // Arrange: Mock database query responses
     // 1. BEGIN transaction
@@ -98,8 +91,8 @@ describe('API Route: POST /api/jobs', () => {
   });
 
   it('should return 400 for invalid input data (e.g., missing title)', async () => {
-    // Arrange: Mock verifyAuthToken
-    mockVerifyAuthToken.mockResolvedValue({ userId: 'test-user-id-123' });
+    // Arrange: Mock verifyAuthToken (synchronous)
+    mockVerifyAuthToken.mockReturnValue({ userId: 'test-user-id-123' });
 
     // Arrange: Invalid payload (missing title)
     const jobPayload = {
@@ -128,17 +121,19 @@ describe('API Route: POST /api/jobs', () => {
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    // Arrange: Mock verifyAuthToken to throw an instance of the mocked AuthError
-    mockVerifyAuthToken.mockImplementation(() => {
-      // Get the AuthError class from the mocked module itself
-      const MockedAuthError = jest.requireMock('@/lib/authUtils').AuthError;
-      throw new MockedAuthError('User not authenticated', 401);
-    });
+    // Arrange: Mock verifyAuthToken to return null, simulating authentication failure
+    mockVerifyAuthToken.mockReturnValue(null);
 
     const mockRequest = new NextRequest('http://localhost/api/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }, // No Authorization header or invalid token
-      body: JSON.stringify({ title: 'Test', description: 'Test', companyId: '123', jobType: 'Full-time' }),
+      // Body content doesn't strictly matter as auth should fail first, but providing a minimal valid one
+      body: JSON.stringify({
+        title: 'Test Auth Fail',
+        description: 'Test Auth Fail Desc',
+        companyId: '123e4567-e89b-12d3-a456-426614174000',
+        jobType: 'Full-time'
+      }),
     });
 
     // Act
@@ -148,7 +143,7 @@ describe('API Route: POST /api/jobs', () => {
     // Assert
     expect(response.status).toBe(401);
     expect(body.success).toBe(false);
-    expect(body.message).toBe('User not authenticated');
+    expect(body.message).toBe('Authentication failed: Invalid or missing token');
     expect(mockQuery).not.toHaveBeenCalled();
   });
 

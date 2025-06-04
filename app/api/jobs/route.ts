@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { query } from '@/lib/db';
-import { verifyAuthToken, AuthError } from '@/lib/authUtils'; // Assuming AuthError is exported for specific error handling
+import { verifyAuthToken } from '@/lib/authUtils';
 
 const postJobSchema = z.object({
   companyId: z.string().uuid(),
@@ -30,21 +30,14 @@ const postJobSchema = z.object({
     path: ["salaryMin"],
 });
 
-export async function POST(request: Request) {
-  let token;
-  try {
-    token = await verifyAuthToken(request);
-  } catch (e) {
-    if (e instanceof AuthError) {
-      return NextResponse.json({ success: false, message: e.message }, { status: e.status });
-    }
-    return NextResponse.json({ success: false, message: 'Authentication failed' }, { status: 401 });
-  }
+export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization');
+  const authPayload = verifyAuthToken(authHeader);
 
-  if (!token || !token.userId) {
-    return NextResponse.json({ success: false, message: 'User not authenticated or user ID missing' }, { status: 401 });
+  if (!authPayload) {
+    return NextResponse.json({ success: false, message: 'Authentication failed: Invalid or missing token' }, { status: 401 });
   }
-  const postedByUserId = token.userId;
+  const { userId: postedByUserId } = authPayload;
 
   let body;
   try {
@@ -63,27 +56,13 @@ export async function POST(request: Request) {
   }
 
   const {
-    companyId,
-    title,
-    description,
-    responsibilities,
-    requirements,
-    benefits,
-    location,
-    jobType,
-    experienceLevel,
-    salaryMin,
-    salaryMax,
-    salaryCurrency,
-    salaryPeriod,
-    applicationDeadline,
-    status,
-    skills,
+    companyId, title, description, responsibilities, requirements, benefits, location,
+    jobType, experienceLevel, salaryMin, salaryMax, salaryCurrency, salaryPeriod,
+    applicationDeadline, status, skills,
   } = validationResult.data;
 
   try {
     await query('BEGIN');
-
     const jobInsertQuery = `
       INSERT INTO jobs (
         company_id, posted_by_user_id, title, description, responsibilities,
@@ -99,7 +78,6 @@ export async function POST(request: Request) {
       salaryMin, salaryMax, salaryCurrency, salaryPeriod,
       applicationDeadline ? new Date(applicationDeadline) : null, status,
     ];
-
     const jobResult = await query(jobInsertQuery, jobInsertParams);
     const newJobId = jobResult.rows[0].id;
 
@@ -107,7 +85,6 @@ export async function POST(request: Request) {
       for (const skillName of skills) {
         let skillResult = await query('SELECT id FROM skills WHERE LOWER(name) = LOWER($1)', [skillName]);
         let skillId;
-
         if (skillResult.rows.length === 0) {
           const newSkillResult = await query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [skillName]);
           skillId = newSkillResult.rows[0].id;
@@ -120,25 +97,18 @@ export async function POST(request: Request) {
         );
       }
     }
-
     await query('COMMIT');
-
-    return NextResponse.json({
-      success: true,
-      message: 'Job created successfully',
-      jobId: newJobId,
-    }, { status: 201 });
-
+    return NextResponse.json({ success: true, message: 'Job created successfully', jobId: newJobId }, { status: 201 });
   } catch (error: any) {
     await query('ROLLBACK');
-    console.error('Error creating job:', error);
+    console.error('Error in POST /api/jobs:', error);
+    if (error instanceof z.ZodError) {
+        return NextResponse.json({ success: false, message: 'Validation error', errors: error.errors }, { status: 400 });
+    }
     if (error.code === '23503' && error.constraint === 'jobs_company_id_fkey') {
         return NextResponse.json({ success: false, message: 'Company not found.' }, { status: 400 });
     }
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to create job posting. ' + (error.message || 'Unknown error'),
-    }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -147,7 +117,7 @@ const getJobsQuerySchema = z.object({
   jobType: z.string().optional(),
   experienceLevel: z.string().optional(),
   location: z.string().optional(),
-  skills: z.string().optional(), // Comma-separated skill names
+  skills: z.string().optional(),
   companyId: z.string().uuid().optional(),
   status: z.string().optional().default("Open"),
   page: z.string().regex(/^\d+$/).transform(Number).optional().default("1"),
@@ -159,215 +129,161 @@ const getJobsQuerySchema = z.object({
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const params = Object.fromEntries(searchParams.entries());
-
   const validationResult = getJobsQuerySchema.safeParse(params);
 
   if (!validationResult.success) {
     return NextResponse.json({
-      success: false,
-      message: 'Invalid query parameters',
+      success: false, message: 'Invalid query parameters',
       errors: validationResult.error.flatten().fieldErrors,
     }, { status: 400 });
   }
 
   const {
-    searchTerm,
-    jobType,
-    experienceLevel,
-    location,
-    skills: skillsString,
-    companyId,
-    status,
-    page,
-    limit,
-    sortBy,
-    sortOrder,
+    searchTerm, jobType, experienceLevel, location, skills: skillsString,
+    companyId, status, page, limit, sortBy, sortOrder,
   } = validationResult.data;
 
   const offset = (page - 1) * limit;
   const queryParams: any[] = [];
   let paramIndex = 1;
 
-  let baseQuery = `
+  // CTEs for skill aggregation
+  const cteClause = `
+    WITH DistinctJobSkills AS (
+        SELECT DISTINCT jsl.job_id, s.name AS skill_name
+        FROM job_skills_link jsl
+        JOIN skills s ON jsl.skill_id = s.id
+    ),
+    AggregatedJobSkills AS (
+        SELECT djs.job_id, STRING_AGG(djs.skill_name, ', ' ORDER BY djs.skill_name) AS skills_list
+        FROM DistinctJobSkills djs
+        GROUP BY djs.job_id
+    )
+  `;
+
+  let baseSelect = `
     SELECT
       j.id, j.title, j.location, j.job_type, j.experience_level,
       j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
       j.published_at, j.description, j.status, j.created_at,
       c.name as company_name, c.logo_url as company_logo_url,
-      STRING_AGG(DISTINCT s.name, ', ') WITHIN GROUP (ORDER BY s.name) as skills_list
+      COALESCE(ajs.skills_list, '') AS skills_list
     FROM jobs j
     JOIN companies c ON j.company_id = c.id
-    LEFT JOIN job_skills_link jsl ON j.id = jsl.job_id
-    LEFT JOIN skills s ON jsl.skill_id = s.id
+    LEFT JOIN AggregatedJobSkills ajs ON j.id = ajs.job_id
   `;
 
-  let countQuery = `
-    SELECT COUNT(DISTINCT j.id) as total_items
-    FROM jobs j
-    JOIN companies c ON j.company_id = c.id
-  `;
+  // Base for count query, without skill aggregation for count itself
+  let countSelect = `SELECT COUNT(DISTINCT j.id) as total_items FROM jobs j JOIN companies c ON j.company_id = c.id`;
 
-  // For skill filtering, we might need to add joins to the count query as well
-  let skillFilterSubQuery = "";
+  const whereClauses: string[] = [];
+  const countWhereClauses: string[] = []; // Separate for count, as skill filtering subquery differs
+
+  // Skill filtering (if skillsString is provided)
   const skillsArray = skillsString?.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
   if (skillsArray && skillsArray.length > 0) {
-    queryParams.push(skillsArray);
-    const skillParamPlaceholder = `$${paramIndex++}`;
-    // This subquery ensures that only jobs matching ALL specified skills are returned
-    skillFilterSubQuery = `
+    const skillPlaceholders = skillsArray.map((_, i) => `$${paramIndex + i}`).join(', ');
+    const skillFilterSubQuery = `
       j.id IN (
         SELECT jsl_filter.job_id
         FROM job_skills_link jsl_filter
         JOIN skills s_filter ON jsl_filter.skill_id = s_filter.id
-        WHERE s_filter.name = ANY(${skillParamPlaceholder})
+        WHERE s_filter.name ILIKE ANY(ARRAY[${skillPlaceholders}]) -- Using ILIKE ANY for case-insensitivity
         GROUP BY jsl_filter.job_id
-        HAVING COUNT(DISTINCT s_filter.name) = array_length(${skillParamPlaceholder}, 1)
+        HAVING COUNT(DISTINCT LOWER(s_filter.name)) = ${skillsArray.length}
       )
     `;
-    // Add necessary joins for skill filtering in countQuery if not already present
-    // For this structure, skills are not directly joined in countQuery base, so we add a WHERE EXISTS clause for count
-     countQuery += `
-       WHERE EXISTS (
-         SELECT 1
-         FROM job_skills_link jsl_filter
-         JOIN skills s_filter ON jsl_filter.skill_id = s_filter.id
-         WHERE jsl_filter.job_id = j.id AND s_filter.name = ANY(${skillParamPlaceholder})
-         GROUP BY jsl_filter.job_id
-         HAVING COUNT(DISTINCT s_filter.name) = array_length(${skillParamPlaceholder}, 1)
-       )
-     `;
+    whereClauses.push(skillFilterSubQuery);
+    countWhereClauses.push(skillFilterSubQuery); // Apply same logic to count
+    skillsArray.forEach(skill => queryParams.push(skill)); // Add each skill for ILIKE ANY
+    paramIndex += skillsArray.length;
   }
 
-
-  const whereClauses: string[] = [];
-
+  // Other filters
   if (status) {
-    whereClauses.push(`j.status = $${paramIndex++}`);
+    whereClauses.push(`j.status = $${paramIndex}`);
+    countWhereClauses.push(`j.status = $${paramIndex}`);
     queryParams.push(status);
+    paramIndex++;
   }
   if (searchTerm) {
-    const searchTermParam = `%${searchTerm}%`;
-    whereClauses.push(`(j.title ILIKE $${paramIndex} OR j.description ILIKE $${paramIndex} OR c.name ILIKE $${paramIndex})`);
-    queryParams.push(searchTermParam);
+    const st = `%${searchTerm}%`;
+    const searchTermClause = `(j.title ILIKE $${paramIndex} OR j.description ILIKE $${paramIndex} OR c.name ILIKE $${paramIndex})`;
+    whereClauses.push(searchTermClause);
+    countWhereClauses.push(searchTermClause);
+    queryParams.push(st);
     paramIndex++;
   }
   if (jobType) {
-    whereClauses.push(`j.job_type = $${paramIndex++}`);
+    whereClauses.push(`j.job_type = $${paramIndex}`);
+    countWhereClauses.push(`j.job_type = $${paramIndex}`);
     queryParams.push(jobType);
+    paramIndex++;
   }
   if (experienceLevel) {
-    whereClauses.push(`j.experience_level = $${paramIndex++}`);
+    whereClauses.push(`j.experience_level = $${paramIndex}`);
+    countWhereClauses.push(`j.experience_level = $${paramIndex}`);
     queryParams.push(experienceLevel);
+    paramIndex++;
   }
   if (location) {
-    whereClauses.push(`j.location ILIKE $${paramIndex++}`);
-    queryParams.push(`%${location}%`);
+    const loc = `%${location}%`;
+    whereClauses.push(`j.location ILIKE $${paramIndex}`);
+    countWhereClauses.push(`j.location ILIKE $${paramIndex}`);
+    queryParams.push(loc);
+    paramIndex++;
   }
   if (companyId) {
-    whereClauses.push(`j.company_id = $${paramIndex++}`);
+    whereClauses.push(`j.company_id = $${paramIndex}`);
+    countWhereClauses.push(`j.company_id = $${paramIndex}`);
     queryParams.push(companyId);
+    paramIndex++;
   }
 
-  if (skillFilterSubQuery) {
-      // For baseQuery (data query), skillFilterSubQuery is added to WHERE
-      // For countQuery, it's handled differently (as shown above) or needs to be integrated carefully
-      // If skillFilterSubQuery was added to countQuery using WHERE EXISTS, this ensures it's part of the main query's WHERE as well
-      whereClauses.push(skillFilterSubQuery);
-  }
-
-  // Consolidate WHERE clauses for countQuery
-  // If skillFilterSubQuery modified countQuery's WHERE, start with 'AND', else 'WHERE'
-  const countWherePrefix = countQuery.includes("WHERE") ? "AND" : "WHERE";
+  // Build final queries
+  let finalDataQuery = cteClause + baseSelect;
   if (whereClauses.length > 0) {
-    // Filter out skillFilterSubQuery from whereClauses for count if it was handled by WHERE EXISTS
-    const countSpecificWhereClauses = whereClauses.filter(clause => clause !== skillFilterSubQuery);
-    if (countSpecificWhereClauses.length > 0) {
-         countQuery += ` ${countWherePrefix} ${countSpecificWhereClauses.join(' AND ')}`;
-    }
+    finalDataQuery += ` WHERE ${whereClauses.join(' AND ')}`;
   }
 
-
-  if (whereClauses.length > 0) {
-    baseQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+  let finalCountQuery = countSelect;
+  if (countWhereClauses.length > 0) {
+    finalCountQuery += ` WHERE ${countWhereClauses.join(' AND ')}`;
   }
 
-  baseQuery += ` GROUP BY j.id, c.id, c.name, c.logo_url`; // Group by all non-aggregated selected columns from jobs and companies
-
-  // ORDER BY clause - ensure sortBy is a valid column name
+  // Sorting (only for data query)
   const allowedSortBy = ['published_at', 'title', 'salary_min', 'created_at', 'company_name'];
-  const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'published_at'; // Default to 'published_at' if invalid
-  // For columns from 'c' table, we need to use the alias, or actual table.column
+  const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'published_at';
   const sortColumn = safeSortBy === 'company_name' ? 'c.name' : `j.${safeSortBy}`;
+  finalDataQuery += ` ORDER BY ${sortColumn} ${sortOrder.toUpperCase()}`;
 
-  baseQuery += ` ORDER BY ${sortColumn} ${sortOrder.toUpperCase()}`;
-  baseQuery += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-  queryParams.push(limit, offset);
+  // Pagination (only for data query)
+  finalDataQuery += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+  const finalQueryParams = [...queryParams, limit, offset]; // Params for data query
 
-
-  // Create a separate parameter list for count query, as it might not use all params (like limit, offset, sort)
-  // and skill filtering parameter placeholder might be different if not using $1 for skillsArray in both.
-  // For simplicity, we'll re-evaluate params for count query carefully.
-  const countQueryParams: any[] = [];
-  let countParamIndex = 1;
-  if (skillsArray && skillsArray.length > 0) {
-    countQueryParams.push(skillsArray); // $1 for skillsArray
-    countParamIndex++;
-  }
-  if (status) {
-    countQueryParams.push(status); // $2 (or next available) for status
-    countParamIndex++;
-  }
-  if (searchTerm) {
-    countQueryParams.push(`%${searchTerm}%`); // $3 for searchTerm
-    countParamIndex++;
-  }
-  if (jobType) {
-    countQueryParams.push(jobType);
-    countParamIndex++;
-  }
-  if (experienceLevel) {
-    countQueryParams.push(experienceLevel);
-    countParamIndex++;
-  }
-  if (location) {
-    countQueryParams.push(`%${location}%`);
-    countParamIndex++;
-  }
-  if (companyId) {
-    countQueryParams.push(companyId);
-    countParamIndex++;
-  }
+  // Params for count query (all except limit and offset)
+  const finalCountQueryParams = queryParams.slice(0, queryParams.length);
 
 
   try {
-    const jobsResult = await query(baseQuery, queryParams);
-    const countResult = await query(countQuery, countQueryParams);
+    const jobsResult = await query(finalDataQuery, finalQueryParams);
+    const countResult = await query(finalCountQuery, finalCountQueryParams);
 
     const totalItems = parseInt(countResult.rows[0].total_items, 10);
     const totalPages = Math.ceil(totalItems / limit);
 
     const jobsWithSkills = jobsResult.rows.map(job => ({
       ...job,
-      description: job.description?.substring(0, 200) + (job.description?.length > 200 ? '...' : ''), // Truncate description
+      description: job.description?.substring(0, 150) + (job.description?.length > 150 ? '...' : ''), // Truncated description
       skills_list: job.skills_list ? job.skills_list.split(', ') : [],
     }));
 
     return NextResponse.json({
       data: jobsWithSkills,
-      pagination: {
-        totalItems,
-        totalPages,
-        currentPage: page,
-        pageSize: limit,
-      },
+      pagination: { totalItems, totalPages, currentPage: page, pageSize: limit },
     });
-
   } catch (error: any) {
-    console.error('Error fetching jobs:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to fetch job postings. ' + (error.message || 'Unknown error'),
-    }, { status: 500 });
+    console.error('Error in GET /api/jobs:', error);
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }

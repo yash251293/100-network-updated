@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { z } from 'zod';
-import { verifyAuthToken, AuthError } from '@/lib/authUtils';
+import { verifyAuthToken } from '@/lib/authUtils'; // Removed AuthError import
 
 const paramsSchema = z.object({
   id: z.string().uuid({ message: "Invalid job ID format" }),
@@ -23,7 +23,7 @@ const updateJobSchema = z.object({
   salaryCurrency: z.string().optional().nullable(),
   salaryPeriod: z.string().optional().nullable(),
   applicationDeadline: z.string().datetime({ offset: true }).optional().nullable(),
-  status: z.string().optional(), // e.g., "Draft", "Open", "Closed", "Filled"
+  status: z.string().optional(),
   skills: z.array(z.string().min(1)).optional().nullable(),
 }).refine(data => {
     if (data.salaryMin && data.salaryMax && data.salaryMin > data.salaryMax) {
@@ -37,7 +37,7 @@ const updateJobSchema = z.object({
 
 
 export async function GET(
-  request: Request,
+  request: Request, // Can remain base Request if no auth needed for GET
   { params }: { params: { id: string } }
 ) {
   const validationResult = paramsSchema.safeParse(params);
@@ -48,9 +48,9 @@ export async function GET(
       { status: 400 }
     );
   }
-
   const { id: jobId } = validationResult.data;
 
+  // ... (rest of GET logic remains unchanged)
   const sqlQuery = `
     SELECT
       j.id, j.title, j.description, j.responsibilities, j.requirements, j.benefits,
@@ -73,11 +73,9 @@ export async function GET(
 
   try {
     const result = await query(sqlQuery, [jobId]);
-
     if (result.rows.length === 0) {
       return NextResponse.json({ success: false, message: 'Job not found' }, { status: 404 });
     }
-
     const dbRow = result.rows[0];
     const jobDetails = {
       id: dbRow.id, title: dbRow.title, description: dbRow.description,
@@ -97,16 +95,13 @@ export async function GET(
     };
     return NextResponse.json({ success: true, data: jobDetails });
   } catch (error: any) {
-    console.error(`Error fetching job details for ID [${jobId}]:`, error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch job details. ' + (error.message || 'Unknown error') },
-      { status: 500 }
-    );
+    console.error(`Error in GET /api/jobs/${jobId}:`, error);
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function PUT(
-  request: NextRequest, // Use NextRequest for auth token
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const paramValidation = paramsSchema.safeParse(params);
@@ -115,20 +110,13 @@ export async function PUT(
   }
   const jobId = paramValidation.data.id;
 
-  let authPayload;
-  try {
-    authPayload = await verifyAuthToken(request);
-  } catch (e) {
-    if (e instanceof AuthError) {
-      return NextResponse.json({ success: false, message: e.message }, { status: e.status });
-    }
-    return NextResponse.json({ success: false, message: 'Authentication failed' }, { status: 401 });
-  }
+  const authHeader = request.headers.get('Authorization');
+  const authPayload = verifyAuthToken(authHeader);
 
-  if (!authPayload || !authPayload.userId) {
-    return NextResponse.json({ success: false, message: 'User not authenticated' }, { status: 401 });
+  if (!authPayload) {
+    return NextResponse.json({ success: false, message: 'Authentication failed: Invalid or missing token' }, { status: 401 });
   }
-  const userId = authPayload.userId;
+  const { userId } = authPayload;
 
   let body;
   try {
@@ -147,7 +135,6 @@ export async function PUT(
     return NextResponse.json({ success: false, message: 'No fields to update' }, { status: 400 });
   }
 
-
   try {
     await query('BEGIN');
 
@@ -157,7 +144,6 @@ export async function PUT(
       return NextResponse.json({ success: false, message: 'Job not found' }, { status: 404 });
     }
     if (jobCheckResult.rows[0].posted_by_user_id !== userId) {
-      // Add admin check here in future if needed: e.g. && !authPayload.isAdmin
       await query('ROLLBACK');
       return NextResponse.json({ success: false, message: 'Forbidden: You do not own this job posting' }, { status: 403 });
     }
@@ -167,24 +153,16 @@ export async function PUT(
     const queryParams: any[] = [];
     let paramIndex = 1;
 
-    // Map Zod schema keys to database columns
     const columnMapping: { [key: string]: string } = {
-        companyId: 'company_id',
-        jobType: 'job_type',
-        experienceLevel: 'experience_level',
-        salaryMin: 'salary_min',
-        salaryMax: 'salary_max',
-        salaryCurrency: 'salary_currency',
-        salaryPeriod: 'salary_period',
-        applicationDeadline: 'application_deadline',
-        // direct mapping for others: title, description, responsibilities, requirements, benefits, location, status
+        companyId: 'company_id', jobType: 'job_type', experienceLevel: 'experience_level',
+        salaryMin: 'salary_min', salaryMax: 'salary_max', salaryCurrency: 'salary_currency',
+        salaryPeriod: 'salary_period', applicationDeadline: 'application_deadline',
     };
 
     for (const key in jobDataFields) {
         if (jobDataFields.hasOwnProperty(key) && (jobDataFields as any)[key] !== undefined) {
-            const columnName = columnMapping[key] || key; // Use mapped name or key itself
+            const columnName = columnMapping[key] || key;
             setClauses.push(`${columnName} = $${paramIndex++}`);
-            // Handle date conversion for applicationDeadline
             if (key === 'applicationDeadline' && (jobDataFields as any)[key] !== null) {
                 queryParams.push(new Date((jobDataFields as any)[key]));
             } else {
@@ -200,9 +178,9 @@ export async function PUT(
       await query(updateJobQuery, queryParams);
     }
 
-    if (skills !== undefined) { // Check if 'skills' key was present in the body
+    if (skills !== undefined) {
       await query('DELETE FROM job_skills_link WHERE job_id = $1', [jobId]);
-      if (skills && skills.length > 0) { // skills can be null or empty array
+      if (skills && skills.length > 0) {
         for (const skillName of skills) {
           let skillResult = await query('SELECT id FROM skills WHERE LOWER(name) = LOWER($1)', [skillName]);
           let skillId;
@@ -222,17 +200,17 @@ export async function PUT(
 
   } catch (error: any) {
     await query('ROLLBACK');
-    console.error(`Error updating job ID [${jobId}]:`, error);
-     if (error.code === '23503' && error.constraint === 'jobs_company_id_fkey') {
+    console.error(`Error in PUT /api/jobs/${jobId}:`, error);
+    if (error.code === '23503' && error.constraint === 'jobs_company_id_fkey') {
         return NextResponse.json({ success: false, message: 'Company not found or invalid companyId.' }, { status: 400 });
     }
-    return NextResponse.json({ success: false, message: 'Failed to update job. ' + (error.message || 'Unknown error') }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 
 export async function DELETE(
-  request: NextRequest, // Use NextRequest for auth token
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const paramValidation = paramsSchema.safeParse(params);
@@ -241,45 +219,33 @@ export async function DELETE(
   }
   const jobId = paramValidation.data.id;
 
-  let authPayload;
-  try {
-    authPayload = await verifyAuthToken(request);
-  } catch (e) {
-    if (e instanceof AuthError) {
-      return NextResponse.json({ success: false, message: e.message }, { status: e.status });
-    }
-    return NextResponse.json({ success: false, message: 'Authentication failed' }, { status: 401 });
-  }
+  const authHeader = request.headers.get('Authorization');
+  const authPayload = verifyAuthToken(authHeader);
 
-  if (!authPayload || !authPayload.userId) {
-    return NextResponse.json({ success: false, message: 'User not authenticated' }, { status: 401 });
+  if (!authPayload) {
+    return NextResponse.json({ success: false, message: 'Authentication failed: Invalid or missing token' }, { status: 401 });
   }
-  const userId = authPayload.userId;
+  const { userId } = authPayload;
 
   try {
-    // First, check if the job exists and if the user is the owner
     const jobCheckResult = await query('SELECT posted_by_user_id FROM jobs WHERE id = $1', [jobId]);
     if (jobCheckResult.rows.length === 0) {
       return NextResponse.json({ success: false, message: 'Job not found' }, { status: 404 });
     }
     if (jobCheckResult.rows[0].posted_by_user_id !== userId) {
-      // Add admin check here in future if needed
       return NextResponse.json({ success: false, message: 'Forbidden: You do not own this job posting' }, { status: 403 });
     }
 
-    // If checks pass, delete the job
-    // ON DELETE CASCADE in schema should handle job_skills_link, job_applications, user_job_bookmarks
     const deleteResult = await query('DELETE FROM jobs WHERE id = $1', [jobId]);
 
     if (deleteResult.rowCount === 0) {
-      // Should ideally be caught by the check above, but as a safeguard
       return NextResponse.json({ success: false, message: 'Job not found or already deleted' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, message: 'Job deleted successfully' });
 
   } catch (error: any) {
-    console.error(`Error deleting job ID [${jobId}]:`, error);
-    return NextResponse.json({ success: false, message: 'Failed to delete job. ' + (error.message || 'Unknown error') }, { status: 500 });
+    console.error(`Error in DELETE /api/jobs/${jobId}:`, error);
+    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }
