@@ -13,6 +13,7 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { format } from 'date-fns';
+import Link from 'next/link'; // Import Link
 
 const ADMIN_EMAIL = 'yashrawlani00@gmail.com';
 
@@ -183,7 +184,11 @@ export default function AdminPage() {
           <TableBody>
             {usersSummary.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.email}</TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/admin/users/${user.id}`} className="text-blue-600 hover:underline">
+                    {user.email}
+                  </Link>
+                </TableCell>
                 <TableCell>{user.firstName || 'N/A'}</TableCell>
                 <TableCell>{user.lastName || 'N/A'}</TableCell>
                 <TableCell>{user.registrationDate ? format(new Date(user.registrationDate), 'PPpp') : 'N/A'}</TableCell>
