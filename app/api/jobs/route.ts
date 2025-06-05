@@ -17,7 +17,10 @@ const postJobSchema = z.object({
   salaryMax: z.number().int().positive().optional(),
   salaryCurrency: z.string().optional().default('USD'),
   salaryPeriod: z.string().optional().default('Annual'),
-  applicationDeadline: z.string().datetime({ offset: true }).optional(),
+  applicationDeadline: z.union([
+    z.string().datetime({ offset: true, message: "Invalid date format for deadline. Must be ISO 8601." }),
+    z.null()
+  ]).optional(),
   status: z.string().optional().default('Draft'),
   skills: z.array(z.string().min(1)).optional(),
 }).refine(data => {
