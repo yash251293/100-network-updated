@@ -386,8 +386,67 @@ export default function CompleteProfilePage() {
             </div>
           </div>
         );
-      case 2: // Skills
-        return ( <div className="space-y-8"> {/* ... existing JSX for step 2 ... */} </div> );
+      case 2: // Skills & Expertise
+        return (
+          <div className="space-y-8">
+            {/* Section Header */}
+            <div className="text-center space-y-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full mb-4">
+                <Sparkles className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent mb-2">
+                  Skills & Expertise
+                </h2>
+                <p className="text-lg text-muted-foreground">Showcase your talents and proficiencies.</p>
+              </div>
+            </div>
+
+            {/* Skill Input and Add Button */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="newSkill" className="text-base font-semibold">Add Skill</Label>
+                <div className="flex space-x-2 mt-1">
+                  <Input
+                    id="newSkill"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    placeholder="e.g., React, Node.js, Project Management"
+                    className="border-2 focus:border-green-500 transition-colors"
+                  />
+                  <Button type="button" onClick={addSkill} variant="outline" className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white">
+                    <Plus className="mr-2 h-4 w-4" /> Add
+                  </Button>
+                </div>
+              </div>
+
+              {/* Display Added Skills */}
+              {profileData.skills && profileData.skills.length > 0 && (
+                <div>
+                  <Label className="text-base font-semibold mb-2 block">Your Skills</Label>
+                  <div className="flex flex-wrap gap-2 p-3 border-2 border-dashed rounded-md min-h-[40px]">
+                    {profileData.skills.map((skill, index) => (
+                      <Badge key={index} variant="secondary" className="text-sm py-1 px-3 bg-emerald-100 text-emerald-700 border-emerald-300">
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(skill)}
+                          className="ml-2 text-emerald-700 hover:text-emerald-900"
+                          aria-label={`Remove ${skill}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+               {(!profileData.skills || profileData.skills.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No skills added yet. Start by typing a skill above and clicking "Add".</p>
+              )}
+            </div>
+          </div>
+        );
       case 3: // Experience
         return ( <div className="space-y-8"> {/* ... existing JSX for step 3 ... */} </div> );
       case 4: // Education
