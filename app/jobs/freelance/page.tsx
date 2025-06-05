@@ -9,6 +9,7 @@ import { BookmarkIcon as LucideBookmarkIcon, Search, Briefcase, Users, PlusCircl
 import Link from "next/link";
 import JobCard, { JobCardSkeleton, Job as JobType } from "@/components/JobCard"; // Using existing JobCard
 import { toast } from "sonner";
+import { getToken } from '@/lib/authClient'; // Ensure this import
 
 // Budget filter options
 const budgetOptions = [
@@ -61,19 +62,48 @@ export default function FreelancePage() {
   }, [projectSearchTerm, activeTab]);
 
   const fetchBookmarkedJobs = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setBookmarkedJobIds(new Set<string>());
+      return;
+    }
+
     try {
-      const response = await fetch('/api/job-bookmarks?limit=200'); // Fetch a large list
+      const response = await fetch('/api/job-bookmarks?limit=500', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
-        console.error("Failed to fetch bookmarks", await response.json());
+        let errorMsg = "Failed to fetch bookmarked jobs.";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+        } catch (e) {
+          errorMsg = `${errorMsg} Status: ${response.status}`;
+        }
+        console.error("fetchBookmarkedJobs error:", errorMsg);
+        toast.error(errorMsg);
+        setBookmarkedJobIds(new Set<string>());
         return;
       }
+
       const data = await response.json();
-      const ids = new Set<string>(data.data.map((bookmark: any) => bookmark.job_id));
-      setBookmarkedJobIds(ids);
-    } catch (err) {
-      console.error("Error fetching bookmarks:", err);
+      if (data && data.data && Array.isArray(data.data)) {
+        const ids = new Set<string>(data.data.map((bookmark: any) => bookmark.job_id));
+        setBookmarkedJobIds(ids);
+      } else {
+        console.error("Fetched bookmarks data is not in the expected format:", data);
+        toast.error("Received unexpected bookmark data format.");
+        setBookmarkedJobIds(new Set<string>());
+      }
+    } catch (err: any) {
+      console.error("Exception in fetchBookmarkedJobs:", err);
+      toast.error(err.message || "An error occurred while fetching your bookmarks.");
+      setBookmarkedJobIds(new Set<string>());
     }
-  }, []);
+  }, []); // Assuming toast from sonner is stable
 
   const fetchProjects = useCallback(async () => {
     setIsLoadingProjects(true);
