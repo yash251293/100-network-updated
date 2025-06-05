@@ -79,7 +79,7 @@ const profileUpdateSchema = z.object({
   location: z.string().max(255).optional().nullable(),
   linkedinUrl: z.string().url({ message: "Invalid LinkedIn URL." }).optional().nullable(),
   githubUrl: z.string().url({ message: "Invalid GitHub URL." }).optional().nullable(),
-  websiteUrl: z.string().url({ message: "Invalid website URL." }).optional().nullable(),
+  websiteUrl: z.preprocess( (val) => (val === "" ? null : val), z.string().url({ message: "Invalid website URL." }).optional().nullable() ),
   phone: z.string().max(50).optional().nullable(),
 
   jobType: z.string().max(100).optional().nullable(),
