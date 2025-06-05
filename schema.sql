@@ -331,3 +331,74 @@ CREATE TABLE user_job_bookmarks (
 
 CREATE INDEX idx_user_job_bookmarks_user_id ON user_job_bookmarks(user_id);
 CREATE INDEX idx_user_job_bookmarks_job_id ON user_job_bookmarks(job_id);
+
+
+-- Messaging Tables --
+
+-- Conversations Table
+CREATE TABLE conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type VARCHAR(10) NOT NULL CHECK (type IN ('one_on_one', 'group')),
+    name VARCHAR(255), -- Nullable, primarily for group chats
+    avatar_url VARCHAR(255), -- Nullable, primarily for group chats
+    created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL, -- User who initiated the group
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Stores timestamp of the last message or activity
+);
+
+CREATE INDEX idx_conversations_type ON conversations(type);
+CREATE INDEX idx_conversations_created_by_user_id ON conversations(created_by_user_id);
+
+-- Conversation Participants Table
+-- Junction table to link users to conversations
+CREATE TABLE conversation_participants (
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(10) CHECK (role IN ('member', 'admin')), -- Nullable for 1-on-1, 'admin' for group creator, 'member' for others
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_read_at TIMESTAMP WITH TIME ZONE, -- Tracks when the user last read messages in this conversation
+    PRIMARY KEY (conversation_id, user_id)
+);
+
+CREATE INDEX idx_conversation_participants_user_id ON conversation_participants(user_id);
+CREATE INDEX idx_conversation_participants_conversation_id ON conversation_participants(conversation_id);
+
+-- Messages Table
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Message remains even if sender's account is deleted
+    content_type VARCHAR(10) NOT NULL DEFAULT 'text' CHECK (content_type IN ('text', 'image', 'file')),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    -- Status for sent/delivered/read - can be enhanced later
+    -- For simplicity, we'll focus on created_at for ordering and assume 'sent' upon creation.
+    -- Read status will be primarily managed by `conversation_participants.last_read_at`.
+    -- An explicit message status (sent, delivered, read by specific recipients) is more complex.
+    status VARCHAR(10) DEFAULT 'sent' CHECK (status IN ('sent', 'delivered', 'read'))
+);
+
+CREATE INDEX idx_messages_conversation_id_created_at ON messages(conversation_id, created_at DESC);
+CREATE INDEX idx_messages_sender_id ON messages(sender_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at DESC); -- For global activity feeds if needed
+
+-- Trigger for conversations updated_at
+-- This trigger will update 'updated_at' whenever a message is added to a conversation (handled by API logic)
+-- or when conversation details (name, avatar) change.
+-- For now, we'll rely on API logic to update conversations.updated_at when new messages are sent.
+-- A more database-centric trigger could be added if direct DB updates to messages should also update conversation.
+-- However, typically the application layer handles updating the parent conversation's timestamp.
+-- Let's add a standard updated_at trigger for direct modifications to the conversations table itself.
+
+CREATE OR REPLACE FUNCTION update_updated_at_conversations()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_conversations_updated_at
+BEFORE UPDATE ON conversations
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_conversations();
