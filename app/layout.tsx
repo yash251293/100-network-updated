@@ -47,8 +47,8 @@ export default function RootLayout({
     // Return a minimal structure or loader during server rendering / initial client hydration
     // This helps prevent flash of unstyled content or incorrect layout.
     return (
-      <html lang="en" suppressHydrationWarning>
-        <body className={`${inter.className} h-screen`}> {/* Ensure inter.className is preserved and body can be full height */}
+      <html lang="en" className="h-full" suppressHydrationWarning>
+        <body className={`${inter.className} h-full bg-background text-foreground overflow-hidden`}>
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <div className="text-xl font-semibold text-foreground animate-pulse">
               Loading...
@@ -66,8 +66,8 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" className="h-full" suppressHydrationWarning>
+    <body className={`${inter.className} h-full bg-background text-foreground overflow-hidden`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
