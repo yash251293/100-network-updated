@@ -89,7 +89,38 @@ export default function AdminUserDetailPage() {
             throw new Error(errorMsg);
         }
         const profileApiResponse: UserProfileCheckResponse = await profileRes.json();
-        const currentUserEmail = profileApiResponse.data?.email;
+
+        // --- BEGIN ADDED DIAGNOSTIC LOGS ---
+        // Log the part of the response that should contain the email
+        // Assuming UserProfileCheckResponse is { success: boolean, data?: { email?: string } }
+        // and profileApiResponse is this entire object.
+        console.log("Admin User Detail Page - Admin Check: Full profileApiResponse object:", JSON.stringify(profileApiResponse, null, 2));
+        console.log("Admin User Detail Page - Admin Check: profileApiResponse.data object:", JSON.stringify(profileApiResponse.data, null, 2));
+
+        const currentUserEmail = profileApiResponse.data?.email; // This is the line we are testing
+
+        console.log("Admin User Detail Page - Admin Check: Extracted currentUserEmail:", currentUserEmail);
+        console.log("Admin User Detail Page - Admin Check: ADMIN_EMAIL constant:", ADMIN_EMAIL);
+
+        if (currentUserEmail !== undefined && currentUserEmail !== null) {
+          console.log("Admin User Detail Page - Admin Check: Comparison result (currentUserEmail === ADMIN_EMAIL):", currentUserEmail === ADMIN_EMAIL);
+          if (typeof currentUserEmail === 'string' && typeof ADMIN_EMAIL === 'string') {
+            console.log("Admin User Detail Page - Admin Check: Comparison result (lowercase) (currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()):", currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+
+            console.log("Admin User Detail Page - Admin Check: currentUserEmail char codes:");
+            let codes = "";
+            for(let i=0; i < currentUserEmail.length; i++) { codes += currentUserEmail.charCodeAt(i) + "(" + currentUserEmail[i] + ") "; }
+            console.log(codes.trim());
+
+            console.log("Admin User Detail Page - Admin Check: ADMIN_EMAIL char codes:");
+            codes = "";
+            for(let i=0; i < ADMIN_EMAIL.length; i++) { codes += ADMIN_EMAIL.charCodeAt(i) + "(" + ADMIN_EMAIL[i] + ") "; }
+            console.log(codes.trim());
+          }
+        } else {
+          console.log("Admin User Detail Page - Admin Check: currentUserEmail is undefined or null, cannot perform detailed comparison.");
+        }
+        // --- END ADDED DIAGNOSTIC LOGS ---
 
         if (currentUserEmail !== ADMIN_EMAIL) {
           setIsAdmin(false);
