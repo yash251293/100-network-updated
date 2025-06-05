@@ -46,20 +46,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: 'Invalid JSON body' }, { status: 400 });
   }
 
+  console.log("POST /api/jobs - Received body:", JSON.stringify(body, null, 2));
+
   const validationResult = postJobSchema.safeParse(body);
   if (!validationResult.success) {
-    return NextResponse.json({
-      success: false,
-      message: 'Invalid input',
-      errors: validationResult.error.flatten().fieldErrors,
-    }, { status: 400 });
+    const flatErrors = validationResult.error.flatten();
+    console.error("POST /api/jobs - Zod validation failed. Body:", JSON.stringify(body, null, 2));
+    console.error("POST /api/jobs - Zod errors:", JSON.stringify(flatErrors, null, 2));
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Invalid job data provided.",
+        errors: flatErrors.fieldErrors,
+        formErrors: flatErrors.formErrors
+      },
+      { status: 400 }
+    );
   }
 
   const {
     companyId, title, description, responsibilities, requirements, benefits, location,
     jobType, experienceLevel, salaryMin, salaryMax, salaryCurrency, salaryPeriod,
     applicationDeadline, status, skills,
-  } = validationResult.data;
+  } = validationResult.data; // Use validationResult.data from here
 
   try {
     await query('BEGIN');
