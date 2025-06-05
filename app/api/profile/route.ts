@@ -90,7 +90,7 @@ const profileUpdateSchema = z.object({
   isAvailableForFreelance: z.boolean().optional(),
   freelanceHeadline: z.string().max(255).optional().nullable(),
   freelanceBio: z.string().optional().nullable(),
-  portfolioUrl: z.string().url({ message: "Invalid portfolio URL. Must be a full URL e.g. https://example.com" }).optional().nullable(),
+  portfolioUrl: z.preprocess( (val) => (val === "" ? null : val), z.string().url({ message: "Invalid portfolio URL. Must be a full URL e.g. https://example.com" }).optional().nullable() ),
   preferredFreelanceRateType: z.string().max(50).optional().nullable(),
   freelanceRateValue: z.number().positive("Rate must be a positive number.").optional().nullable(),
 
