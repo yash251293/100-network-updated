@@ -37,31 +37,46 @@ const updateJobSchema = z.object({
 
 
 export async function GET(
-  request: Request, // Can remain base Request if no auth needed for GET
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  console.log("RAW ID received by API:", params.id);
-  console.log("Type of RAW ID:", typeof params.id);
-  console.log("Length of RAW ID:", params.id?.length);
-  // For more detailed inspection, log the char codes
-  if (params.id) {
+  const id = params.id; // Destructure/assign id immediately
+
+  // Use the local 'id' variable for all logging
+  console.log("RAW ID received by API:", id);
+  console.log("Type of RAW ID:", typeof id);
+  console.log("Length of RAW ID:", id?.length);
+  if (id) {
     const charCodes = [];
-    for (let i = 0; i < params.id.length; i++) {
-      charCodes.push(params.id.charCodeAt(i));
+    for (let i = 0; i < id.length; i++) {
+      charCodes.push(id.charCodeAt(i));
     }
     console.log("Char codes of RAW ID:", charCodes.join(', '));
   }
-  const validationResult = paramsSchema.safeParse(params);
+
+  // Pass an object { id } to safeParse, matching the schema structure
+  const validationResult = paramsSchema.safeParse({ id });
 
   if (!validationResult.success) {
+    // It's good practice to also log the validation errors on the server
+    console.error("Zod validation failed for ID:", id, "Errors:", validationResult.error.flatten());
     return NextResponse.json(
-      { success: false, message: 'Invalid input', errors: validationResult.error.flatten().fieldErrors },
+      {
+        success: false,
+        message: 'Invalid input',
+        // Send back both fieldErrors and formErrors for better client-side diagnostics
+        errors: validationResult.error.flatten().fieldErrors,
+        formErrors: validationResult.error.flatten().formErrors
+      },
       { status: 400 }
     );
   }
+  // validationResult.data will be { id: string } if successful
   const { id: jobId } = validationResult.data;
 
-  // ... (rest of GET logic remains unchanged)
+  // ... rest of the GET logic (SQL query, response handling) remains the same,
+  // using 'jobId' which is the validated ID from validationResult.data.id
+
   const sqlQuery = `
     SELECT
       j.id, j.title, j.description, j.responsibilities, j.requirements, j.benefits,
@@ -83,7 +98,7 @@ export async function GET(
   `;
 
   try {
-    const result = await query(sqlQuery, [jobId]);
+    const result = await query(sqlQuery, [jobId]); // Use validated jobId here
     if (result.rows.length === 0) {
       return NextResponse.json({ success: false, message: 'Job not found' }, { status: 404 });
     }
@@ -106,7 +121,7 @@ export async function GET(
     };
     return NextResponse.json({ success: true, data: jobDetails });
   } catch (error: any) {
-    console.error(`Error in GET /api/jobs/${jobId}:`, error);
+    console.error(`Error in GET /api/jobs/${jobId}:`, error); // Use validated jobId for logging
     return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
   }
 }
