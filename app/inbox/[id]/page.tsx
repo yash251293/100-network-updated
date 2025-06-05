@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react'; // Added React import
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { useParams, useRouter } // if using useParams, or get from props
 from "next/navigation";
@@ -42,7 +43,8 @@ interface ConversationDetails {
 
 export default function ChatPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const conversationId = params.id; // This is the conversationId
+  const pageParams = React.use(params); // Use React.use to unwrap params
+  const conversationId = pageParams.id; // Access id from resolved params
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessageContent, setNewMessageContent] = useState("");
