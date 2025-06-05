@@ -14,16 +14,38 @@ const applicationBodySchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const paramsValidation = paramsSchema.safeParse(params);
-  if (!paramsValidation.success) {
+  const routeJobId = context.params?.id;
+  if (typeof routeJobId !== 'string' || routeJobId.trim() === '') {
+    console.error("Apply API received invalid or missing job ID in params. ID:", routeJobId);
     return NextResponse.json(
-      { success: false, message: 'Invalid job ID format', errors: paramsValidation.error.flatten().fieldErrors },
+      {
+        success: false,
+        message: 'Invalid or missing job ID in URL path for apply operation.',
+        errors: { id: ["Job ID must be a non-empty string."] },
+        formErrors: []
+      },
       { status: 400 }
     );
   }
-  const jobId = paramsValidation.data.id;
+  // Add logging for the received ID
+  console.log(`Apply API (POST) received RAW routeJobId:`, routeJobId);
+
+  const paramsValidation = paramsSchema.safeParse({ id: routeJobId });
+  if (!paramsValidation.success) {
+    console.error(`Apply API (POST) Zod validation failed for routeJobId:`, routeJobId, "Errors:", paramsValidation.error.flatten());
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Invalid job ID format in URL',
+        errors: paramsValidation.error.flatten().fieldErrors,
+        formErrors: paramsValidation.error.flatten().formErrors
+      },
+      { status: 400 }
+    );
+  }
+  const jobId = paramsValidation.data.id; // Use the validated jobId
 
   const authHeader = request.headers.get('Authorization');
   const authPayload = verifyAuthToken(authHeader);
@@ -36,14 +58,21 @@ export async function POST(
   let body;
   try {
     body = await request.json();
+    console.log("Apply API received body:", body); // Logging for request body
   } catch (error) {
     return NextResponse.json({ success: false, message: 'Invalid JSON body' }, { status: 400 });
   }
 
   const bodyValidation = applicationBodySchema.safeParse(body);
   if (!bodyValidation.success) {
+    console.error("Apply API Zod validation failed for body. Body:", body, "Errors:", bodyValidation.error.flatten());
     return NextResponse.json(
-      { success: false, message: 'Invalid request body', errors: bodyValidation.error.flatten().fieldErrors },
+      {
+        success: false,
+        message: 'Invalid request body for application',
+        errors: bodyValidation.error.flatten().fieldErrors,
+        formErrors: bodyValidation.error.flatten().formErrors
+      },
       { status: 400 }
     );
   }

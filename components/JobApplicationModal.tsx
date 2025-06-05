@@ -111,7 +111,7 @@ export default function JobApplicationModal({ isOpen, onClose, jobId, jobTitle }
                 className="col-span-3"
               />
               <p className="text-xs text-muted-foreground col-span-3">
-                Link to your online resume (e.g., LinkedIn profile, Google Drive, Dropbox). Ensure sharing settings allow viewing.
+                Please enter a full URL (e.g., https://linkedin.com/in/yourprofile, https://example.com/resume.pdf). Ensure sharing settings allow viewing.
               </p>
             </div>
           </div>
