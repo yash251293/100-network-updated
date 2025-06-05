@@ -25,6 +25,15 @@ CREATE TABLE profiles (
     experience_level VARCHAR(100),
     remote_work_preference VARCHAR(100),
     preferred_industries TEXT,
+
+    -- New Freelancer Fields --
+    is_available_for_freelance BOOLEAN DEFAULT FALSE NOT NULL,
+    freelance_headline VARCHAR(255) NULL,
+    freelance_bio TEXT NULL,
+    portfolio_url VARCHAR(255) NULL,
+    preferred_freelance_rate_type VARCHAR(50) NULL, -- e.g., 'hourly', 'fixed', 'negotiable'
+    freelance_rate_value NUMERIC(10,2) NULL, -- Example: 12345678.90
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user

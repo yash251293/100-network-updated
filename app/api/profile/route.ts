@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db'; // Assuming db.ts is in lib
 import { verifyAuthToken } from '@/lib/authUtils';
+import { z } from 'zod'; // Import Zod
 
 // Helper function for date formatting
 function formatDateToYearMonth(dateString: string | null | Date): string | null {
   if (!dateString) return null;
   try {
-    // Attempt to handle cases where dateString might already be a Date object (e.g., from DB)
-    // or a string that needs parsing.
     const date = new Date(dateString);
-    // Check if date is valid after parsing. Invalid dates can result from bad strings.
     if (isNaN(date.getTime())) {
-        // If the date is invalid (e.g. from a malformed string or already problematic date from DB),
-        // it's safer to return null or the original string, rather than "NaN-NaN".
         console.warn("formatDateToYearMonth received invalid date string:", dateString);
         return null;
     }
@@ -21,9 +17,76 @@ function formatDateToYearMonth(dateString: string | null | Date): string | null 
     return `${year}-${month}`;
   } catch (e) {
     console.error("Error formatting date:", dateString, e);
-    return null; // Or return original string if preferred on error
+    return null;
   }
 }
+
+// Zod Schemas for POST request validation
+const skillSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  name: z.string().min(1, "Skill name cannot be empty."),
+  // proficiencyLevel is not part of the current skills handling in POST,
+  // but if it were, it would be:
+  // proficiencyLevel: z.string().optional().nullable()
+});
+
+// The current POST handler for skills expects an array of strings (skill names)
+// If the structure changes to objects, this schema needs to be used.
+// For now, we'll use z.array(z.string()) for skills based on current POST logic.
+const simpleSkillSchema = z.string().min(1, "Skill name cannot be empty.");
+
+
+const experienceSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  title: z.string().min(1, "Job title is required."),
+  company: z.string().min(1, "Company name is required."), // Matches current profileData.experience[].company
+  location: z.string().optional().nullable(),
+  startDate: z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format").optional().nullable(),
+  endDate: z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format").optional().nullable(),
+  current: z.boolean().optional(), // Matches current profileData.experience[].current
+  description: z.string().optional().nullable()
+});
+
+const educationSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  school: z.string().min(1, "School name is required."), // Matches current profileData.education[].school
+  degree: z.string().optional().nullable(),
+  field: z.string().optional().nullable(), // Matches current profileData.education[].field
+  startDate: z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format").optional().nullable(),
+  endDate: z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format").optional().nullable(),
+  current: z.boolean().optional(), // Matches current profileData.education[].current
+  description: z.string().optional().nullable()
+});
+
+const profileUpdateSchema = z.object({
+  firstName: z.string().min(1, "First name is required.").max(100).optional().nullable(),
+  lastName: z.string().min(1, "Last name is required.").max(100).optional().nullable(),
+  avatarUrl: z.string().url({ message: "Invalid avatar URL." }).optional().nullable(),
+  headline: z.string().max(255).optional().nullable(),
+  bio: z.string().optional().nullable(),
+  location: z.string().max(255).optional().nullable(),
+  linkedinUrl: z.string().url({ message: "Invalid LinkedIn URL." }).optional().nullable(),
+  githubUrl: z.string().url({ message: "Invalid GitHub URL." }).optional().nullable(),
+  websiteUrl: z.string().url({ message: "Invalid website URL." }).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+
+  jobType: z.string().max(100).optional().nullable(),
+  experienceLevel: z.string().max(100).optional().nullable(),
+  remoteWorkPreference: z.string().max(100).optional().nullable(),
+  preferredIndustries: z.string().optional().nullable(), // Kept as string, assuming client stringifies array
+
+  isAvailableForFreelance: z.boolean().optional(),
+  freelanceHeadline: z.string().max(255).optional().nullable(),
+  freelanceBio: z.string().optional().nullable(),
+  portfolioUrl: z.string().url({ message: "Invalid portfolio URL. Must be a full URL e.g. https://example.com" }).optional().nullable(),
+  preferredFreelanceRateType: z.string().max(50).optional().nullable(),
+  freelanceRateValue: z.number().positive("Rate must be a positive number.").optional().nullable(),
+
+  skills: z.array(simpleSkillSchema).optional().nullable(), // Using array of strings for skills based on current POST logic
+  experience: z.array(experienceSchema).optional().nullable(),
+  education: z.array(educationSchema).optional().nullable(),
+});
+
 
 export async function GET(request: Request) {
   try {
@@ -34,8 +97,22 @@ export async function GET(request: Request) {
     const { userId } = authResult;
 
     // Fetch profile data
-    const profileRes = await query('SELECT * FROM profiles WHERE id = $1', [userId]);
-    const profile = profileRes.rows[0] || {}; // 기본값으로 빈 객체
+    const profileQuery = `
+      SELECT
+        id, first_name, last_name, avatar_url, headline, bio, location,
+        linkedin_url, github_url, website_url, phone,
+        job_type, experience_level, remote_work_preference, preferred_industries,
+        is_available_for_freelance as "isAvailableForFreelance",
+        freelance_headline as "freelanceHeadline",
+        freelance_bio as "freelanceBio",
+        portfolio_url as "portfolioUrl",
+        preferred_freelance_rate_type as "preferredFreelanceRateType",
+        freelance_rate_value as "freelanceRateValue"
+      FROM profiles
+      WHERE id = $1
+    `;
+    const profileRes = await query(profileQuery, [userId]);
+    const profile = profileRes.rows[0] || {};
 
     // Fetch skills data
     const skillsRes = await query(
@@ -57,31 +134,26 @@ export async function GET(request: Request) {
     const userEmail = userEmailRes.rows[0]?.email || null;
 
     const consolidatedProfile = {
-      ...profile, // Spread profile fields (id, first_name, last_name, avatar_url, headline etc.)
-      // Note: profile.id will be the same as userId here.
-      // The schema for profiles table has 'id' as its PK which is also the user_id FK.
-      userId: userId, // Explicitly include userId
-      email: userEmail, // Add the email here
+      ...profile,
+      userId: userId,
+      email: userEmail,
       skills: skills,
-      experience: experiences, // Ensure this matches frontend state structure key
-      education: educations,   // Ensure this matches frontend state structure key
+      experience: experiences,
+      education: educations,
     };
     
-    // Ensure field names from DB (e.g. company_name, school_name) are mapped to frontend state keys if different
-    // And format dates
     consolidatedProfile.experience = experiences.map(exp => ({
         ...exp,
-        company: exp.company_name, // Map company_name to company
+        company: exp.company_name,
         startDate: formatDateToYearMonth(exp.start_date),
         endDate: formatDateToYearMonth(exp.end_date)
     }));
     consolidatedProfile.education = educations.map(edu => ({
         ...edu,
-        school: edu.school_name, // Map school_name to school
+        school: edu.school_name,
         startDate: formatDateToYearMonth(edu.start_date),
         endDate: formatDateToYearMonth(edu.end_date)
     }));
-
 
     return NextResponse.json(consolidatedProfile);
 
@@ -91,38 +163,58 @@ export async function GET(request: Request) {
   }
 }
 
-// (getUserIdFromRequest and GET handler from previous step should be above this)
-// import { query } from '@/lib/db'; // Already imported
-// import { NextResponse } from 'next/server'; // Already imported
 
 export async function POST(request: Request) {
   const authResult = verifyAuthToken(request.headers.get('Authorization'));
   if (!authResult) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
   const { userId } = authResult;
 
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return NextResponse.json({ success: false, message: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  console.log("API /api/profile POST received body:", body);
+  const validationResult = profileUpdateSchema.safeParse(body);
+
+  if (!validationResult.success) {
+    console.error("API /api/profile POST Zod validation failed. Body:", body, "Errors:", validationResult.error.flatten());
+    return NextResponse.json({
+      success: false,
+      message: "Validation failed.",
+      errors: validationResult.error.flatten().fieldErrors,
+      formErrors: validationResult.error.flatten().formErrors
+    }, { status: 400 });
+  }
+
+  const profileData = validationResult.data; // Use validated data from now on
+
   try {
     await query('BEGIN'); // START TRANSACTION
-    const profileData = await request.json();
     
     console.log(`API /api/profile POST: Saving data for userId: ${userId}`, profileData);
 
-    // 1. Update/Insert into `profiles` table
-    // Map frontend field names to DB column names if they differ
-    const industriesString = profileData.industries ? JSON.stringify(profileData.industries) : null;
-
-    console.log('Processing and saving career preferences:', {
-      jobType: profileData.jobType,
-      experienceLevel: profileData.experienceLevel,
-      remoteWork: profileData.remoteWork,
-      industries: profileData.industries
-    });
+    const industriesString = profileData.preferredIndustries ? JSON.stringify(profileData.preferredIndustries) : null;
 
     await query(
-      `INSERT INTO profiles (id, bio, location, website_url, avatar_url, phone, job_type, experience_level, remote_work_preference, preferred_industries, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+      `INSERT INTO profiles (
+         id, first_name, last_name, bio, location, website_url, avatar_url, phone,
+         job_type, experience_level, remote_work_preference, preferred_industries,
+         headline, linkedin_url, github_url,
+         is_available_for_freelance, freelance_headline, freelance_bio,
+         portfolio_url, preferred_freelance_rate_type, freelance_rate_value,
+         updated_at
+       )
+       VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, CURRENT_TIMESTAMP
+       )
        ON CONFLICT (id) DO UPDATE SET
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name,
          bio = EXCLUDED.bio,
          location = EXCLUDED.location,
          website_url = EXCLUDED.website_url,
@@ -132,30 +224,47 @@ export async function POST(request: Request) {
          experience_level = EXCLUDED.experience_level,
          remote_work_preference = EXCLUDED.remote_work_preference,
          preferred_industries = EXCLUDED.preferred_industries,
+         headline = EXCLUDED.headline,
+         linkedin_url = EXCLUDED.linkedin_url,
+         github_url = EXCLUDED.github_url,
+         is_available_for_freelance = EXCLUDED.is_available_for_freelance,
+         freelance_headline = EXCLUDED.freelance_headline,
+         freelance_bio = EXCLUDED.freelance_bio,
+         portfolio_url = EXCLUDED.portfolio_url,
+         preferred_freelance_rate_type = EXCLUDED.preferred_freelance_rate_type,
+         freelance_rate_value = EXCLUDED.freelance_rate_value,
          updated_at = CURRENT_TIMESTAMP
       `,
       [
         userId,
+        profileData.firstName,
+        profileData.lastName,
         profileData.bio,
         profileData.location,
-        profileData.website,
-        profileData.profilePicture,
-        profileData.phone, // New field
-        profileData.jobType, // New field
-        profileData.experienceLevel, // New field
-        profileData.remoteWork, // New field
-        industriesString // New field (stringified array)
+        profileData.websiteUrl,
+        profileData.avatarUrl,
+        profileData.phone,
+        profileData.jobType,
+        profileData.experienceLevel,
+        profileData.remoteWorkPreference,
+        industriesString,
+        profileData.headline,
+        profileData.linkedinUrl,
+        profileData.githubUrl,
+        profileData.isAvailableForFreelance,
+        profileData.freelanceHeadline,
+        profileData.freelanceBio,
+        profileData.portfolioUrl,
+        profileData.preferredFreelanceRateType,
+        profileData.freelanceRateValue
       ]
     );
     console.log('Profile upserted');
 
-
-    // 2. Handle Skills (delete old, find/create in skills, insert into user_skills)
     await query('DELETE FROM user_skills WHERE user_id = $1', [userId]);
-    console.log('Old skills deleted');
     if (profileData.skills && profileData.skills.length > 0) {
-      for (const skillName of profileData.skills) { // Assuming profileData.skills is an array of skill names
-        if (typeof skillName !== 'string' || skillName.trim() === '') continue; // Basic validation
+      for (const skillName of profileData.skills) {
+        if (typeof skillName !== 'string' || skillName.trim() === '') continue;
         let skillRes = await query('SELECT id FROM skills WHERE name = $1', [skillName.trim()]);
         let skillId;
         if (skillRes.rows.length > 0) {
@@ -163,19 +272,16 @@ export async function POST(request: Request) {
         } else {
           skillRes = await query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [skillName.trim()]);
           skillId = skillRes.rows[0].id;
-          console.log(`Skill '${skillName.trim()}' created with id ${skillId}`);
         }
         await query('INSERT INTO user_skills (user_id, skill_id) VALUES ($1, $2)', [userId, skillId]);
       }
-      console.log('New skills inserted');
+      console.log('New skills inserted/updated');
     }
 
-    // 3. Handle Experience (delete old, insert new)
     await query('DELETE FROM user_experience WHERE user_id = $1', [userId]);
-    console.log('Old experiences deleted');
     if (profileData.experience && profileData.experience.length > 0) {
       for (const exp of profileData.experience) {
-        if (!exp.title || !exp.company) continue; // Skip if essential fields are missing
+        if (!exp.title || !exp.company) continue;
 
         let processedStartDate = exp.startDate || null;
         if (processedStartDate && /^\d{4}-\d{2}$/.test(processedStartDate)) {
@@ -196,12 +302,10 @@ export async function POST(request: Request) {
       console.log('New experiences inserted');
     }
 
-    // 4. Handle Education (delete old, insert new)
     await query('DELETE FROM user_education WHERE user_id = $1', [userId]);
-    console.log('Old education deleted');
     if (profileData.education && profileData.education.length > 0) {
       for (const edu of profileData.education) {
-        if (!edu.school) continue; // Skip if essential fields are missing
+        if (!edu.school) continue;
 
         let processedEduStartDate = edu.startDate || null;
         if (processedEduStartDate && /^\d{4}-\d{2}$/.test(processedEduStartDate)) {
@@ -222,17 +326,12 @@ export async function POST(request: Request) {
       console.log('New education inserted');
     }
     
-    // Career preferences are now handled by the main profiles upsert.
-    // The console.log above confirms processing.
-
-    await query('COMMIT'); // COMMIT TRANSACTION
-    return NextResponse.json({ message: 'Profile updated successfully' });
+    await query('COMMIT');
+    return NextResponse.json({ success: true, message: 'Profile updated successfully' });
 
   } catch (error) {
-    await query('ROLLBACK'); // ROLLBACK TRANSACTION ON ERROR
+    await query('ROLLBACK');
     console.error('POST /api/profile error:', error);
-    return NextResponse.json({ error: 'Failed to update profile data', details: (error as Error).message }, { status: 500 });
-  } finally {
-    // if (client) client.release();
+    return NextResponse.json({ success: false, message: 'Failed to update profile data', details: (error as Error).message }, { status: 500 });
   }
 }
