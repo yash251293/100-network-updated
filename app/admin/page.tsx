@@ -75,18 +75,18 @@ export default function AdminPage() {
         const profileApiResponse: UserProfileResponse = await profileRes.json();
 
         // --- BEGIN ADDED LOGS ---
-        console.log("Admin Check: Full profileApiResponse:", JSON.stringify(profileApiResponse, null, 2)); // Log the whole object
-        const currentUserEmail = profileApiResponse.data?.email;
-        console.log("Admin Check: Extracted currentUserEmail:", currentUserEmail);
-        console.log("Admin Check: ADMIN_EMAIL constant:", ADMIN_EMAIL);
-        console.log("Admin Check: Comparison result (currentUserEmail === ADMIN_EMAIL):", currentUserEmail === ADMIN_EMAIL);
-        if (currentUserEmail && typeof currentUserEmail === 'string' && typeof ADMIN_EMAIL === 'string') {
-          console.log("Admin Check: Comparison result (lowercase) (currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()):", currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase());
-          console.log("Admin Check: currentUserEmail char codes:");
-          for(let i=0; i < currentUserEmail.length; i++) { console.log(currentUserEmail.charCodeAt(i) + " (" + currentUserEmail[i] + ")"); }
-          console.log("Admin Check: ADMIN_EMAIL char codes:");
-          for(let i=0; i < ADMIN_EMAIL.length; i++) { console.log(ADMIN_EMAIL.charCodeAt(i) + " (" + ADMIN_EMAIL[i] + ")"); }
-        }
+        // console.log("Admin Check: Full profileApiResponse:", JSON.stringify(profileApiResponse, null, 2)); // Log the whole object
+        const currentUserEmail = profileApiResponse?.email;
+        // console.log("Admin Check: Extracted currentUserEmail:", currentUserEmail);
+        // console.log("Admin Check: ADMIN_EMAIL constant:", ADMIN_EMAIL);
+        // console.log("Admin Check: Comparison result (currentUserEmail === ADMIN_EMAIL):", currentUserEmail === ADMIN_EMAIL);
+        // if (currentUserEmail && typeof currentUserEmail === 'string' && typeof ADMIN_EMAIL === 'string') {
+        //   console.log("Admin Check: Comparison result (lowercase) (currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()):", currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+        //   console.log("Admin Check: currentUserEmail char codes:");
+        //   for(let i=0; i < currentUserEmail.length; i++) { console.log(currentUserEmail.charCodeAt(i) + " (" + currentUserEmail[i] + ")"); }
+        //   console.log("Admin Check: ADMIN_EMAIL char codes:");
+        //   for(let i=0; i < ADMIN_EMAIL.length; i++) { console.log(ADMIN_EMAIL.charCodeAt(i) + " (" + ADMIN_EMAIL[i] + ")"); }
+        // }
         // --- END ADDED LOGS ---
 
         if (currentUserEmail === ADMIN_EMAIL) { // Or use toLowerCase comparison if that's the fix
