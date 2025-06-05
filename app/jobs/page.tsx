@@ -79,9 +79,13 @@ function AppliedJobCard({ application }: AppliedJobCardProps) {
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-medium text-primary hover:underline">
-              <Link href={`/jobs/${application.job_id}`}>{application.job_title}</Link>
-            </h3>
+            {application.job_id && typeof application.job_id === 'string' && application.job_id.trim() !== '' ? (
+              <h3 className="font-medium text-primary hover:underline">
+                <Link href={`/jobs/${application.job_id}`}>{application.job_title}</Link>
+              </h3>
+            ) : (
+              <h3 className="font-medium text-primary">{application.job_title}</h3>
+            )}
             <div className="flex items-center space-x-2">
               {getStatusIcon(application.status)}
               {getStatusBadge(application.status)}

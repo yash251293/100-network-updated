@@ -56,25 +56,35 @@ export default function JobCard({ job, onBookmarkToggle, isBookmarked, className
   return (
     <div className={`border rounded-lg p-4 md:p-6 space-y-3 bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md ${className}`}>
       <div className="flex items-start">
-        <Link href={`/jobs/${job.id}`} className="flex-shrink-0 mr-4">
-          {job.company.logo_url ? (
-            <Image
-              src={job.company.logo_url}
-              alt={`${job.company.name} logo`}
-              width={50}
-              height={50}
-              className="rounded-md object-contain h-[50px] w-[50px]"
-            />
-          ) : (
-            <div className="h-[50px] w-[50px] bg-muted rounded-md flex items-center justify-center text-muted-foreground">
-              <Building size={24} />
-            </div>
-          )}
-        </Link>
-        <div className="flex-1">
-          <Link href={`/jobs/${job.id}`} className="hover:underline">
-            <h3 className="text-lg md:text-xl font-semibold text-primary">{job.title}</h3>
+        {job.id && typeof job.id === 'string' && job.id.trim() !== '' ? (
+          <Link href={`/jobs/${job.id}`} className="flex-shrink-0 mr-4">
+            {job.company.logo_url ? (
+              <Image
+                src={job.company.logo_url}
+                alt={`${job.company.name} logo`}
+                width={50}
+                height={50}
+                className="rounded-md object-contain h-[50px] w-[50px]"
+              />
+            ) : (
+              <div className="h-[50px] w-[50px] bg-muted rounded-md flex items-center justify-center text-muted-foreground">
+                <Building size={24} />
+              </div>
+            )}
           </Link>
+        ) : (
+          <div className="flex-shrink-0 mr-4 h-[50px] w-[50px] bg-muted rounded-md flex items-center justify-center text-muted-foreground">
+            <Building size={24} /> {/* Placeholder if no valid ID for link */}
+          </div>
+        )}
+        <div className="flex-1">
+          {job.id && typeof job.id === 'string' && job.id.trim() !== '' ? (
+            <Link href={`/jobs/${job.id}`} className="hover:underline">
+              <h3 className="text-lg md:text-xl font-semibold text-primary">{job.title}</h3>
+            </Link>
+          ) : (
+            <h3 className="text-lg md:text-xl font-semibold text-primary">{job.title}</h3>
+          )}
           <p className="text-sm text-muted-foreground">{job.company.name}</p>
           {job.location && (
             <p className="text-xs text-muted-foreground flex items-center mt-0.5">
@@ -113,11 +123,17 @@ export default function JobCard({ job, onBookmarkToggle, isBookmarked, className
         </div>
       )}
 
-      <Link href={`/jobs/${job.id}`} className="block">
+      {job.id && typeof job.id === 'string' && job.id.trim() !== '' ? (
+        <Link href={`/jobs/${job.id}`} className="block">
+          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            {job.description || 'No description available.'}
+          </p>
+        </Link>
+      ) : (
         <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
           {job.description || 'No description available.'}
         </p>
-      </Link>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground pt-2 space-y-2 sm:space-y-0">
         <div className="flex items-center space-x-3 flex-wrap gap-y-1">
