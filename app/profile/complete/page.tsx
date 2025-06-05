@@ -177,26 +177,26 @@ export default function CompleteProfilePage() {
               ...prev, // Spread previous state to keep any unchanged parts
               firstName: fetched.first_name || prev.firstName || "", // API uses first_name
               lastName: fetched.last_name || prev.lastName || "",   // API uses last_name
-              profilePicture: fetched.avatarUrl || prev.profilePicture || "",
+              profilePicture: fetched.avatar_url || prev.profilePicture || "",
               bio: fetched.bio || prev.bio || "",
               location: fetched.location || prev.location || "",
-              website: fetched.websiteUrl || prev.website || "",
+              website: fetched.website_url || prev.website || "",
               phone: fetched.phone || prev.phone || "",
               skills: getSafeArray(fetched.skills?.map((s: any) => typeof s === 'object' ? s.name : s), prev.skills),
               experience: processedExperience,
               education: processedEducation,
               industries: getSafeArray(industriesArray, prev.industries),
-              jobType: fetched.jobType || prev.jobType || "",
-              experienceLevel: fetched.experienceLevel || prev.experienceLevel || "",
-              remoteWork: fetched.remoteWorkPreference || prev.remoteWork || "",
-              isAvailableForFreelance: fetched.isAvailableForFreelance || false,
-              freelanceHeadline: fetched.freelanceHeadline || "",
-              freelanceBio: fetched.freelanceBio || "",
-              portfolioUrl: fetched.portfolioUrl || "",
-              preferredFreelanceRateType: fetched.preferredFreelanceRateType || "",
-              freelanceRateValue: fetched.freelanceRateValue?.toString() || "",
+              jobType: fetched.job_type || prev.jobType || "",
+              experienceLevel: fetched.experience_level || prev.experienceLevel || "",
+              remoteWork: fetched.remote_work_preference || prev.remoteWork || "",
+              isAvailableForFreelance: fetched.is_available_for_freelance || false,
+              freelanceHeadline: fetched.freelance_headline || "",
+              freelanceBio: fetched.freelance_bio || "",
+              portfolioUrl: fetched.portfolio_url || "",
+              preferredFreelanceRateType: fetched.preferred_freelance_rate_type || "",
+              freelanceRateValue: fetched.freelance_rate_value?.toString() || "",
             };
-            setProfilePicturePreview(fetched.avatarUrl || null);
+            setProfilePicturePreview(fetched.avatar_url || null);
             return newData;
           });
         } else {
