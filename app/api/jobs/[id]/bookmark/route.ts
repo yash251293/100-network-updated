@@ -15,12 +15,39 @@ async function checkJobExists(jobId: string) {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const paramsValidation = paramsSchema.safeParse(params);
-  if (!paramsValidation.success) {
+  const id = context.params?.id; // Safely access id
+
+  // Explicitly check if id is a valid string before any other operation
+  if (typeof id !== 'string' || id.trim() === '') {
+    console.error("Bookmark API received invalid or missing ID in params. ID:", id);
     return NextResponse.json(
-      { success: false, message: 'Invalid job ID format', errors: paramsValidation.error.flatten().fieldErrors },
+      {
+        success: false,
+        message: 'Invalid or missing job ID in URL path for bookmark operation.',
+        errors: { id: ["Job ID must be a non-empty string."] },
+        formErrors: []
+      },
+      { status: 400 }
+    );
+  }
+
+  // Add logging for the received ID (similar to the other API route)
+  console.log(`Bookmark API (${request.method}) received RAW ID:`, id);
+  console.log(`Bookmark API (${request.method}) Type of RAW ID:`, typeof id);
+  console.log(`Bookmark API (${request.method}) Length of RAW ID:`, id.length);
+
+  const paramsValidation = paramsSchema.safeParse({ id });
+  if (!paramsValidation.success) {
+    console.error(`Bookmark API (${request.method}) Zod validation failed for ID:`, id, "Errors:", paramsValidation.error.flatten());
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Invalid job ID format',
+        errors: paramsValidation.error.flatten().fieldErrors,
+        formErrors: paramsValidation.error.flatten().formErrors
+      },
       { status: 400 }
     );
   }
@@ -66,12 +93,39 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const paramsValidation = paramsSchema.safeParse(params);
-  if (!paramsValidation.success) {
+  const id = context.params?.id; // Safely access id
+
+  // Explicitly check if id is a valid string before any other operation
+  if (typeof id !== 'string' || id.trim() === '') {
+    console.error("Bookmark API received invalid or missing ID in params. ID:", id);
     return NextResponse.json(
-      { success: false, message: 'Invalid job ID format', errors: paramsValidation.error.flatten().fieldErrors },
+      {
+        success: false,
+        message: 'Invalid or missing job ID in URL path for bookmark operation.',
+        errors: { id: ["Job ID must be a non-empty string."] },
+        formErrors: []
+      },
+      { status: 400 }
+    );
+  }
+
+  // Add logging for the received ID (similar to the other API route)
+  console.log(`Bookmark API (${request.method}) received RAW ID:`, id);
+  console.log(`Bookmark API (${request.method}) Type of RAW ID:`, typeof id);
+  console.log(`Bookmark API (${request.method}) Length of RAW ID:`, id.length);
+
+  const paramsValidation = paramsSchema.safeParse({ id });
+  if (!paramsValidation.success) {
+    console.error(`Bookmark API (${request.method}) Zod validation failed for ID:`, id, "Errors:", paramsValidation.error.flatten());
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Invalid job ID format',
+        errors: paramsValidation.error.flatten().fieldErrors,
+        formErrors: paramsValidation.error.flatten().formErrors
+      },
       { status: 400 }
     );
   }
