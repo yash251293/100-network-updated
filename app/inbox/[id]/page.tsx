@@ -218,6 +218,23 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     }
   };
 
+  const getFormattedTimestamp = (createdAtString: string | null | undefined): string => {
+    if (!createdAtString) {
+      return "---"; // Fallback for null, undefined, or empty string
+    }
+    const date = new Date(createdAtString);
+    if (isNaN(date.getTime())) { // Check if the date is valid
+      console.warn("Encountered invalid createdAt value:", createdAtString);
+      return "[Invalid Date]"; // Fallback for invalid dates
+    }
+    try {
+      return format(date, "p"); // e.g., "h:mm aa"
+    } catch (e) {
+      console.error("Error formatting date with date-fns:", createdAtString, e);
+      return "[Formatting Error]"; // Fallback if format itself throws an error
+    }
+  };
+
   const getParticipantName = () => {
     if (!conversationDetails) return "Loading chat...";
     return conversationDetails.name || "Chat";
@@ -291,7 +308,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                 <p className={`text-xs mt-1 ${
                     msg.sender.id === currentUser?.id ? "text-blue-200" : "text-muted-foreground"
                 }`}>
-                  {format(new Date(msg.createdAt), "p")}
+                  {getFormattedTimestamp(msg.createdAt)}
                   {msg.status === 'sending' && ' (Sending...)'}
                   {msg.status === 'failed' && ' (Failed)'}
                 </p>
