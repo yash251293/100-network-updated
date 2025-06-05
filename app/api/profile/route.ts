@@ -41,8 +41,14 @@ const experienceSchema = z.object({
   title: z.string().min(1, "Job title is required."),
   company: z.string().min(1, "Company name is required."), // Matches current profileData.experience[].company
   location: z.string().optional().nullable(),
-  startDate: z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format").optional().nullable(),
-  endDate: z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format").optional().nullable(),
+  startDate: z.union([
+    z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format or empty."),
+    z.null()
+  ]).optional(),
+  endDate: z.union([
+    z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format or empty."),
+    z.null()
+  ]).optional(),
   current: z.boolean().optional(), // Matches current profileData.experience[].current
   description: z.string().optional().nullable()
 });
@@ -52,8 +58,14 @@ const educationSchema = z.object({
   school: z.string().min(1, "School name is required."), // Matches current profileData.education[].school
   degree: z.string().optional().nullable(),
   field: z.string().optional().nullable(), // Matches current profileData.education[].field
-  startDate: z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format").optional().nullable(),
-  endDate: z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format").optional().nullable(),
+  startDate: z.union([
+    z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format or empty."),
+    z.null()
+  ]).optional(),
+  endDate: z.union([
+    z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format or empty."),
+    z.null()
+  ]).optional(),
   current: z.boolean().optional(), // Matches current profileData.education[].current
   description: z.string().optional().nullable()
 });
@@ -61,7 +73,7 @@ const educationSchema = z.object({
 const profileUpdateSchema = z.object({
   firstName: z.string().min(1, "First name is required.").max(100).optional().nullable(),
   lastName: z.string().min(1, "Last name is required.").max(100).optional().nullable(),
-  avatarUrl: z.string().url({ message: "Invalid avatar URL." }).optional().nullable(),
+  avatarUrl: z.string().max(255).optional().nullable(), // Changed from URL to lenient string
   headline: z.string().max(255).optional().nullable(),
   bio: z.string().optional().nullable(),
   location: z.string().max(255).optional().nullable(),

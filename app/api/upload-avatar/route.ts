@@ -37,8 +37,11 @@ export async function POST(request: NextRequest) {
   // Define the path for saving. Relative to the project root.
   // Files in `public` directory are served statically by Next.js.
   const uploadDir = join(process.cwd(), 'public', 'uploads', 'avatars');
-  const relativePath = join('/uploads/avatars', uniqueFilename); // Path to be returned to client
+  // const relativePath = join('/uploads/avatars', uniqueFilename); // Path to be returned to client
   const absolutePath = join(uploadDir, uniqueFilename);
+
+  let fileUrl = `/uploads/avatars/${uniqueFilename}`;
+  fileUrl = fileUrl.replace(/\\/g, '/');
 
   try {
     // Check if upload directory exists, create if not
@@ -57,8 +60,9 @@ export async function POST(request: NextRequest) {
     console.log(`File saved to ${absolutePath}`);
 
     return NextResponse.json({
+      success: true, // Adding success field for consistency
       message: 'File uploaded successfully.',
-      url: relativePath // URL path client can use
+      url: fileUrl
     });
   } catch (error) {
     console.error('Failed to save file:', error);

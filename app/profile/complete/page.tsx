@@ -354,7 +354,21 @@ export default function CompleteProfilePage() {
             <div className="space-y-6 pt-4">
               <div><Label htmlFor="bio" className="text-base font-semibold">Professional Bio</Label><Textarea id="bio" name="bio" value={profileData.bio} onChange={(e) => handleInputChange("bio", e.target.value)} placeholder="Share a brief summary..." rows={5} className="border-2 focus:border-blue-500"/></div>
               <div><Label htmlFor="location" className="text-base font-semibold">Location</Label><Input id="location" name="location" value={profileData.location} onChange={(e) => handleInputChange("location", e.target.value)} placeholder="e.g., San Francisco, CA" className="border-2 focus:border-blue-500"/></div>
-              <div><Label htmlFor="website" className="text-base font-semibold">Website/Portfolio</Label><Input id="website" name="website" type="url" value={profileData.website} onChange={(e) => handleInputChange("website", e.target.value)} placeholder="https://yourpersonalwebsite.com" className="border-2 focus:border-blue-500"/></div>
+              <div>
+                <Label htmlFor="website" className="text-base font-semibold">Website/Portfolio</Label>
+                <Input
+                  id="website"
+                  name="website"
+                  type="url"
+                  value={profileData.website}
+                  onChange={(e) => handleInputChange("website", e.target.value)}
+                  placeholder="e.g., https://yourdomain.com" // Updated placeholder
+                  className="border-2 focus:border-blue-500 transition-colors"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Please enter a full URL, including http:// or https://
+                </p>
+              </div>
               <div><Label htmlFor="phone" className="text-base font-semibold">Phone Number</Label><Input id="phone" name="phone" type="tel" value={profileData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} placeholder="(123) 456-7890" className="border-2 focus:border-blue-500"/></div>
             </div>
           </div>
