@@ -44,7 +44,7 @@ type ProjectFormData = z.infer<typeof projectSchema>;
 // Placeholder Company ID for freelance projects
 // In a real app, this might be a specific "Freelance Platform" company record
 // or a system to allow users to post under their own (verified) company.
-const FREELANCE_PLATFORM_COMPANY_ID = "your-placeholder-company-id-for-freelance"; // TODO: Replace with an actual UUID or fetch dynamically
+const FREELANCE_PLATFORM_COMPANY_ID = process.env.NEXT_PUBLIC_FREELANCE_PLATFORM_COMPANY_ID;
 
 export default function PostFreelanceProjectPage() {
   const router = useRouter();
@@ -62,9 +62,9 @@ export default function PostFreelanceProjectPage() {
     // **Assumption**: Using a placeholder companyId for all freelance projects posted through this form.
     // This ID should correspond to a generic "company" entry in the database representing the freelance platform itself,
     // or a dedicated entity for freelance listings if the schema supports it differently.
-    if (FREELANCE_PLATFORM_COMPANY_ID === "your-placeholder-company-id-for-freelance") {
-        toast.error("Configuration Error: Freelance Platform Company ID is not set.");
-        console.error("CRITICAL: FREELANCE_PLATFORM_COMPANY_ID is not configured. Cannot post job.");
+    if (!FREELANCE_PLATFORM_COMPANY_ID || FREELANCE_PLATFORM_COMPANY_ID === "your-placeholder-company-id-for-freelance") { // Second part of condition is fallback if someone forgets to remove placeholder from env
+        toast.error("Configuration Error: NEXT_PUBLIC_FREELANCE_PLATFORM_COMPANY_ID is not properly set in your environment variables.");
+        console.error("CRITICAL: NEXT_PUBLIC_FREELANCE_PLATFORM_COMPANY_ID is not configured in .env.local (or other relevant .env file) or is still set to the placeholder value. Cannot post job.");
         return;
     }
 
