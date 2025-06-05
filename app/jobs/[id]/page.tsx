@@ -99,10 +99,16 @@ export default function JobDetailPage() {
             const errorData = await jobRes.json();
             if (errorData && errorData.message) {
               errorMsg = `${errorData.message} (Status: ${jobRes.status})`;
-              if (errorData.errors && errorData.errors.id) { // Specifically check for Zod ID errors
-                errorMsg += ` Details: ${errorData.errors.id.join(', ')}`;
-              } else if (errorData.errors) { // More generic error object
-                errorMsg += ` Details: ${JSON.stringify(errorData.errors)}`;
+              if (errorData.errors && errorData.errors.id && Array.isArray(errorData.errors.id)) {
+                errorMsg += ` Details: ID Errors: ${errorData.errors.id.join(', ')}`;
+              } else if (errorData.errors && Object.keys(errorData.errors).length > 0) {
+                errorMsg += ` Details: Field Errors: ${JSON.stringify(errorData.errors)}`;
+              } else if (errorData.formErrors && Array.isArray(errorData.formErrors) && errorData.formErrors.length > 0) {
+                errorMsg += ` Details: Form Errors: ${errorData.formErrors.join(', ')}`;
+              } else if (errorData.message && errorData.message !== errorMsg.substring(0, errorMsg.indexOf(" (Status:"))) {
+                // If we captured a specific message from errorData.message and it's different from the base errorMsg
+                // and no other details were found, this means the message itself is the detail.
+                // This case might be redundant if errorData.message is always used for the base, but good for safety.
               }
             }
           } catch (parseError) {
