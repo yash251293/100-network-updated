@@ -16,7 +16,8 @@ export async function POST(
   request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const routeJobId = context.params?.id;
+  const awaitedParams = await context.params;
+  const routeJobId = awaitedParams?.id;
   if (typeof routeJobId !== 'string' || routeJobId.trim() === '') {
     console.error("Apply API received invalid or missing job ID in params. ID:", routeJobId);
     return NextResponse.json(

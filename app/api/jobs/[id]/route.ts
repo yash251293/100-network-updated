@@ -40,7 +40,8 @@ export async function GET(
   request: NextRequest, // Changed to NextRequest
   context: { params: { id: string } }
 ) {
-  const id = context.params?.id; // Safely access id
+  const awaitedParams = await context.params;
+  const id = awaitedParams?.id;
 
   // Explicitly check if id is a valid string before any other operation
   if (typeof id !== 'string' || id.trim() === '') {
@@ -165,7 +166,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const paramValidation = paramsSchema.safeParse(params);
+  const awaitedParams = await params;
+  const paramValidation = paramsSchema.safeParse(awaitedParams);
   if (!paramValidation.success) {
     return NextResponse.json({ success: false, message: 'Invalid job ID format', errors: paramValidation.error.flatten().fieldErrors }, { status: 400 });
   }
@@ -274,7 +276,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const paramValidation = paramsSchema.safeParse(params);
+  const awaitedParams = await params;
+  const paramValidation = paramsSchema.safeParse(awaitedParams);
   if (!paramValidation.success) {
     return NextResponse.json({ success: false, message: 'Invalid job ID format', errors: paramValidation.error.flatten().fieldErrors }, { status: 400 });
   }
