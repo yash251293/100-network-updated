@@ -93,8 +93,22 @@ export default function JobDetailPage() {
       // Fetch job details (public, no token needed)
       const jobRes = await fetch(`/api/jobs/${jobId}`);
       if (!jobRes.ok) {
-        if (jobRes.status === 404) throw new Error("Job not found");
-        throw new Error(`Failed to load job details (${jobRes.status})`);
+          let errorMsg = `Failed to load job details (${jobRes.status})`;
+          try {
+            // Attempt to parse the error response body
+            const errorData = await jobRes.json();
+            if (errorData && errorData.message) {
+              errorMsg = `${errorData.message} (Status: ${jobRes.status})`;
+              if (errorData.errors && errorData.errors.id) { // Specifically check for Zod ID errors
+                errorMsg += ` Details: ${errorData.errors.id.join(', ')}`;
+              } else if (errorData.errors) { // More generic error object
+                errorMsg += ` Details: ${JSON.stringify(errorData.errors)}`;
+              }
+            }
+          } catch (parseError) {
+            // Ignore if parsing fails, stick with the original status-based message
+          }
+          throw new Error(errorMsg);
       }
       const jobData = await jobRes.json();
       setJobDetails(jobData.data);
