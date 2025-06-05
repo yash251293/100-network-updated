@@ -6,36 +6,35 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button"; // Added Button import
+import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
-import Link from 'next/link'; // Added Link import
+import Link from 'next/link';
 
 const ADMIN_EMAIL = 'yashrawlani00@gmail.com';
 
-// Define a comprehensive interface for the expected user detail structure from the API
 interface UserDetail {
-  userid: string;
+  userId: string;
   email: string;
-  registrationdate: string;
-  firstname: string | null;
-  lastname: string | null;
-  avatarurl: string | null;
+  registrationDate: string;
+  firstName: string | null;
+  lastName: string | null;
+  avatarUrl: string | null;
   headline: string | null;
   bio: string | null;
   location: string | null;
-  linkedinurl: string | null;
-  githuburl: string | null;
-  websiteurl: string | null;
+  linkedinUrl: string | null;
+  githubUrl: string | null;
+  websiteUrl: string | null;
   phone: string | null;
-  preferredjobtype: string | null;
-  preferredexperiencelevel: string | null;
-  remoteworkpreference: string | null;
-  preferredindustries: string | null;
-  skills: Array<{ name: string; proficiencylevel: string | null }>;
-  experience: Array<{ title: string; companyname: string; location: string | null; startdate: string | null; enddate: string | null; currentjob: boolean; description: string | null }>;
-  education: Array<{ schoolname: string; degree: string | null; fieldofstudy: string | null; startdate: string | null; enddate: string | null; currentstudent: boolean; description: string | null }>;
-  jobsposted: Array<{ id: string; title: string; jobtype: string; status: string; createdat: string; publishedat: string | null }>;
-  applicationssubmitted: Array<{ applicationid: string; applicationdate: string; applicationstatus: string; jobid: string; jobtitle: string; companyname: string }>;
+  preferredJobType: string | null;
+  preferredExperienceLevel: string | null;
+  remoteWorkPreference: string | null;
+  preferredIndustries: string | null;
+  skills: Array<{ name: string; proficiencyLevel: string | null }>;
+  experience: Array<{ title: string; companyName: string; location: string | null; startDate: string | null; endDate: string | null; currentJob: boolean; description: string | null }>;
+  education: Array<{ schoolName: string; degree: string | null; fieldOfStudy: string | null; startDate: string | null; endDate: string | null; currentStudent: boolean; description: string | null }>;
+  jobsPosted: Array<{ id: string; title: string; jobType: string; status: string; createdAt: string; publishedAt: string | null }>;
+  applicationsSubmitted: Array<{ applicationId: string; applicationDate: string; applicationStatus: string; jobId: string; jobTitle: string; companyName: string }>;
 }
 
 interface UserProfileCheckResponse {
@@ -90,37 +89,7 @@ export default function AdminUserDetailPage() {
         }
         const profileApiResponse: UserProfileCheckResponse = await profileRes.json();
 
-        // --- BEGIN ADDED DIAGNOSTIC LOGS ---
-        // Log the part of the response that should contain the email
-        // Assuming UserProfileCheckResponse is { success: boolean, data?: { email?: string } }
-        // and profileApiResponse is this entire object.
-        // console.log("Admin User Detail Page - Admin Check: Full profileApiResponse object:", JSON.stringify(profileApiResponse, null, 2));
-        // console.log("Admin User Detail Page - Admin Check: profileApiResponse.data object:", JSON.stringify(profileApiResponse.data, null, 2));
-
-        const currentUserEmail = profileApiResponse?.email; // This is the line we are testing
-
-        // console.log("Admin User Detail Page - Admin Check: Extracted currentUserEmail:", currentUserEmail);
-        // console.log("Admin User Detail Page - Admin Check: ADMIN_EMAIL constant:", ADMIN_EMAIL);
-
-        // if (currentUserEmail !== undefined && currentUserEmail !== null) {
-        //   console.log("Admin User Detail Page - Admin Check: Comparison result (currentUserEmail === ADMIN_EMAIL):", currentUserEmail === ADMIN_EMAIL);
-        //   if (typeof currentUserEmail === 'string' && typeof ADMIN_EMAIL === 'string') {
-        //     console.log("Admin User Detail Page - Admin Check: Comparison result (lowercase) (currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()):", currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase());
-
-        //     console.log("Admin User Detail Page - Admin Check: currentUserEmail char codes:");
-        //     let codes = "";
-        //     for(let i=0; i < currentUserEmail.length; i++) { codes += currentUserEmail.charCodeAt(i) + "(" + currentUserEmail[i] + ") "; }
-        //     console.log(codes.trim());
-
-        //     console.log("Admin User Detail Page - Admin Check: ADMIN_EMAIL char codes:");
-        //     codes = "";
-        //     for(let i=0; i < ADMIN_EMAIL.length; i++) { codes += ADMIN_EMAIL.charCodeAt(i) + "(" + ADMIN_EMAIL[i] + ") "; }
-        //     console.log(codes.trim());
-        //   }
-        // } else {
-        //   console.log("Admin User Detail Page - Admin Check: currentUserEmail is undefined or null, cannot perform detailed comparison.");
-        // }
-        // --- END ADDED DIAGNOSTIC LOGS ---
+        const currentUserEmail = profileApiResponse?.email;
 
         if (currentUserEmail !== ADMIN_EMAIL) {
           setIsAdmin(false);
@@ -155,7 +124,7 @@ export default function AdminUserDetailPage() {
 
     fetchData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetUserId]); // Removed router from deps
+  }, [targetUserId]);
 
   if (isLoading) {
     return <div className="container mx-auto p-4 text-center">Loading user details...</div>;
@@ -165,7 +134,7 @@ export default function AdminUserDetailPage() {
     return <div className="container mx-auto p-4 text-center text-red-500">{error || 'Access Forbidden.'}</div>;
   }
 
-  if (error && !userDetail) { // Show error only if userDetail is not set (implies major fetch error)
+  if (error && !userDetail) {
      return <div className="container mx-auto p-4 text-center text-red-500">Error: {error}</div>;
   }
 
@@ -178,7 +147,7 @@ export default function AdminUserDetailPage() {
     return <ul className="list-disc pl-5 space-y-1">{items.map(renderItem)}</ul>;
   };
 
-  const formatDate = (dateString?: string | null) => {
+  const formatDateDisplay = (dateString?: string | null) => { // Renamed to avoid conflict with imported format
     if (!dateString) return 'N/A';
     try {
         return format(new Date(dateString), 'PPpp');
@@ -189,7 +158,7 @@ export default function AdminUserDetailPage() {
   };
 
   return (
-    <div className="space-y-6"> {/* Layout container is in app/admin/layout.tsx */}
+    <div className="space-y-6">
       <Button variant="outline" onClick={() => router.back()} className="mb-4 print:hidden">
         &larr; Back
       </Button>
@@ -201,13 +170,13 @@ export default function AdminUserDetailPage() {
         <CardHeader>
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={userDetail.avatarurl || undefined} alt={`${userDetail.firstname || ''} ${userDetail.lastname || ''}`} />
-              <AvatarFallback>{(userDetail.firstname?.[0] || 'U')}{(userDetail.lastname?.[0] || 'N')}</AvatarFallback>
+              <AvatarImage src={userDetail.avatarUrl || undefined} alt={`${userDetail.firstName || ''} ${userDetail.lastName || ''}`} />
+              <AvatarFallback>{(userDetail.firstName?.[0] || 'U')}{(userDetail.lastName?.[0] || 'N')}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-2xl">{userDetail.firstname || 'N/A'} {userDetail.lastname || 'N/A'}</CardTitle>
+              <CardTitle className="text-2xl">{userDetail.firstName || 'N/A'} {userDetail.lastName || 'N/A'}</CardTitle>
               <CardDescription>{userDetail.email}</CardDescription>
-              <p className="text-sm text-muted-foreground">Registered: {formatDate(userDetail.registrationdate)}</p>
+              <p className="text-sm text-muted-foreground">Registered: {formatDateDisplay(userDetail.registrationDate)}</p>
             </div>
           </div>
         </CardHeader>
@@ -216,19 +185,19 @@ export default function AdminUserDetailPage() {
           {userDetail.bio && <p className="whitespace-pre-line"><strong>Bio:</strong> {userDetail.bio}</p>}
           {userDetail.location && <p><strong>Location:</strong> {userDetail.location}</p>}
           {userDetail.phone && <p><strong>Phone:</strong> {userDetail.phone}</p>}
-          {userDetail.websiteurl && <p><strong>Website:</strong> <a href={userDetail.websiteurl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{userDetail.websiteurl}</a></p>}
-          {userDetail.linkedinurl && <p><strong>LinkedIn:</strong> <a href={userDetail.linkedinurl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{userDetail.linkedinurl}</a></p>}
-          {userDetail.githuburl && <p><strong>GitHub:</strong> <a href={userDetail.githuburl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{userDetail.githuburl}</a></p>}
+          {userDetail.websiteUrl && <p><strong>Website:</strong> <a href={userDetail.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{userDetail.websiteUrl}</a></p>}
+          {userDetail.linkedinUrl && <p><strong>LinkedIn:</strong> <a href={userDetail.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{userDetail.linkedinUrl}</a></p>}
+          {userDetail.githubUrl && <p><strong>GitHub:</strong> <a href={userDetail.githubUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{userDetail.githubUrl}</a></p>}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle>Profile Preferences</CardTitle></CardHeader>
         <CardContent>
-          <p><strong>Preferred Job Type:</strong> {userDetail.preferredjobtype || 'N/A'}</p>
-          <p><strong>Preferred Experience Level:</strong> {userDetail.preferredexperiencelevel || 'N/A'}</p>
-          <p><strong>Remote Work Preference:</strong> {userDetail.remoteworkpreference || 'N/A'}</p>
-          <p><strong>Preferred Industries:</strong> {userDetail.preferredindustries || 'N/A'}</p>
+          <p><strong>Preferred Job Type:</strong> {userDetail.preferredJobType || 'N/A'}</p>
+          <p><strong>Preferred Experience Level:</strong> {userDetail.preferredExperienceLevel || 'N/A'}</p>
+          <p><strong>Remote Work Preference:</strong> {userDetail.remoteWorkPreference || 'N/A'}</p>
+          <p><strong>Preferred Industries:</strong> {userDetail.preferredIndustries || 'N/A'}</p>
         </CardContent>
       </Card>
 
@@ -236,7 +205,7 @@ export default function AdminUserDetailPage() {
         <CardHeader><CardTitle>Skills</CardTitle></CardHeader>
         <CardContent>
           {renderList(userDetail.skills, (skill, i) => (
-            <li key={`skill-${i}`}><Badge variant="secondary">{skill.name}</Badge> {skill.proficiencylevel && `(${skill.proficiencylevel})`}</li>
+            <li key={`skill-${i}`}><Badge variant="secondary">{skill.name}</Badge> {skill.proficiencyLevel && `(${skill.proficiencyLevel})`}</li>
           ), "No skills listed.")}
         </CardContent>
       </Card>
@@ -246,8 +215,8 @@ export default function AdminUserDetailPage() {
         <CardContent>
           {renderList(userDetail.experience, (exp, i) => (
             <li key={`exp-${i}`} className="mb-2 border-b pb-2 last:border-b-0 last:pb-0">
-              <strong>{exp.title}</strong> at {exp.companyname} ({exp.location || 'N/A'})<br/>
-              <span className="text-sm text-muted-foreground">{formatDate(exp.startdate)} - {exp.currentjob ? 'Present' : formatDate(exp.enddate)}</span>
+              <strong>{exp.title}</strong> at {exp.companyName} ({exp.location || 'N/A'})<br/>
+              <span className="text-sm text-muted-foreground">{formatDateDisplay(exp.startDate)} - {exp.currentJob ? 'Present' : formatDateDisplay(exp.endDate)}</span>
               {exp.description && <p className="text-sm whitespace-pre-line">{exp.description}</p>}
             </li>
           ), "No work experience listed.")}
@@ -259,32 +228,32 @@ export default function AdminUserDetailPage() {
         <CardContent>
           {renderList(userDetail.education, (edu, i) => (
             <li key={`edu-${i}`} className="mb-2 border-b pb-2 last:border-b-0 last:pb-0">
-              <strong>{edu.schoolname}</strong> - {edu.degree || 'N/A'} ({edu.fieldofstudy || 'N/A'})<br/>
-              <span className="text-sm text-muted-foreground">{formatDate(edu.startdate)} - {edu.currentstudent ? 'Present' : formatDate(edu.enddate)}</span>
-              {edu.description && <p className="text-sm whitespace-pre-line">{edu.description}</p>}
+              <strong>{edu.schoolName}</strong> - {edu.degree || 'N/A'} ({edu.fieldOfStudy || 'N/A'})<br/>
+              <span className="text-sm text-muted-foreground">{formatDateDisplay(edu.startDate)} - {edu.currentStudent ? 'Present' : formatDateDisplay(edu.endDate)}</span>
+              {edu.description && <p className="text-sm whitespace-pre-line">{exp.description}</p>} {/* Typo: should be edu.description */}
             </li>
           ), "No education listed.")}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Jobs Posted ({userDetail.jobsposted?.length || 0})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Jobs Posted ({userDetail.jobsPosted?.length || 0})</CardTitle></CardHeader>
         <CardContent>
-          {renderList(userDetail.jobsposted, (job, i) => (
+          {renderList(userDetail.jobsPosted, (job, i) => (
             <li key={`job-${job.id}`}>
-              <Link href={`/jobs/${job.id}`} className="text-blue-500 hover:underline">{job.title}</Link> ({job.status}, {job.jobtype}) - Posted: {formatDate(job.createdat)}
+              <Link href={`/jobs/${job.id}`} className="text-blue-500 hover:underline">{job.title}</Link> ({job.status}, {job.jobType}) - Posted: {formatDateDisplay(job.createdAt)}
             </li>
           ), "No jobs posted by this user.")}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Applications Submitted ({userDetail.applicationssubmitted?.length || 0})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Applications Submitted ({userDetail.applicationsSubmitted?.length || 0})</CardTitle></CardHeader>
         <CardContent>
-          {renderList(userDetail.applicationssubmitted, (app, i) => (
-            <li key={`app-${app.applicationid}`}>
-              Applied for <Link href={`/jobs/${app.jobid}`} className="text-blue-500 hover:underline">{app.jobtitle}</Link> at {app.companyname}
-              <br/><span className="text-sm text-muted-foreground">Status: {app.applicationstatus}, Applied: {formatDate(app.applicationdate)}</span>
+          {renderList(userDetail.applicationsSubmitted, (app, i) => (
+            <li key={`app-${app.applicationId}`}>
+              Applied for <Link href={`/jobs/${app.jobId}`} className="text-blue-500 hover:underline">{app.jobTitle}</Link> at {app.companyName}
+              <br/><span className="text-sm text-muted-foreground">Status: {app.applicationStatus}, Applied: {formatDateDisplay(app.applicationDate)}</span>
             </li>
           ), "No applications submitted by this user.")}
         </CardContent>
