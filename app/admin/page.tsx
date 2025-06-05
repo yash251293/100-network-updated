@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; // Removed useCallback as checkAdminAndFetchData is inside useEffect
 import { getToken } from '@/lib/authClient';
 import { useRouter } from 'next/navigation';
 import {
@@ -26,119 +26,133 @@ interface UserSummary {
   applicationsSubmittedCount: number;
 }
 
-// Basic Profile type to get current user's email
-// interface UserProfile { // Not strictly needed if API returns combined data
-//   email?: string;
-// }
+// Assuming this is the actual structure from /api/profile based on prior fixes
+// where it returns a consolidated object.
+interface UserProfileResponse {
+  success: boolean;
+  data?: { // data might be optional if success is false
+    email?: string;
+    // other fields from combined user & profile data
+  };
+  message?: string; // In case of error
+}
 
 
-export default function AdminPage() { // Renamed to AdminPage
+export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [usersSummary, setUsersSummary] = useState<UserSummary[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false); // For summary data specifically
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const checkAdminAndFetchData = async () => {
-      setIsAdmin(null);
+      setIsAdmin(null); // Indicates admin check is in progress
       setError(null);
       const token = getToken();
 
       if (!token) {
-        // Redirect to login if not authenticated.
-        // Alternatively, show a message and prevent further execution.
         router.push('/auth/login?redirect=/admin');
+        // No need to set isAdmin to false here, as the component will unmount or redirect.
         return;
       }
 
-      // 1. Verify if current user is admin
       try {
+        // 1. Verify if current user is admin
         const profileRes = await fetch('/api/profile', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
         if (!profileRes.ok) {
-          // Handle non-OK responses for profile fetch specifically
-          if (profileRes.status === 401) { // Unauthorized from profile API
-             setError('Authentication failed. Please log in again.');
-             setIsAdmin(false);
-             router.push('/auth/login?redirect=/admin');
-             return;
-          }
-          throw new Error(`Failed to fetch current user profile (status: ${profileRes.status}).`);
+          let errorMsg = 'Failed to fetch current user profile to verify admin status.';
+          try {
+            const errorData: {message?: string} = await profileRes.json();
+            errorMsg = errorData.message || errorMsg;
+          } catch (e) { /* ignore parsing error, use default msg */ }
+          throw new Error(errorMsg);
         }
-        const profileData = await profileRes.json();
 
-        // Assuming /api/profile returns { success: true, data: { id, email, first_name, ... } }
-        const currentUserEmail = profileData.data?.email;
+        const profileApiResponse: UserProfileResponse = await profileRes.json();
+        // Ensure you access the email correctly based on your /api/profile response structure
+        // Assuming your /api/profile GET returns { success: true, data: { email: '...', other_profile_data... } }
+        const currentUserEmail = profileApiResponse.data?.email;
 
         if (currentUserEmail === ADMIN_EMAIL) {
-          setIsAdmin(true);
+          setIsAdmin(true); // Admin status confirmed
+
           // 2. If admin, fetch users summary
-          setIsLoadingData(true);
-          const summaryRes = await fetch('/api/admin/users-summary', {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          if (!summaryRes.ok) {
-            const errorResult = await summaryRes.json();
-            throw new Error(errorResult.message || 'Failed to fetch users summary.');
+          setIsLoadingData(true); // Start loading summary data
+          setError(null); // Clear previous errors before fetching summary
+          try {
+            const summaryRes = await fetch('/api/admin/users-summary', {
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!summaryRes.ok) {
+              let summaryErrorMsg = 'Failed to fetch users summary.';
+              try {
+                const errorResult: {message?: string} = await summaryRes.json();
+                summaryErrorMsg = errorResult.message || summaryErrorMsg;
+              } catch (e) { /* ignore parsing error */ }
+              throw new Error(summaryErrorMsg);
+            }
+            const summaryData = await summaryRes.json();
+            setUsersSummary(summaryData.data || []);
+          } catch (summaryErr: any) {
+            console.error("Failed to fetch users summary:", summaryErr);
+            setError(summaryErr.message || 'Could not load user summaries.');
+            setUsersSummary([]); // Clear previous summary data on error
+          } finally {
+            setIsLoadingData(false); // Finish loading summary data
           }
-          const summaryData = await summaryRes.json();
-          setUsersSummary(summaryData.data || []);
         } else {
-          setIsAdmin(false);
+          setIsAdmin(false); // Not an admin
           setError('Access Forbidden: You are not authorized to view this page.');
-          // Optionally redirect to home page if not admin
-          // router.push('/');
         }
       } catch (err: any) {
-        console.error("Admin dashboard error:", err);
-        setError(err.message || 'An error occurred while loading admin data.');
-        setIsAdmin(false); // Assume not admin or error occurred
-      } finally {
-        setIsLoadingData(false);
-        // Final check for isAdmin state if it's still null (shouldn't happen if try/catch is robust)
-        if (isAdmin === null && !error) { // if still null and no specific error was set for admin check
-          // This case implies an issue before setIsAdmin(true/false) was reached within try.
-          // Default to not admin if status is indeterminate after checks.
-          // setIsAdmin(false); // This might be redundant if the catch block handles it.
-        }
+        console.error("Admin dashboard initial check error:", err);
+        setError(err.message || 'An error occurred during admin verification.');
+        setIsAdmin(false); // Set to false on any error during admin check
       }
+      // No finally block needed here to set isAdmin, as it's set in try/catch.
+      // setIsLoadingData(false) is handled within the admin block.
     };
 
     checkAdminAndFetchData();
-  }, [router, isAdmin]); // Added isAdmin to dependency array to avoid potential issues if its state changes elsewhere, though unlikely here
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Changed dependency array to [] to run once on mount.
+          // router.push is an exception that doesn't need to be in deps if it causes unmount/redirect.
 
   if (isAdmin === null) {
-    return <div className="text-center p-10">Verifying admin status...</div>;
+    return <div className="container mx-auto p-4 text-center">Verifying admin status...</div>;
   }
 
   if (!isAdmin) {
-    // If an error message specific to admin check failure is set, show it. Otherwise, generic forbidden.
-    return <div className="text-center p-10 text-red-600">{error || 'Access Forbidden. You do not have permission to view this page.'}</div>;
+    return <div className="container mx-auto p-4 text-center text-red-500">{error || 'Access Forbidden. You are not authorized to view this page.'}</div>;
   }
 
-  // Admin is confirmed, now check data loading status
+  // Admin is true, now show data or data loading state
   if (isLoadingData) {
-    return <div className="text-center p-10">Loading user data...</div>;
+    return <div className="container mx-auto p-4 text-center">Loading user data...</div>;
   }
 
-  // If there was an error fetching summary data (but admin check passed)
+  // Error for user summary data, but admin is confirmed
   if (error && usersSummary.length === 0) {
-      return <div className="text-center p-10 text-red-600">Error loading user summaries: {error}</div>;
+      return (
+        <div className="container mx-auto p-4">
+          <h1 className="text-2xl font-bold mb-6 text-center">Admin Dashboard</h1>
+          <p className="text-red-500 text-center">{error}</p>
+        </div>
+      );
   }
 
   return (
-    <div> {/* Changed from container to allow layout to control container */}
-      <h1 className="text-3xl font-bold mb-8 text-center">Admin Dashboard</h1>
-      <h2 className="text-xl font-semibold mb-6">User Summaries</h2>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6 text-center">Admin Dashboard - User Summaries</h1>
+      {/* Display partial error for summary fetch if it occurred but we might have old data or want to show it */}
+      {error && <p className="text-red-500 mb-4 text-center">Error fetching latest summary: {error}</p>}
 
-      {/* Display error related to data fetching if it occurred, even if some old data might be shown */}
-      {error && !isLoadingData && <p className="text-red-500 mb-4">Error fetching data: {error}</p>}
-
-      {usersSummary.length === 0 && !isLoadingData && !error && (
-        <p className="text-center text-gray-500">No users found or no data to display.</p>
+      {usersSummary.length === 0 && !isLoadingData && (
+        <p className="text-center text-muted-foreground">No users found or data could not be loaded.</p>
       )}
 
       {usersSummary.length > 0 && (
@@ -146,10 +160,10 @@ export default function AdminPage() { // Renamed to AdminPage
           <TableCaption>A list of user summaries and their activities.</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">Email</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>First Name</TableHead>
               <TableHead>Last Name</TableHead>
-              <TableHead>Registered On</TableHead>
+              <TableHead>Registered</TableHead>
               <TableHead className="text-right">Jobs Posted</TableHead>
               <TableHead className="text-right">Apps Submitted</TableHead>
             </TableRow>
@@ -157,12 +171,12 @@ export default function AdminPage() { // Renamed to AdminPage
           <TableBody>
             {usersSummary.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-mono text-sm py-2">{user.email}</TableCell>
-                <TableCell className="py-2">{user.firstName || 'N/A'}</TableCell>
-                <TableCell className="py-2">{user.lastName || 'N/A'}</TableCell>
-                <TableCell className="py-2">{format(new Date(user.registrationDate), 'PPpp')}</TableCell>
-                <TableCell className="text-right py-2">{user.jobsPostedCount}</TableCell>
-                <TableCell className="text-right py-2">{user.applicationsSubmittedCount}</TableCell>
+                <TableCell className="font-medium">{user.email}</TableCell>
+                <TableCell>{user.firstName || 'N/A'}</TableCell>
+                <TableCell>{user.lastName || 'N/A'}</TableCell>
+                <TableCell>{user.registrationDate ? format(new Date(user.registrationDate), 'PPpp') : 'N/A'}</TableCell>
+                <TableCell className="text-right">{user.jobsPostedCount}</TableCell>
+                <TableCell className="text-right">{user.applicationsSubmittedCount}</TableCell>
               </TableRow>
             ))}
           </TableBody>
