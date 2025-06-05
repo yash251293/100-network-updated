@@ -78,6 +78,12 @@ export async function GET(
   // using 'jobId' which is the validated ID from validationResult.data.id
 
   const sqlQuery = `
+    WITH JobSpecificSkills AS (
+      SELECT DISTINCT s.name
+      FROM skills s
+      JOIN job_skills_link jsl ON s.id = jsl.skill_id
+      WHERE jsl.job_id = $1
+    )
     SELECT
       j.id, j.title, j.description, j.responsibilities, j.requirements, j.benefits,
       j.location, j.job_type, j.experience_level, j.salary_min, j.salary_max,
@@ -87,14 +93,10 @@ export async function GET(
       c.logo_url as company_logo_url, c.website_url as company_website_url,
       c.industry as company_industry, c.company_size as company_size,
       c.hq_location as company_hq_location,
-      STRING_AGG(DISTINCT s.name, ', ') WITHIN GROUP (ORDER BY s.name) as skills_list
+      (SELECT STRING_AGG(jss.name, ', ' ORDER BY jss.name) FROM JobSpecificSkills jss) as skills_list
     FROM jobs j
     JOIN companies c ON j.company_id = c.id
-    LEFT JOIN job_skills_link jsl ON j.id = jsl.job_id
-    LEFT JOIN skills s ON jsl.skill_id = s.id
-    WHERE j.id = $1
-    GROUP BY
-      j.id, c.id, c.name, c.description, c.logo_url, c.website_url, c.industry, c.company_size, c.hq_location;
+    WHERE j.id = $1;
   `;
 
   try {
