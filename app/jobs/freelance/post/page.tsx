@@ -14,6 +14,7 @@ import { ArrowLeft, UploadCloud } from "lucide-react"; // Added UploadCloud
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner"; // Using sonner for toasts
+import { getToken } from "@/lib/authClient"; // Add this if not already present
 
 // Zod Schema for form validation
 const projectSchema = z.object({
@@ -56,6 +57,12 @@ export default function PostFreelanceProjectPage() {
   });
 
   const onSubmit = async (data: ProjectFormData) => {
+    const token = getToken();
+    if (!token) {
+      toast.error("Authentication Error: You must be logged in to post a project.");
+      return;
+    }
+
     toast.info("Submitting project...");
     console.log("Form data:", data);
 
@@ -89,7 +96,10 @@ export default function PostFreelanceProjectPage() {
     try {
       const response = await fetch("/api/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(apiRequestBody),
       });
 
