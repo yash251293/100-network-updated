@@ -62,6 +62,8 @@ interface JobDetails {
   postedByUserId: string;
   company: CompanyDetails;
   skills: string[];
+  isBookmarked?: boolean;
+  hasApplied?: boolean;
 }
 
 const parseListField = (text: string | null | undefined): string[] => {
@@ -118,54 +120,15 @@ export default function JobDetailPage() {
       }
       const jobData = await jobRes.json();
       setJobDetails(jobData.data);
-
-      if (token) { // Only fetch user-specific data if token exists
-        // Fetch initial bookmark status
-        try {
-          const bookmarkRes = await fetch(`/api/job-bookmarks`, { // Fetches all user's bookmarks
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (bookmarkRes.ok) {
-            const bookmarksData = await bookmarkRes.json();
-            const isMarked = bookmarksData.data.some((b: any) => b.job_id === jobId);
-            setIsBookmarked(isMarked);
-          } else {
-            console.warn("Could not fetch bookmark status.");
-          }
-        } catch (bookmarkError) {
-           console.warn("Error checking bookmark status:", bookmarkError);
-        }
-
-        // Check if user has already applied
-        try {
-          const applicationCheckRes = await fetch(`/api/job-applications?jobId=${jobId}`, {
-             headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if(applicationCheckRes.ok) {
-              const applicationsData = await applicationCheckRes.json();
-              // Check if any application in the returned data is by the current user for this job
-              // The API should ideally filter by current user via token, so if data.length > 0, it's an application by this user.
-              if(applicationsData.data && applicationsData.data.length > 0) {
-                  setHasApplied(true);
-              } else {
-                  setHasApplied(false); // Explicitly set to false if no applications found
-              }
-          } else {
-            console.warn("Could not fetch application status.");
-            setHasApplied(false);
-          }
-        } catch(appCheckError) {
-          console.warn("Error checking application status:", appCheckError);
-          setHasApplied(false);
-        }
-      } else {
-        // No token, user is not logged in or token is unavailable
-        setIsBookmarked(false);
-        setHasApplied(false); // Cannot determine application status without login
-      }
+      // Set bookmark and applied status from the main API response
+      setIsBookmarked(jobData.data.isBookmarked || false);
+      setHasApplied(jobData.data.hasApplied || false);
 
     } catch (err: any) {
       setError(err.message);
+      // If the main fetch fails, ensure states are reset (especially if user logs out etc.)
+      setIsBookmarked(false);
+      setHasApplied(false);
     } finally {
       setIsLoading(false);
     }

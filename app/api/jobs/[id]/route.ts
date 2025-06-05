@@ -37,8 +37,8 @@ const updateJobSchema = z.object({
 
 
 export async function GET(
-  request: Request,
-  context: { params: { id: string } } // Changed to use 'context'
+  request: NextRequest, // Changed to NextRequest
+  context: { params: { id: string } }
 ) {
   const id = context.params?.id; // Safely access id
 
@@ -84,6 +84,10 @@ export async function GET(
   }
   const { id: jobId } = validationResult.data; // jobId is the validated UUID string
 
+  const authHeader = request.headers.get('Authorization');
+  const authPayload = verifyAuthToken(authHeader);
+  const currentUserId = authPayload?.userId;
+
   const sqlQuery = `
     WITH JobSpecificSkills AS (
       SELECT DISTINCT s.name
@@ -112,7 +116,27 @@ export async function GET(
       return NextResponse.json({ success: false, message: 'Job not found' }, { status: 404 });
     }
     const dbRow = result.rows[0];
-    const jobDetails = {
+
+    let isBookmarked = false;
+    let hasApplied = false;
+
+    if (currentUserId && dbRow) {
+      // Check bookmark status
+      const bookmarkCheckSql = "SELECT EXISTS (SELECT 1 FROM user_job_bookmarks WHERE user_id = $1 AND job_id = $2)";
+      const bookmarkResult = await query(bookmarkCheckSql, [currentUserId, jobId]);
+      if (bookmarkResult.rows.length > 0) {
+        isBookmarked = bookmarkResult.rows[0].exists;
+      }
+
+      // Check application status
+      const applicationCheckSql = "SELECT EXISTS (SELECT 1 FROM job_applications WHERE user_id = $1 AND job_id = $2)";
+      const applicationResult = await query(applicationCheckSql, [currentUserId, jobId]);
+      if (applicationResult.rows.length > 0) {
+        hasApplied = applicationResult.rows[0].exists;
+      }
+    }
+
+    const finalJobDetails = {
       id: dbRow.id, title: dbRow.title, description: dbRow.description,
       responsibilities: dbRow.responsibilities, requirements: dbRow.requirements,
       benefits: dbRow.benefits, location: dbRow.location, jobType: dbRow.job_type,
@@ -127,8 +151,10 @@ export async function GET(
         industry: dbRow.company_industry, size: dbRow.company_size, hqLocation: dbRow.company_hq_location,
       },
       skills: dbRow.skills_list ? dbRow.skills_list.split(', ').map((s: string) => s.trim()) : [],
+      isBookmarked: currentUserId ? isBookmarked : false,
+      hasApplied: currentUserId ? hasApplied : false
     };
-    return NextResponse.json({ success: true, data: jobDetails });
+    return NextResponse.json({ success: true, data: finalJobDetails });
   } catch (error: any) {
     console.error(`Error in GET /api/jobs/${jobId}:`, error);
     return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
