@@ -40,6 +40,17 @@ export async function GET(
   request: Request, // Can remain base Request if no auth needed for GET
   { params }: { params: { id: string } }
 ) {
+  console.log("RAW ID received by API:", params.id);
+  console.log("Type of RAW ID:", typeof params.id);
+  console.log("Length of RAW ID:", params.id?.length);
+  // For more detailed inspection, log the char codes
+  if (params.id) {
+    const charCodes = [];
+    for (let i = 0; i < params.id.length; i++) {
+      charCodes.push(params.id.charCodeAt(i));
+    }
+    console.log("Char codes of RAW ID:", charCodes.join(', '));
+  }
   const validationResult = paramsSchema.safeParse(params);
 
   if (!validationResult.success) {
