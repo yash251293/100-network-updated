@@ -102,10 +102,11 @@ const profileUpdateSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const userId = verifyAuthToken(request.headers.get('Authorization'));
-    if (!userId) {
+    const authResult = verifyAuthToken(request.headers.get('Authorization'));
+    if (!authResult) {
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     }
+    const actualUserIdString = authResult.userId;
 
     // Fetch profile data
     const profileQuery = `
@@ -122,31 +123,31 @@ export async function GET(request: Request) {
       FROM profiles
       WHERE id = $1
     `;
-    const profileRes = await query(profileQuery, [userId]);
+    const profileRes = await query(profileQuery, [actualUserIdString]);
     const profile = profileRes.rows[0] || {};
 
     // Fetch skills data
     const skillsRes = await query(
       'SELECT s.id, s.name, us.proficiency_level FROM user_skills us JOIN skills s ON us.skill_id = s.id WHERE us.user_id = $1',
-      [userId]
+      [actualUserIdString]
     );
     const skills = skillsRes.rows;
 
     // Fetch experience data
-    const experienceRes = await query('SELECT * FROM user_experience WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [userId]);
+    const experienceRes = await query('SELECT * FROM user_experience WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [actualUserIdString]);
     const experiences = experienceRes.rows;
 
     // Fetch education data
-    const educationRes = await query('SELECT * FROM user_education WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [userId]);
+    const educationRes = await query('SELECT * FROM user_education WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [actualUserIdString]);
     const educations = educationRes.rows;
 
     // Fetch user's email
-    const userEmailRes = await query('SELECT email FROM users WHERE id = $1', [userId]);
+    const userEmailRes = await query('SELECT email FROM users WHERE id = $1', [actualUserIdString]);
     const userEmail = userEmailRes.rows[0]?.email || null;
 
     const consolidatedProfile = {
       ...profile,
-      userId: userId,
+      userId: actualUserIdString,
       email: userEmail,
       skills: skills,
       experience: experiences,
@@ -176,10 +177,11 @@ export async function GET(request: Request) {
 
 
 export async function POST(request: Request) {
-  const userId = verifyAuthToken(request.headers.get('Authorization'));
-  if (!userId) {
+  const authResult = verifyAuthToken(request.headers.get('Authorization'));
+  if (!authResult) {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
+  const actualUserIdString = authResult.userId;
 
   let body;
   try {
@@ -206,7 +208,7 @@ export async function POST(request: Request) {
   try {
     await query('BEGIN'); // START TRANSACTION
     
-    console.log(`API /api/profile POST: Saving data for userId: ${userId}`, profileData);
+    console.log(`API /api/profile POST: Saving data for userId: ${actualUserIdString}`, profileData);
 
     const industriesString = profileData.preferredIndustries ? JSON.stringify(profileData.preferredIndustries) : null;
 
@@ -246,7 +248,7 @@ export async function POST(request: Request) {
          updated_at = CURRENT_TIMESTAMP
       `,
       [
-        userId,
+        actualUserIdString,
         profileData.firstName,
         profileData.lastName,
         profileData.bio,
@@ -271,7 +273,7 @@ export async function POST(request: Request) {
     );
     console.log('Profile upserted');
 
-    await query('DELETE FROM user_skills WHERE user_id = $1', [userId]);
+    await query('DELETE FROM user_skills WHERE user_id = $1', [actualUserIdString]);
     if (profileData.skills && profileData.skills.length > 0) {
       for (const skillName of profileData.skills) {
         if (typeof skillName !== 'string' || skillName.trim() === '') continue;
@@ -283,12 +285,12 @@ export async function POST(request: Request) {
           skillRes = await query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [skillName.trim()]);
           skillId = skillRes.rows[0].id;
         }
-        await query('INSERT INTO user_skills (user_id, skill_id) VALUES ($1, $2)', [userId, skillId]);
+        await query('INSERT INTO user_skills (user_id, skill_id) VALUES ($1, $2)', [actualUserIdString, skillId]);
       }
       console.log('New skills inserted/updated');
     }
 
-    await query('DELETE FROM user_experience WHERE user_id = $1', [userId]);
+    await query('DELETE FROM user_experience WHERE user_id = $1', [actualUserIdString]);
     if (profileData.experience && profileData.experience.length > 0) {
       for (const exp of profileData.experience) {
         if (!exp.title || !exp.company) continue;
@@ -306,13 +308,13 @@ export async function POST(request: Request) {
         await query(
           `INSERT INTO user_experience (user_id, title, company_name, location, start_date, end_date, current_job, description)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [userId, exp.title, exp.company, exp.location, processedStartDate, processedEndDate, exp.current || false, exp.description]
+          [actualUserIdString, exp.title, exp.company, exp.location, processedStartDate, processedEndDate, exp.current || false, exp.description]
         );
       }
       console.log('New experiences inserted');
     }
 
-    await query('DELETE FROM user_education WHERE user_id = $1', [userId]);
+    await query('DELETE FROM user_education WHERE user_id = $1', [actualUserIdString]);
     if (profileData.education && profileData.education.length > 0) {
       for (const edu of profileData.education) {
         if (!edu.school) continue;
@@ -330,7 +332,7 @@ export async function POST(request: Request) {
         await query(
           `INSERT INTO user_education (user_id, school_name, degree, field_of_study, start_date, end_date, current_student, description)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [userId, edu.school, edu.degree, edu.field, processedEduStartDate, processedEduEndDate, edu.current || false, edu.description || '']
+          [actualUserIdString, edu.school, edu.degree, edu.field, processedEduStartDate, processedEduEndDate, edu.current || false, edu.description || '']
         );
       }
       console.log('New education inserted');
