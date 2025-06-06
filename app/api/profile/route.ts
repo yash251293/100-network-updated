@@ -3,23 +3,27 @@ import { query } from '@/lib/db'; // Assuming db.ts is in lib
 import { verifyAuthToken } from '@/lib/authUtils';
 import { z } from 'zod'; // Import Zod
 
-// Helper function for date formatting
-function formatDateToYearMonth(dateString: string | null | Date): string | null {
+// Helper function for date formatting to YYYY-MM-DD
+function formatDateToYYYYMMDD(dateString: string | null | Date): string | null {
   if (!dateString) return null;
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-        console.warn("formatDateToYearMonth received invalid date string:", dateString);
-        return null;
+      // console.warn("formatDateToYYYYMMDD received invalid date string:", dateString);
+      return null;
     }
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `${year}-${month}`;
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   } catch (e) {
-    console.error("Error formatting date:", dateString, e);
+    // console.error("Error formatting date to YYYY-MM-DD:", dateString, e);
     return null;
   }
 }
+
+// formatDateToYearMonth is no longer used in this file.
+// Helper function formatDateToYYYYMMDD is used instead for standardization.
 
 // Zod Schemas for POST request validation
 const skillSchema = z.object({
@@ -37,35 +41,35 @@ const simpleSkillSchema = z.string().min(1, "Skill name cannot be empty.");
 
 
 const experienceSchema = z.object({
-  id: z.union([z.string(), z.number()]).optional(),
+  id: z.string().uuid().optional(), // Assuming DB IDs are UUIDs
   title: z.string().min(1, "Job title is required."),
   company: z.string().min(1, "Company name is required."), // Matches current profileData.experience[].company
   location: z.string().optional().nullable(),
   startDate: z.union([
-    z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format or empty."),
-    z.null()
-  ]).optional(),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Start date must be in YYYY-MM-DD format."),
+    z.null(), z.literal('')
+  ]).transform(val => val === "" ? null : val).optional(),
   endDate: z.union([
-    z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format or empty."),
-    z.null()
-  ]).optional(),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "End date must be in YYYY-MM-DD format."),
+    z.null(), z.literal('')
+  ]).transform(val => val === "" ? null : val).optional(),
   current: z.boolean().optional(), // Matches current profileData.experience[].current
   description: z.string().optional().nullable()
 });
 
 const educationSchema = z.object({
-  id: z.union([z.string(), z.number()]).optional(),
+  id: z.string().uuid().optional(), // Assuming DB IDs are UUIDs
   school: z.string().min(1, "School name is required."), // Matches current profileData.education[].school
   degree: z.string().optional().nullable(),
   field: z.string().optional().nullable(), // Matches current profileData.education[].field
   startDate: z.union([
-    z.string().regex(/^\d{4}-\d{2}$/, "Start date must be in YYYY-MM format or empty."),
-    z.null()
-  ]).optional(),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Start date must be in YYYY-MM-DD format."),
+    z.null(), z.literal('')
+  ]).transform(val => val === "" ? null : val).optional(),
   endDate: z.union([
-    z.string().regex(/^\d{4}-\d{2}$/, "End date must be in YYYY-MM format or empty."),
-    z.null()
-  ]).optional(),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "End date must be in YYYY-MM-DD format."),
+    z.null(), z.literal('')
+  ]).transform(val => val === "" ? null : val).optional(),
   current: z.boolean().optional(), // Matches current profileData.education[].current
   description: z.string().optional().nullable()
 });
@@ -85,7 +89,7 @@ const profileUpdateSchema = z.object({
   jobType: z.string().max(100).optional().nullable(),
   experienceLevel: z.string().max(100).optional().nullable(),
   remoteWorkPreference: z.string().max(100).optional().nullable(),
-  preferredIndustries: z.string().optional().nullable(), // Kept as string, assuming client stringifies array
+  preferredIndustries: z.array(z.string()).optional().nullable(), // Expect an array of strings
 
   isAvailableForFreelance: z.boolean().optional(),
   freelanceHeadline: z.string().max(255).optional().nullable(),
@@ -154,18 +158,35 @@ export async function GET(request: Request) {
       education: educations,
     };
     
+    // Return dates as YYYY-MM-DD strings directly from DB or formatted if they are Date objects
     consolidatedProfile.experience = experiences.map(exp => ({
         ...exp,
-        company: exp.company_name,
-        startDate: formatDateToYearMonth(exp.start_date),
-        endDate: formatDateToYearMonth(exp.end_date)
+        company: exp.company_name, // ensure field names match client expectations if different from DB
+        start_date: formatDateToYYYYMMDD(exp.start_date), // Format to YYYY-MM-DD
+        end_date: formatDateToYYYYMMDD(exp.end_date)     // Format to YYYY-MM-DD
     }));
     consolidatedProfile.education = educations.map(edu => ({
         ...edu,
-        school: edu.school_name,
-        startDate: formatDateToYearMonth(edu.start_date),
-        endDate: formatDateToYearMonth(edu.end_date)
+        school: edu.school_name, // ensure field names match client expectations
+        start_date: formatDateToYYYYMMDD(edu.start_date), // Format to YYYY-MM-DD
+        end_date: formatDateToYYYYMMDD(edu.end_date)     // Format to YYYY-MM-DD
     }));
+    // The formatDateToYearMonth helper is no longer used for GET response.
+    // Client will handle formatting YYYY-MM-DD to YYYY-MM if needed.
+
+    // Parse preferred_industries for the response
+    if (consolidatedProfile.preferred_industries && typeof consolidatedProfile.preferred_industries === 'string') {
+      try {
+        consolidatedProfile.preferred_industries = JSON.parse(consolidatedProfile.preferred_industries);
+      } catch (e) {
+        console.error("Failed to parse preferred_industries from DB:", e);
+        consolidatedProfile.preferred_industries = []; // Default to empty array on parse error
+      }
+    } else if (consolidatedProfile.preferred_industries === null || consolidatedProfile.preferred_industries === undefined) {
+      consolidatedProfile.preferred_industries = []; // Default to empty array if null/undefined from DB
+    }
+    // If it's already an array (e.g., due to some unexpected DB state or prior manipulation), leave it as is.
+
 
     return NextResponse.json(consolidatedProfile);
 
@@ -290,52 +311,132 @@ export async function POST(request: Request) {
       console.log('New skills inserted/updated');
     }
 
-    await query('DELETE FROM user_experience WHERE user_id = $1', [actualUserIdString]);
-    if (profileData.experience && profileData.experience.length > 0) {
+    // --- User Experience: Diff Update ---
+    if (profileData.experience) {
+      const existingExperiencesQuery = await query('SELECT * FROM user_experience WHERE user_id = $1', [actualUserIdString]);
+      const dbExperiencesMap = new Map(existingExperiencesQuery.rows.map(exp => [exp.id, exp]));
+
+      const experiencesToInsert = [];
+      const experiencesToUpdate = [];
+      const experienceIdsFromClient = new Set();
+
       for (const exp of profileData.experience) {
         if (!exp.title || !exp.company) continue;
+        experienceIdsFromClient.add(exp.id);
 
-        let processedStartDate = exp.startDate || null;
-        if (processedStartDate && /^\d{4}-\d{2}$/.test(processedStartDate)) {
-          processedStartDate = processedStartDate + "-01";
+        // Dates from client are expected to be YYYY-MM-DD or null
+        const currentExpData = { ...exp, startDate: exp.startDate || null, endDate: exp.endDate || null, current: exp.current || false };
+
+        if (exp.id && dbExperiencesMap.has(exp.id)) { // Existing item, check for update
+          const dbExp = dbExperiencesMap.get(exp.id);
+          // Compare YYYY-MM-DD strings
+          if (dbExp.title !== currentExpData.title ||
+              dbExp.company_name !== currentExpData.company ||
+              dbExp.location !== currentExpData.location ||
+              formatDateToYYYYMMDD(dbExp.start_date) !== currentExpData.startDate ||
+              formatDateToYYYYMMDD(dbExp.end_date) !== currentExpData.endDate ||
+              dbExp.current_job !== currentExpData.current ||
+              dbExp.description !== currentExpData.description) {
+            // Use currentExpData which has YYYY-MM-DD dates as received from client
+            experiencesToUpdate.push({ ...currentExpData, id: exp.id }); // ensure id is correctly passed
+          }
+          dbExperiencesMap.delete(exp.id); // Remove from map, remaining will be deleted
+        } else { // New item
+          experiencesToInsert.push(currentExpData);
         }
+      }
 
-        let processedEndDate = exp.endDate || null;
-        if (processedEndDate && /^\d{4}-\d{2}$/.test(processedEndDate)) {
-          processedEndDate = processedEndDate + "-01";
-        }
+      const experienceIdsToDelete = Array.from(dbExperiencesMap.keys());
 
+      if (experienceIdsToDelete.length > 0) {
+        await query(`DELETE FROM user_experience WHERE user_id = $1 AND id = ANY($2::uuid[])`, [actualUserIdString, experienceIdsToDelete]);
+        console.log(`Deleted ${experienceIdsToDelete.length} experiences`);
+      }
+
+      for (const exp of experiencesToInsert) {
         await query(
           `INSERT INTO user_experience (user_id, title, company_name, location, start_date, end_date, current_job, description)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [actualUserIdString, exp.title, exp.company, exp.location, processedStartDate, processedEndDate, exp.current || false, exp.description]
+          [actualUserIdString, exp.title, exp.company, exp.location, exp.startDate, exp.endDate, exp.current, exp.description] // exp.startDate/endDate are YYYY-MM-DD
         );
       }
-      console.log('New experiences inserted');
+      console.log(`Inserted ${experiencesToInsert.length} experiences`);
+
+      for (const exp of experiencesToUpdate) {
+        await query(
+          `UPDATE user_experience SET title = $1, company_name = $2, location = $3, start_date = $4, end_date = $5, current_job = $6, description = $7, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $8 AND user_id = $9`,
+          [exp.title, exp.company, exp.location, exp.startDate, exp.endDate, exp.current, exp.description, exp.id, actualUserIdString] // exp.startDate/endDate are YYYY-MM-DD
+        );
+      }
+      console.log(`Updated ${experiencesToUpdate.length} experiences`);
+    } else { // If profileData.experience is null/undefined, means client wants to delete all
+        await query('DELETE FROM user_experience WHERE user_id = $1', [actualUserIdString]);
+        console.log('All experiences deleted for user as per request.');
     }
 
-    await query('DELETE FROM user_education WHERE user_id = $1', [actualUserIdString]);
-    if (profileData.education && profileData.education.length > 0) {
+    // --- User Education: Diff Update ---
+    if (profileData.education) {
+      const existingEducationQuery = await query('SELECT * FROM user_education WHERE user_id = $1', [actualUserIdString]);
+      const dbEducationMap = new Map(existingEducationQuery.rows.map(edu => [edu.id, edu]));
+
+      const educationToInsert = [];
+      const educationToUpdate = [];
+      const educationIdsFromClient = new Set();
+
       for (const edu of profileData.education) {
         if (!edu.school) continue;
+        educationIdsFromClient.add(edu.id);
 
-        let processedEduStartDate = edu.startDate || null;
-        if (processedEduStartDate && /^\d{4}-\d{2}$/.test(processedEduStartDate)) {
-          processedEduStartDate = processedEduStartDate + "-01";
+        // Dates from client are expected to be YYYY-MM-DD or null
+        const currentEduData = { ...edu, startDate: edu.startDate || null, endDate: edu.endDate || null, current: edu.current || false };
+
+        if (edu.id && dbEducationMap.has(edu.id)) { // Existing item
+          const dbEdu = dbEducationMap.get(edu.id);
+          // Compare YYYY-MM-DD strings
+          if (dbEdu.school_name !== currentEduData.school ||
+              dbEdu.degree !== currentEduData.degree ||
+              dbEdu.field_of_study !== currentEduData.field ||
+              formatDateToYYYYMMDD(dbEdu.start_date) !== currentEduData.startDate ||
+              formatDateToYYYYMMDD(dbEdu.end_date) !== currentEduData.endDate ||
+              dbEdu.current_student !== currentEduData.current ||
+              dbEdu.description !== currentEduData.description) {
+            // Use currentEduData which has YYYY-MM-DD dates as received from client
+            educationToUpdate.push({ ...currentEduData, id: edu.id }); // ensure id is correctly passed
+          }
+          dbEducationMap.delete(edu.id);
+        } else { // New item
+          educationToInsert.push(currentEduData);
         }
+      }
 
-        let processedEduEndDate = edu.endDate || null;
-        if (processedEduEndDate && /^\d{4}-\d{2}$/.test(processedEduEndDate)) {
-          processedEduEndDate = processedEduEndDate + "-01";
-        }
+      const educationIdsToDelete = Array.from(dbEducationMap.keys());
 
+      if (educationIdsToDelete.length > 0) {
+        await query(`DELETE FROM user_education WHERE user_id = $1 AND id = ANY($2::uuid[])`, [actualUserIdString, educationIdsToDelete]);
+        console.log(`Deleted ${educationIdsToDelete.length} education entries`);
+      }
+
+      for (const edu of educationToInsert) {
         await query(
           `INSERT INTO user_education (user_id, school_name, degree, field_of_study, start_date, end_date, current_student, description)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [actualUserIdString, edu.school, edu.degree, edu.field, processedEduStartDate, processedEduEndDate, edu.current || false, edu.description || '']
+          [actualUserIdString, edu.school, edu.degree, edu.field, edu.startDate, edu.endDate, edu.current, edu.description || ''] // edu.startDate/endDate are YYYY-MM-DD
         );
       }
-      console.log('New education inserted');
+      console.log(`Inserted ${educationToInsert.length} education entries`);
+
+      for (const edu of educationToUpdate) {
+        await query(
+          `UPDATE user_education SET school_name = $1, degree = $2, field_of_study = $3, start_date = $4, end_date = $5, current_student = $6, description = $7, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $8 AND user_id = $9`,
+          [edu.school, edu.degree, edu.field, edu.startDate, edu.endDate, edu.current, edu.description || '', edu.id, actualUserIdString] // edu.startDate/endDate are YYYY-MM-DD
+        );
+      }
+      console.log(`Updated ${educationToUpdate.length} education entries`);
+    } else { // If profileData.education is null/undefined, client wants to delete all
+        await query('DELETE FROM user_education WHERE user_id = $1', [actualUserIdString]);
+        console.log('All education entries deleted for user as per request.');
     }
     
     await query('COMMIT');

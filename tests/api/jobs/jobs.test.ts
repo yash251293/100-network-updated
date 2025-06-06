@@ -1,4 +1,4 @@
-import { POST as jobsPostHandler } from '@/app/api/jobs/route'; // Adjust if your actual path is different
+import { GET as jobsGetHandler, POST as jobsPostHandler } from '@/app/api/jobs/route'; // Adjust if your actual path is different
 import { query } from '@/lib/db';
 import { verifyAuthToken } from '@/lib/authUtils';
 import { NextRequest } from 'next/server';
@@ -13,6 +13,21 @@ jest.mock('@/lib/authUtils', () => ({
   verifyAuthToken: jest.fn(),
   // AuthError is no longer explicitly mocked here as the new pattern doesn't rely on throwing it from the mock
 }));
+
+// Helper to create mock NextRequest
+function createMockRequest(method: 'GET' | 'POST' = 'GET', body?: any, headers?: any, urlParams?: Record<string, string>) {
+  const url = `http://localhost/api/jobs${urlParams ? '?' + new URLSearchParams(urlParams) : ''}`;
+  const request = new NextRequest(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return request;
+}
+
 
 const mockQuery = query as jest.Mock;
 const mockVerifyAuthToken = verifyAuthToken as jest.Mock;
@@ -145,6 +160,115 @@ describe('API Route: POST /api/jobs', () => {
     expect(body.success).toBe(false);
     expect(body.message).toBe('Authentication failed: Invalid or missing token');
     expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+});
+
+describe('API Route: GET /api/jobs', () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+    // No auth check for GET jobs in the current implementation, so no need to mock verifyAuthToken here
+  });
+
+  it('should return jobs with skills as an array and handle jobs with no skills', async () => {
+    const mockJobsData = [
+      {
+        id: 'job-id-1',
+        title: 'Software Engineer',
+        description: 'Develop cool stuff.',
+        company_id: 'comp-1',
+        company_name: 'Tech Corp',
+        company_logo_url: 'logo.png',
+        // other job fields...
+        skills: ['React', 'Node.js'] //ARRAY_AGG result from DB
+      },
+      {
+        id: 'job-id-2',
+        title: 'UX Designer',
+        description: 'Design beautiful interfaces.',
+        company_id: 'comp-2',
+        company_name: 'Design Studio',
+        company_logo_url: null,
+        // other job fields...
+        skills: [] // Job with no skills, DB returns empty array
+      },
+      {
+        id: 'job-id-3',
+        title: 'Data Scientist',
+        description: 'Analyze data.',
+        company_id: 'comp-3',
+        company_name: 'Data Inc.',
+        company_logo_url: 'logo3.png',
+        // other job fields...
+        skills: ['Python', 'SQL', 'Machine Learning'] // Job with multiple skills
+      }
+    ];
+
+    mockQuery
+      .mockResolvedValueOnce({ // For count query
+        rows: [{ total_items: mockJobsData.length.toString() }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({ // For jobs data query
+        rows: mockJobsData,
+        rowCount: mockJobsData.length,
+      });
+
+    const req = createMockRequest('GET', undefined, undefined, { page: '1', limit: '10' });
+    const response = await jobsGetHandler(req);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data).toHaveLength(mockJobsData.length);
+
+    // Check job 1 (with skills)
+    const job1 = body.data.find((j: any) => j.id === 'job-id-1');
+    expect(job1).toBeDefined();
+    expect(job1.skills).toEqual(['React', 'Node.js']);
+    expect(Array.isArray(job1.skills)).toBe(true);
+
+    // Check job 2 (no skills)
+    const job2 = body.data.find((j: any) => j.id === 'job-id-2');
+    expect(job2).toBeDefined();
+    expect(job2.skills).toEqual([]);
+    expect(Array.isArray(job2.skills)).toBe(true);
+
+    // Check job 3 (multiple skills)
+    const job3 = body.data.find((j: any) => j.id === 'job-id-3');
+    expect(job3).toBeDefined();
+    expect(job3.skills).toEqual(['Python', 'SQL', 'Machine Learning']);
+    expect(Array.isArray(job3.skills)).toBe(true);
+
+    // Verify the transformation in the route handler is correctly mapping fields
+    expect(job1.company.name).toBe('Tech Corp');
+    expect(job1.description.length).toBeLessThanOrEqual(153); // 150 + '...'
+  });
+
+  it('should return empty array if no jobs found', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ total_items: '0' }], rowCount: 1 }) // Count query
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // Jobs data query
+
+    const req = createMockRequest('GET');
+    const response = await jobsGetHandler(req);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.totalItems).toBe(0);
+  });
+
+  it('should handle invalid query parameters gracefully', async () => {
+    // No need to mock query, as validation should happen first
+    const req = createMockRequest('GET', undefined, undefined, { page: 'invalidPage', limit: '-5' });
+    const response = await jobsGetHandler(req);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.message).toBe('Invalid query parameters');
+    expect(body.errors.page).toBeDefined();
+    expect(body.errors.limit).toBeDefined();
   });
 
 });

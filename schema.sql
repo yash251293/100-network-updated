@@ -404,3 +404,16 @@ CREATE TRIGGER trigger_conversations_updated_at
 BEFORE UPDATE ON conversations
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_conversations();
+
+-- Additional indexes based on query patterns (YYYY-MM-DD Step 7)
+
+-- For jobs table sorting and searching
+CREATE INDEX idx_jobs_title ON jobs(title);
+CREATE INDEX idx_jobs_salary_min ON jobs(salary_min);
+CREATE INDEX idx_jobs_created_at_desc ON jobs(created_at DESC); -- Renamed for clarity
+
+-- For user_experience table ordering by start_date
+CREATE INDEX idx_user_experience_user_id_start_date_desc ON user_experience(user_id, start_date DESC);
+
+-- For user_education table ordering by start_date
+CREATE INDEX idx_user_education_user_id_start_date_desc ON user_education(user_id, start_date DESC);

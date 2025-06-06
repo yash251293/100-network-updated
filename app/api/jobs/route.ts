@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
         JOIN skills s ON jsl.skill_id = s.id
     ),
     AggregatedJobSkills AS (
-        SELECT djs.job_id, STRING_AGG(djs.skill_name, ', ' ORDER BY djs.skill_name) AS skills_list
+        SELECT djs.job_id, ARRAY_AGG(djs.skill_name ORDER BY djs.skill_name) AS skills_array
         FROM DistinctJobSkills djs
         GROUP BY djs.job_id
     )
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
       c.id as company_id, -- Added company_id
       c.name as company_name,
       c.logo_url as company_logo_url,
-      COALESCE(ajs.skills_list, '') AS skills_list
+      COALESCE(ajs.skills_array, ARRAY[]::VARCHAR[]) AS skills
     FROM jobs j
     JOIN companies c ON j.company_id = c.id
     LEFT JOIN AggregatedJobSkills ajs ON j.id = ajs.job_id
@@ -278,7 +278,7 @@ export async function GET(request: NextRequest) {
 
     const transformedJobs = jobsResult.rows.map(row => {
       const {
-        company_id, company_name, company_logo_url, skills_list, description,
+        company_id, company_name, company_logo_url, skills, description, // skills_list removed, skills (as array) is now directly from query
         ...jobProps
       } = row;
       return {
@@ -289,7 +289,7 @@ export async function GET(request: NextRequest) {
           name: company_name,
           logo_url: company_logo_url,
         },
-        skills: skills_list ? skills_list.split(',').map((s:string) => s.trim()) : [],
+        skills: skills || [], // skills is already an array from the query (or an empty array)
       };
     });
 

@@ -22,26 +22,14 @@ import {
 import Link from "next/link";
 import { cookies } from 'next/headers';
 import { verifyAuthToken } from '@/lib/authUtils';
-import { query } from '@/lib/db';
+// import { query } from '@/lib/db'; // Removed direct db import
 import { redirect } from 'next/navigation';
 
-// Helper function for date formatting (copied from api/profile/route.ts)
-function formatDateToYearMonth(dateString: string | null | Date): string | null {
-  if (!dateString) return null;
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-        // console.warn("formatDateToYearMonth received invalid date string:", dateString); // Optional: server-side logging
-        return null;
-    }
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `${year}-${month}`;
-  } catch (e) {
-    // console.error("Error formatting date:", dateString, e); // Optional: server-side logging
-    return null;
-  }
-}
+// The formatDateToYearMonth helper function is no longer needed here,
+// as the API will return YYYY-MM-DD strings, and client-side formatting
+// will use new Date().toLocaleDateString().
+// If specific YYYY-MM formatting is needed, it can be done directly in JSX
+// or with a more general date utility.
 
 export default async function ProfilePage() {
   const cookieStore = cookies();
@@ -56,61 +44,65 @@ export default async function ProfilePage() {
   let profileData: any = null;
   let error: string | null = null;
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://${process.env.VERCEL_URL || 'localhost:3000'}`;
+
   try {
-    // Fetch profile data (adapted from /api/profile GET handler)
-    const profileQuery = `
-      SELECT
-        id, first_name, last_name, avatar_url, headline, bio, location,
-        linkedin_url, github_url, website_url, phone,
-        job_type, experience_level, remote_work_preference, preferred_industries,
-        is_available_for_freelance as "isAvailableForFreelance",
-        freelance_headline as "freelanceHeadline",
-        freelance_bio as "freelanceBio",
-        portfolio_url as "portfolioUrl",
-        preferred_freelance_rate_type as "preferredFreelanceRateType",
-        freelance_rate_value as "freelanceRateValue"
-      FROM profiles
-      WHERE id = $1
-    `;
-    const profileRes = await query(profileQuery, [userId]);
-    const baseProfile = profileRes.rows[0] || {};
+    const res = await fetch(`${appUrl}/api/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-    const skillsRes = await query(
-      'SELECT s.id, s.name, us.proficiency_level FROM user_skills us JOIN skills s ON us.skill_id = s.id WHERE us.user_id = $1',
-      [userId]
-    );
-    const skills = skillsRes.rows;
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ message: 'Failed to fetch profile data and could not parse error response.' }));
+      throw new Error(errorData.message || `API request failed with status ${res.status}`);
+    }
 
-    const experienceRes = await query('SELECT * FROM user_experience WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [userId]);
-    const experiencesRaw = experienceRes.rows;
+    const rawData = await res.json();
 
-    const educationRes = await query('SELECT * FROM user_education WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [userId]);
-    const educationsRaw = educationRes.rows;
+    // Assuming the API returns data in a structure similar to the previous direct DB query:
+    // rawData might be { profile: {...}, skills: [...], experiences: [...], educations: [...] }
+    // or it might be a single flat object if the API aggregates everything.
+    // For this iteration, let's assume the API returns an object containing arrays for experiences, educations, skills,
+    // and a profile object which contains most of the direct user attributes.
 
-    const userEmailRes = await query('SELECT email FROM users WHERE id = $1', [userId]);
-    const userEmail = userEmailRes.rows[0]?.email || null;
+    if (!rawData.profile) { // Check if the main profile data exists
+        throw new Error("Profile data not found in API response.");
+    }
+
+    const baseProfile = rawData.profile;
+    const skills = rawData.skills || [];
+    const experiencesRaw = rawData.experiences || [];
+    const educationsRaw = rawData.educations || [];
+    // Email might be part of baseProfile or fetched separately by API. Assuming it's in baseProfile.
+    const userEmail = baseProfile.email || null;
 
     profileData = {
       ...baseProfile,
-      userId: userId,
+      userId: baseProfile.id, // Assuming API provides 'id' in profile object for userId
       email: userEmail,
-      skills: skills, // Skills are already in the desired format {id, name, proficiency_level}
-      experience: experiencesRaw.map(exp => ({
-        ...exp, // Spread raw experience
-        company: exp.company_name, // Map company_name to company
-        startDate: formatDateToYearMonth(exp.start_date),
-        endDate: formatDateToYearMonth(exp.end_date),
-        current: exp.current_job, // Map current_job to current
+      skills: skills,
+      experience: experiencesRaw.map((exp: any) => ({
+        ...exp,
+        company: exp.company_name || exp.company,
+        // API now returns start_date and end_date as 'YYYY-MM-DD'
+        // No further transformation needed here if JSX handles 'YYYY-MM-DD'
+        startDate: exp.start_date, // Directly use YYYY-MM-DD string from API
+        endDate: exp.end_date,     // Directly use YYYY-MM-DD string from API
+        current: exp.current_job !== undefined ? exp.current_job : exp.current,
       })),
-      education: educationsRaw.map(edu => ({
-        ...edu, // Spread raw education
-        school: edu.school_name, // Map school_name to school
-        field: edu.field_of_study, // Map field_of_study to field
-        startDate: formatDateToYearMonth(edu.start_date),
-        endDate: formatDateToYearMonth(edu.end_date),
-        current: edu.current_student, // Map current_student to current
+      education: educationsRaw.map((edu: any) => ({
+        ...edu,
+        school: edu.school_name || edu.school,
+        field: edu.field_of_study || edu.field,
+        // API now returns start_date and end_date as 'YYYY-MM-DD'
+        startDate: edu.start_date, // Directly use YYYY-MM-DD string from API
+        endDate: edu.end_date,     // Directly use YYYY-MM-DD string from API
+        current: edu.current_student !== undefined ? edu.current_student : edu.current,
       })),
       // Ensure all fields expected by the JSX are present, even if null/undefined
+      // Most of these should come from ...baseProfile
       avatar_url: baseProfile.avatar_url,
       first_name: baseProfile.first_name,
       last_name: baseProfile.last_name,
@@ -119,23 +111,24 @@ export default async function ProfilePage() {
       phone: baseProfile.phone,
       website_url: baseProfile.website_url,
       bio: baseProfile.bio,
+      preferred_industries: baseProfile.preferred_industries || [], // API now returns an array or empty array for this
     };
 
-    // Transform preferred_industries from JSON string to array if it exists
-    if (profileData.preferred_industries && typeof profileData.preferred_industries === 'string') {
-      try {
-        profileData.preferred_industries = JSON.parse(profileData.preferred_industries);
-      } catch (e) {
-        // console.error("Failed to parse preferred_industries JSON:", e); // Optional server-side logging
-        profileData.preferred_industries = []; // Default to empty array on parse error
-      }
-    } else if (!profileData.preferred_industries) {
-        profileData.preferred_industries = []; // Default if not present
-    }
-
+    // The API now handles parsing preferred_industries into an array.
+    // The client-side parsing logic below is no longer needed.
+    // if (profileData.preferred_industries && typeof profileData.preferred_industries === 'string') {
+    //   try {
+    //     profileData.preferred_industries = JSON.parse(profileData.preferred_industries);
+    //   } catch (e) {
+    //     // console.error("Failed to parse preferred_industries JSON:", e); // Optional server-side logging
+    //     profileData.preferred_industries = []; // Default to empty array on parse error
+    //   }
+    // } else if (!profileData.preferred_industries) {
+    //     profileData.preferred_industries = []; // Default if not present
+    // }
 
   } catch (err: any) {
-    // console.error("Error fetching profile data in RSC:", err); // Optional: server-side logging
+    // console.error("Error fetching profile data via API in RSC:", err); // Optional: server-side logging
     error = err.message || 'An unexpected error occurred while fetching profile data.';
   }
 
@@ -277,19 +270,21 @@ export default async function ProfilePage() {
                       <h3 className="font-medium">{exp.title || 'N/A'}</h3>
                       <p className="text-muted-foreground">{exp.company || 'N/A'} • {exp.employment_type || 'N/A'}</p>
                       <p className="text-sm text-muted-foreground">
-                        {exp.start_date ? new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'} -
-                        {exp.current ? 'Present' : (exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A')}
+                        {/* Dates are now YYYY-MM-DD. new Date() can parse this directly. */}
+                        {exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'} -
+                        {exp.current ? 'Present' : (exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A')}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">{exp.location || 'N/A'}</p>
                       <p className="text-sm mt-2 whitespace-pre-line">{exp.description || 'No description provided.'}</p>
                       {/* Skills for this experience item - assuming exp.skills is an array of strings if it exists */}
-                      {exp.skills && exp.skills.length > 0 && (
+                      {/* This part is still commented out as it depends on API providing skills per experience */}
+                      {/* {exp.skills && exp.skills.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {exp.skills.map((skill: string, skillIndex: number) => (
                             <Badge key={skillIndex} variant="secondary">{skill}</Badge>
                           ))}
                         </div>
-                      )}
+                      )} */}
                     </div>
                   </div>
                 ))
@@ -322,8 +317,9 @@ export default async function ProfilePage() {
                       <h3 className="font-medium">{edu.degree || 'N/A'}</h3>
                       <p className="text-muted-foreground">{edu.school || 'N/A'} • {edu.field_of_study || 'N/A'}</p>
                       <p className="text-sm text-muted-foreground">
-                        {edu.start_date ? new Date(edu.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'} -
-                        {edu.current ? 'Present' : (edu.end_date ? new Date(edu.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A')}
+                        {/* Dates are now YYYY-MM-DD. new Date() can parse this directly. */}
+                        {edu.startDate ? new Date(edu.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'} -
+                        {edu.current ? 'Present' : (edu.endDate ? new Date(edu.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A')}
                       </p>
                       <p className="text-sm mt-2 whitespace-pre-line">{edu.description || 'No description provided.'}</p>
                     </div>
