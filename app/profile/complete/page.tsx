@@ -351,6 +351,34 @@ export default function CompleteProfilePage() {
               <Button type="button" variant="outline" onClick={handleImageUploadClick}><Upload className="mr-2 h-4 w-4" /> Change Picture</Button>
               {selectedImageFile && <p className="text-sm text-muted-foreground">New image: {selectedImageFile.name}</p>}
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-base font-semibold">
+                  First Name
+                </Label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  value={profileData.firstName}
+                  onChange={(e) => handleInputChange("firstName", e.target.value)}
+                  placeholder="Enter your first name"
+                  className="border-2 focus:border-blue-500 transition-colors"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-base font-semibold">
+                  Last Name
+                </Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  value={profileData.lastName}
+                  onChange={(e) => handleInputChange("lastName", e.target.value)}
+                  placeholder="Enter your last name"
+                  className="border-2 focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
             <div className="space-y-6 pt-4">
               <div><Label htmlFor="bio" className="text-base font-semibold">Professional Bio</Label><Textarea id="bio" name="bio" value={profileData.bio} onChange={(e) => handleInputChange("bio", e.target.value)} placeholder="Share a brief summary..." rows={5} className="border-2 focus:border-blue-500"/></div>
               <div><Label htmlFor="location" className="text-base font-semibold">Location</Label><Input id="location" name="location" value={profileData.location} onChange={(e) => handleInputChange("location", e.target.value)} placeholder="e.g., San Francisco, CA" className="border-2 focus:border-blue-500"/></div>
