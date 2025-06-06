@@ -15,6 +15,7 @@ import {
   Star, Sparkles, Crown, DollarSign, FileText, Trash2
 } from "lucide-react"
 import { getToken } from "@/lib/authClient";
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 interface ExperienceEntry {
   id?: string | number;
@@ -289,6 +290,26 @@ export default function CompleteProfilePage() {
       finalApiProfileData.experience = profileData.experience.map(exp => ({ ...exp, companyName: exp.company, currentJob: exp.current }));
       finalApiProfileData.education = profileData.education.map(edu => ({ ...edu, schoolName: edu.school, fieldOfStudy: edu.field, currentStudent: edu.current }));
 
+      // Clean up experience and education arrays
+      if (finalApiProfileData.experience) {
+        finalApiProfileData.experience = finalApiProfileData.experience.filter(exp => {
+          return !(exp.title === "" && exp.company === "");
+        }).map(exp => ({
+          ...exp,
+          startDate: exp.startDate === "" ? null : exp.startDate,
+          endDate: exp.endDate === "" ? null : exp.endDate,
+        }));
+      }
+
+      if (finalApiProfileData.education) {
+        finalApiProfileData.education = finalApiProfileData.education.filter(edu => {
+          return !(edu.school === "");
+        }).map(edu => ({
+          ...edu,
+          startDate: edu.startDate === "" ? null : edu.startDate,
+          endDate: edu.endDate === "" ? null : edu.endDate,
+        }));
+      }
 
       const response = await fetch('/api/profile', {
         method: 'POST',
@@ -489,9 +510,10 @@ export default function CompleteProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="relative container max-w-4xl mx-auto px-4 py-12">
-        <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="relative container max-w-4xl mx-auto px-4 py-12">
+          <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-8 md:p-12">
             {renderFormStep()}
           </CardContent>
