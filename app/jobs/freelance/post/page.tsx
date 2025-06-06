@@ -26,7 +26,7 @@ const projectSchema = z.object({
   minBudget: z.coerce.number().positive("Minimum budget must be positive.").optional().nullable(),
   maxBudget: z.coerce.number().positive("Maximum budget must be positive.").optional().nullable(),
   duration: z.string().min(1, "Duration is required."),
-  attachments: z.instanceof(FileList).optional(), // For now, just acknowledge files
+  attachments: z.any().optional(), // For now, just acknowledge files
 }).refine(data => {
   if (data.budgetType === "fixed" && (data.minBudget === null || data.minBudget === undefined)) {
     return false; // Fixed price must have at least minBudget (which can be the fixed price itself)
