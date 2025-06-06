@@ -1,6 +1,5 @@
-"use client"; // Added
-
-import ProtectedRoute from "../../components/ProtectedRoute"; // Added
+import Image from 'next/image';
+// Removed ProtectedRoute, auth handled server-side
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -19,66 +18,137 @@ import {
   Eye,
   MessageCircle,
 } from "lucide-react"
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getToken } from "@/lib/authClient";
+// Removed useEffect, useState, useRouter, getToken - not needed for RSC data fetching
 import Link from "next/link";
+import { cookies } from 'next/headers';
+import { verifyAuthToken } from '@/lib/authUtils';
+import { query } from '@/lib/db';
+import { redirect } from 'next/navigation';
 
-export default function ProfilePage() {
-  const [profileData, setProfileData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+// Helper function for date formatting (copied from api/profile/route.ts)
+function formatDateToYearMonth(dateString: string | null | Date): string | null {
+  if (!dateString) return null;
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        // console.warn("formatDateToYearMonth received invalid date string:", dateString); // Optional: server-side logging
+        return null;
+    }
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    return `${year}-${month}`;
+  } catch (e) {
+    // console.error("Error formatting date:", dateString, e); // Optional: server-side logging
+    return null;
+  }
+}
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoading(true);
-      setError(null);
-      const token = getToken();
+export default async function ProfilePage() {
+  const cookieStore = cookies();
+  const token = cookieStore.get('authToken')?.value;
+  const authResult = verifyAuthToken(token ? `Bearer ${token}` : null);
+  const userId = authResult?.userId;
 
-      if (!token) {
-        console.warn("[ProfilePage] No auth token found. API request will likely fail or be unauthorized.");
-        setError("Authentication token not found. Please log in.");
-        setIsLoading(false);
-        // Optionally, redirect: router.push('/auth/login');
-        return;
-      }
+  if (!userId) {
+    redirect('/auth/login?message=Please log in to view your profile.');
+  }
 
-      const headers: HeadersInit = { 'Authorization': `Bearer ${token}` };
+  let profileData: any = null;
+  let error: string | null = null;
 
-      try {
-        const response = await fetch('/api/profile', { headers });
-        if (response.ok) {
-          const data = await response.json();
-          setProfileData(data);
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error("Failed to fetch profile data, status:", response.status, "body:", errorData);
-          setError(errorData.error || errorData.message || 'Failed to fetch profile data');
-        }
-      } catch (err: any) {
-        console.error("Error fetching profile data:", err);
-        setError(err.message || 'An unexpected error occurred.');
-      } finally {
-        setIsLoading(false);
-      }
+  try {
+    // Fetch profile data (adapted from /api/profile GET handler)
+    const profileQuery = `
+      SELECT
+        id, first_name, last_name, avatar_url, headline, bio, location,
+        linkedin_url, github_url, website_url, phone,
+        job_type, experience_level, remote_work_preference, preferred_industries,
+        is_available_for_freelance as "isAvailableForFreelance",
+        freelance_headline as "freelanceHeadline",
+        freelance_bio as "freelanceBio",
+        portfolio_url as "portfolioUrl",
+        preferred_freelance_rate_type as "preferredFreelanceRateType",
+        freelance_rate_value as "freelanceRateValue"
+      FROM profiles
+      WHERE id = $1
+    `;
+    const profileRes = await query(profileQuery, [userId]);
+    const baseProfile = profileRes.rows[0] || {};
+
+    const skillsRes = await query(
+      'SELECT s.id, s.name, us.proficiency_level FROM user_skills us JOIN skills s ON us.skill_id = s.id WHERE us.user_id = $1',
+      [userId]
+    );
+    const skills = skillsRes.rows;
+
+    const experienceRes = await query('SELECT * FROM user_experience WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [userId]);
+    const experiencesRaw = experienceRes.rows;
+
+    const educationRes = await query('SELECT * FROM user_education WHERE user_id = $1 ORDER BY start_date DESC, id DESC', [userId]);
+    const educationsRaw = educationRes.rows;
+
+    const userEmailRes = await query('SELECT email FROM users WHERE id = $1', [userId]);
+    const userEmail = userEmailRes.rows[0]?.email || null;
+
+    profileData = {
+      ...baseProfile,
+      userId: userId,
+      email: userEmail,
+      skills: skills, // Skills are already in the desired format {id, name, proficiency_level}
+      experience: experiencesRaw.map(exp => ({
+        ...exp, // Spread raw experience
+        company: exp.company_name, // Map company_name to company
+        startDate: formatDateToYearMonth(exp.start_date),
+        endDate: formatDateToYearMonth(exp.end_date),
+        current: exp.current_job, // Map current_job to current
+      })),
+      education: educationsRaw.map(edu => ({
+        ...edu, // Spread raw education
+        school: edu.school_name, // Map school_name to school
+        field: edu.field_of_study, // Map field_of_study to field
+        startDate: formatDateToYearMonth(edu.start_date),
+        endDate: formatDateToYearMonth(edu.end_date),
+        current: edu.current_student, // Map current_student to current
+      })),
+      // Ensure all fields expected by the JSX are present, even if null/undefined
+      avatar_url: baseProfile.avatar_url,
+      first_name: baseProfile.first_name,
+      last_name: baseProfile.last_name,
+      headline: baseProfile.headline,
+      location: baseProfile.location,
+      phone: baseProfile.phone,
+      website_url: baseProfile.website_url,
+      bio: baseProfile.bio,
     };
 
-    fetchProfile();
-  }, [router]); // Added router to dependency array if it's used for navigation
+    // Transform preferred_industries from JSON string to array if it exists
+    if (profileData.preferred_industries && typeof profileData.preferred_industries === 'string') {
+      try {
+        profileData.preferred_industries = JSON.parse(profileData.preferred_industries);
+      } catch (e) {
+        // console.error("Failed to parse preferred_industries JSON:", e); // Optional server-side logging
+        profileData.preferred_industries = []; // Default to empty array on parse error
+      }
+    } else if (!profileData.preferred_industries) {
+        profileData.preferred_industries = []; // Default if not present
+    }
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading profile...</div>;
+
+  } catch (err: any) {
+    // console.error("Error fetching profile data in RSC:", err); // Optional: server-side logging
+    error = err.message || 'An unexpected error occurred while fetching profile data.';
   }
+
+  // UI Rendering Logic (similar to before, but without isLoading)
   if (error) {
     return <div className="flex justify-center items-center min-h-screen">Error: {error}</div>;
   }
   if (!profileData) {
-    return <div className="flex justify-center items-center min-h-screen">No profile data found.</div>;
+    return <div className="flex justify-center items-center min-h-screen">No profile data found or failed to load.</div>;
   }
 
   return (
-    <ProtectedRoute>
+    // Removed ProtectedRoute wrapper
       <div className="container max-w-4xl py-6">
         {/* Header Card */}
         <Card className="mb-6">
@@ -434,6 +504,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
-    </ProtectedRoute>
+    // Removed ProtectedRoute wrapper
   )
 }
