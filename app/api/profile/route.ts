@@ -102,11 +102,10 @@ const profileUpdateSchema = z.object({
 
 export async function GET(request: Request) {
   try {
-    const authResult = verifyAuthToken(request.headers.get('Authorization'));
-    if (!authResult) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = verifyAuthToken(request.headers.get('Authorization'));
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     }
-    const { userId } = authResult;
 
     // Fetch profile data
     const profileQuery = `
@@ -177,11 +176,10 @@ export async function GET(request: Request) {
 
 
 export async function POST(request: Request) {
-  const authResult = verifyAuthToken(request.headers.get('Authorization'));
-  if (!authResult) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+  const userId = verifyAuthToken(request.headers.get('Authorization'));
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
-  const { userId } = authResult;
 
   let body;
   try {

@@ -20,7 +20,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { getToken } from '@/lib/authClient';
-import CreateCompanyModal from '@/components/CreateCompanyModal'; // Import the modal
+import dynamic from 'next/dynamic'; // Import dynamic
+const CreateCompanyModal = dynamic(() => import('@/components/CreateCompanyModal'), { ssr: false }); // Import the modal dynamically
 
 // Zod Schema for the main job posting form
 const jobPostingSchema = z.object({

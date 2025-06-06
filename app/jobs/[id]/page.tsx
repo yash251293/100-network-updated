@@ -26,7 +26,8 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import { useToast } from "@/components/ui/use-toast";
-import JobApplicationModal from "@/components/JobApplicationModal";
+import dynamic from 'next/dynamic'; // Added
+const JobApplicationModal = dynamic(() => import('@/components/JobApplicationModal'), { ssr: false }); // Added
 import { getToken } from "@/lib/authClient"; // Added
 
 // Interface for Job Details from API (based on /api/jobs/[id] route)
