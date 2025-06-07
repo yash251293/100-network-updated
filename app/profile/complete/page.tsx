@@ -15,7 +15,7 @@ import {
   Star, Sparkles, Crown, DollarSign, FileText, Trash2
 } from "lucide-react"
 import { getToken } from "@/lib/authClient";
-import ProtectedRoute from '@/components/ProtectedRoute';
+import ProtectedRoute from '../../../components/ProtectedRoute'; // Changed to relative path
 import { formatDateToYearMonth } from "@/lib/utils"; // Import the consolidated function
 
 interface ExperienceEntry {
