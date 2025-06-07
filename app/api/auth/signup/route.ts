@@ -16,11 +16,6 @@ export async function POST(request: Request) {
   if (!email || !password || !firstName || !lastName) {
     return NextResponse.json({ success: false, message: 'All fields are required.' }, { status: 400 });
   }
-  // console.log('Signup API request body:', body); // Optional: Keep for debugging if needed
-
-  if (!email || !password || !firstName || !lastName) {
-    return NextResponse.json({ success: false, message: 'Missing required fields (email, password, firstName, lastName).' }, { status: 400 })
-  }
 
   // Basic password validation (consider moving to client-side or shared validation logic)
   if (password.length < 8) {
