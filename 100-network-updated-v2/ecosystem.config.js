@@ -3,7 +3,7 @@ module.exports = {
     name   : "my-nextjs-app-dev-v2",
     script : "pnpm",
     args   : "dev",
-    cwd    : "/root/100-network-updated-v2", // This CWD will likely need adjustment by the user if the app isn't actually there
+    cwd    : "/root/100-network-updated-v2",
     env_production : {
        NODE_ENV: "production",
        POSTGRES_URL: "postgresql://flexbone_username:flexbone_password@5.189.179.61:3001/flexbone_db",
