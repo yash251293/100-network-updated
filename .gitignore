@@ -1,0 +1,44 @@
+# Node modules
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Dependency lock files (ignore npm's lock file in a pnpm project)
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+.env
+
+# Other projects or temporary files often found in root (IMPORTANT: adjust if these are actually part of your project)
+# These lines ensure that other project folders or stray files often found in the root
+# do not get accidentally committed to this repository.
+100-networks/
+my-job-recommendation-project/
+/git  # Ignores a folder/file named 'git' at the root
+/pnpm # Ignores a folder/file named 'pnpm' at the root
+
+# OSX files
+.DS_Store
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# pnpm store (if not global, or if you want to explicitly ignore a local store)
+.pnpm-store/
+
+# User-uploaded content (local development)
+/public/uploads/avatars/
+.aider*
