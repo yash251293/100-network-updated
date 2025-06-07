@@ -1,5 +1,5 @@
 // jest.setup.js
-// import '@testing-library/jest-dom'; // Example if you were doing DOM tests
+import '@testing-library/jest-dom'; // Example if you were doing DOM tests
 // Add any other global setup here, like environment variable mocks if needed for tests
 
 // You can mock global fetch if your API client uses it, or specific modules

@@ -24,45 +24,61 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Check if user already exists
-    const existingUserResult = await query('SELECT * FROM users WHERE email = $1', [email])
-    if (existingUserResult.rows.length > 0) {
-      return NextResponse.json({ success: false, message: 'User with this email already exists.' }, { status: 409 }) // 409 Conflict
-    }
+    await query('BEGIN'); // START TRANSACTION
 
-    // Hash the password
-    const hashedPassword = await hash(password, 10)
+    try {
+      // Check if user already exists
+      const existingUserResult = await query('SELECT * FROM users WHERE email = $1', [email]);
+      if (existingUserResult.rows.length > 0) {
+        await query('ROLLBACK'); // Rollback before exiting
+        return NextResponse.json({ success: false, message: 'User with this email already exists.' }, { status: 409 }); // 409 Conflict
+      }
 
-    // Insert new user
-    const newUserResult = await query(
-      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id',
-      [email, hashedPassword]
-    )
-    const userId = newUserResult.rows[0].id
+      // Hash the password
+      const hashedPassword = await hash(password, 10);
 
-    if (!userId) {
-        // This case should ideally not happen if the previous query was successful and RETURNING id worked
+      // Insert new user
+      const newUserResult = await query(
+        'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id',
+        [email, hashedPassword]
+      );
+      const userId = newUserResult.rows[0]?.id; // Safely access id
+
+      if (!userId) {
+        await query('ROLLBACK'); // Rollback if userId is not returned
         console.error('User ID not returned after insert.');
+        // It's good practice to not expose 'no ID returned' to client, keep generic error
         return NextResponse.json({ success: false, message: 'An error occurred during user creation.' }, { status: 500 });
+      }
+
+      // Insert new profile
+      await query(
+        'INSERT INTO profiles (id, first_name, last_name) VALUES ($1, $2, $3)',
+        [userId, firstName, lastName]
+      );
+
+      await query('COMMIT'); // COMMIT TRANSACTION
+
+      // Return success response
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Signup successful! Please login.',
+          userId: userId
+        },
+        { status: 201 }
+      );
+
+    } catch (transactionError) {
+      await query('ROLLBACK'); // Rollback on any error during transaction
+      console.error('Error during signup transaction:', transactionError);
+      // Re-throw to be caught by the outer catch, which returns a generic error to the client
+      throw transactionError;
     }
 
-    // Insert new profile
-    await query(
-      'INSERT INTO profiles (id, first_name, last_name) VALUES ($1, $2, $3)',
-      [userId, firstName, lastName]
-    )
-
-    // Return success response
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Signup successful! Please login.', // Updated message
-        userId: userId // Optionally return the userId or user object
-      },
-      { status: 201 }
-    )
   } catch (dbError) {
-    console.error('Signup database error:', dbError)
-    return NextResponse.json({ success: false, message: 'An error occurred during signup. Please try again.' }, { status: 500 })
+    // This outer catch handles errors from BEGIN, COMMIT, ROLLBACK, or re-thrown transaction errors
+    console.error('Signup database/transaction management error:', dbError);
+    return NextResponse.json({ success: false, message: 'An error occurred during signup. Please try again.' }, { status: 500 });
   }
 }

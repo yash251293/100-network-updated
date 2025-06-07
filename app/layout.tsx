@@ -7,6 +7,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { UserProvider } from '@/contexts/UserContext'; // Adjust path if needed
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import { isAuthenticated } from "@/lib/authClient";
@@ -74,21 +75,23 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {isUserAuthenticated && !pathname.startsWith('/auth') ? (
-            <div className="flex h-screen bg-background">
-              <Sidebar />
-              <div className="flex flex-col flex-1">
-                <Header />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
-                  {children}
-                </main>
+          <UserProvider> {/* Wrap content with UserProvider */}
+            {isUserAuthenticated && !pathname.startsWith('/auth') ? (
+              <div className="flex h-screen bg-background">
+                <Sidebar />
+                <div className="flex flex-col flex-1">
+                  <Header />
+                  <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
+                    {children}
+                  </main>
+                </div>
               </div>
-            </div>
-          ) : (
-            // This simpler <main> will be used for unauthenticated users
-            // OR for authenticated users who are on an /auth route.
-            <main>{children}</main>
-          )}
+            ) : (
+              // This simpler <main> will be used for unauthenticated users
+              // OR for authenticated users who are on an /auth route.
+              <main>{children}</main>
+            )}
+          </UserProvider>
           <Toaster />
         </ThemeProvider>
       </body>

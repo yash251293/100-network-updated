@@ -4,13 +4,15 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Briefcase, Calendar, Globe, Inbox, LayoutDashboard,
-  MessageSquare, Users, Building2, ClipboardList, PlusSquare // Added PlusSquare
+  MessageSquare, Users, Building2, ClipboardList, PlusSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { isAuthenticated } from "@/lib/authClient" // Added for conditional rendering
-import { useEffect, useState } from "react" // Added for managing client-side auth check
+import { isAuthenticated } from "@/lib/authClient"
+import { useEffect, useState } from "react"
+import { useUser } from "@/contexts/UserContext" // Import useUser
 
+// Nav items (keep as is for now)
 const baseNavItems = [
   {
     name: "Explore",
@@ -38,7 +40,6 @@ const baseNavItems = [
     href: "/jobs/freelance",
     icon: ClipboardList,
   },
-  // "Post a Job" will be added dynamically if authenticated
   {
     name: "Events",
     href: "/events",
@@ -63,31 +64,53 @@ const postJobItem = {
   icon: PlusSquare,
 };
 
+
 export default function Sidebar() {
   const pathname = usePathname();
-  const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
+  // isUserAuthenticated for showing "Post a Job" can still rely on isAuthenticated()
+  // or be derived from useUser().user object.
+  // For simplicity, keeping the existing auth check for nav items for now.
+  const [isUserAuthenticatedForNav, setIsUserAuthenticatedForNav] = useState(false);
   const [displayNavItems, setDisplayNavItems] = useState(baseNavItems);
 
+  const { user, isLoading } = useUser(); // Use the UserContext
+
   useEffect(() => {
-    // isAuthenticated relies on localStorage, so it must run client-side
-    const authStatus = isAuthenticated();
-    setIsUserAuthenticated(authStatus);
+    const authStatus = isAuthenticated(); // Client-side check for nav item
+    setIsUserAuthenticatedForNav(authStatus);
+
+    let newNavItems = [...baseNavItems];
+    const postJobExists = newNavItems.some(item => item.href === "/post-job");
 
     if (authStatus) {
-      // Add "Post a Job" item if authenticated
-      // Find index after "Freelance" to insert "Post a Job"
-      const freelanceIndex = baseNavItems.findIndex(item => item.href === "/jobs/freelance");
-      const newNavItems = [...baseNavItems];
-      if (freelanceIndex !== -1) {
-        newNavItems.splice(freelanceIndex + 1, 0, postJobItem);
-      } else { // Fallback if "Freelance" isn't found, add towards the end or a sensible default
-        newNavItems.splice(5, 0, postJobItem); // Default position
+      if (!postJobExists) {
+        const freelanceIndex = baseNavItems.findIndex(item => item.href === "/jobs/freelance");
+        if (freelanceIndex !== -1) {
+          newNavItems.splice(freelanceIndex + 1, 0, postJobItem);
+        } else {
+          // Fallback: add after "Jobs" or at a specific position if "Freelance" is not found
+          const jobsIndex = newNavItems.findIndex(item => item.href === "/jobs");
+          if (jobsIndex !== -1) {
+            newNavItems.splice(jobsIndex + 1, 0, postJobItem);
+          } else {
+            newNavItems.splice(5, 0, postJobItem); // Default position if no other landmarks found
+          }
+        }
       }
-      setDisplayNavItems(newNavItems);
     } else {
-      setDisplayNavItems(baseNavItems); // Ensure it's the base list if not authenticated
+      newNavItems = baseNavItems.filter(item => item.href !== "/post-job");
     }
-  }, []); // Run once on mount
+    setDisplayNavItems(newNavItems);
+  }, [pathname, user]); // Re-evaluate if auth status (derived from user) or path changes.
+
+  const getInitials = (firstName?: string | null, lastName?: string | null): string => {
+    if (isLoading) return "..";
+    const firstInitial = firstName ? firstName[0] : "";
+    const lastInitial = lastName ? lastName[0] : "";
+    return (firstInitial + lastInitial).toUpperCase() || "U";
+  };
+
+  const profileName = isLoading ? "Loading..." : (user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Your Profile" : "Your Profile");
 
   return (
     <div className="w-64 border-r bg-background h-full flex flex-col">
@@ -135,12 +158,17 @@ export default function Sidebar() {
           className="flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-muted transition-colors"
         >
           <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder-user.jpg" alt="User" />
-            <AvatarFallback>UN</AvatarFallback>
+            <AvatarImage
+              src={isLoading ? "/placeholder-user.jpg" : user?.avatarUrl || "/placeholder-user.jpg"}
+              alt={user?.firstName || "User"}
+            />
+            <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Your Profile</p>
-            <p className="text-xs text-muted-foreground truncate">View and edit profile</p>
+            <p className="text-sm font-medium truncate">{profileName}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {isLoading ? "Loading profile..." : (user && user.firstName ? `View ${user.firstName}'s profile` : "View and edit profile")}
+            </p>
           </div>
         </Link>
       </div>
