@@ -3,15 +3,19 @@ import { hash } from 'bcryptjs'
 import { query } from '@/lib/db' // Adjusted path
 
 export async function POST(request: Request) {
-  let body
+  let body;
   try {
-    body = await request.json()
+    body = await request.json();
   } catch (error) {
-    console.error("Failed to parse request body:", error)
-    return NextResponse.json({ success: false, message: 'Invalid request body. Ensure it is valid JSON.' }, { status: 400 })
+    console.error("Failed to parse request body:", error);
+    return NextResponse.json({ success: false, message: 'Invalid request body. Ensure it is valid JSON.' }, { status: 400 });
   }
 
-  const { email, password, firstName, lastName } = body
+  const { email, password, firstName, lastName } = body;
+
+  if (!email || !password || !firstName || !lastName) {
+    return NextResponse.json({ success: false, message: 'All fields are required.' }, { status: 400 });
+  }
   // console.log('Signup API request body:', body); // Optional: Keep for debugging if needed
 
   if (!email || !password || !firstName || !lastName) {
