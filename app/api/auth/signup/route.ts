@@ -14,8 +14,8 @@ export async function POST(request: Request) {
   const { email, password, firstName, lastName } = body
   // console.log('Signup API request body:', body); // Optional: Keep for debugging if needed
 
-  if (!email || !password || !firstName || !lastName) {
-    return NextResponse.json({ success: false, message: 'Missing required fields (email, password, firstName, lastName).' }, { status: 400 })
+  if (!email || !password || !firstName) { // Removed !lastName
+    return NextResponse.json({ success: false, message: 'Missing required fields (email, password, firstName).' }, { status: 400 })
   }
 
   // Basic password validation (consider moving to client-side or shared validation logic)
