@@ -115,7 +115,7 @@ export default function OnboardingDonePage() {
             className="border-brand-border text-brand-text-medium hover:bg-brand-bg-light-gray font-medium"
             asChild
           >
-            <Link href="/dashboard">Skip for now, go to Dashboard</Link>
+            <Link href="/explore">Skip for now, go to Dashboard</Link>
           </Button>
         </div>
       </div>
