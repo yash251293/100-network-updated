@@ -20,32 +20,25 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
 
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
-    console.log('handleSignUp called');
     event.preventDefault()
     setIsLoading(true)
 
-    console.log('Validating fullName:', fullName);
     const nameParts = fullName.trim().split(/\s+/)
     const firstName = nameParts[0] || ""
-    const lastName = nameParts.slice(1).join(" ") || ""
-    console.log('Derived names:', { firstName, lastName });
+    const lastName = nameParts.slice(1).join(" ") || "" // This will be sent to API, but not strictly validated for presence on client.
 
     // Client-side validation checks
-    console.log('Checking firstName and lastName...');
-    if (!firstName || !lastName) {
-      console.log('Validation failed: firstName or lastName empty');
+    if (!firstName) { // Changed from (!firstName || !lastName)
       toast({
         title: "Validation Error",
-        description: "Please enter both first and last names in the Full Name field.",
+        description: "Full Name is required.", // Updated message
         variant: "destructive",
       })
       setIsLoading(false)
       return
     }
 
-    console.log('Checking email...');
     if (!email) {
-      console.log('Validation failed: email empty');
       toast({
         title: "Validation Error",
         description: "Email is required.",
@@ -55,9 +48,7 @@ export default function SignUpPage() {
       return
     }
 
-    console.log('Checking password...');
     if (!password) {
-      console.log('Validation failed: password empty');
       toast({
         title: "Validation Error",
         description: "Password is required.",
@@ -67,9 +58,7 @@ export default function SignUpPage() {
       return
     }
 
-    console.log('Checking password length...');
     if (password.length < 8) {
-      console.log('Validation failed: password too short');
       toast({
         title: "Validation Error",
         description: "Password must be at least 8 characters long.",
@@ -81,7 +70,6 @@ export default function SignUpPage() {
 
     try {
       const requestBody = { firstName, lastName, email, password };
-      console.log('Attempting to fetch /api/auth/signup with body:', JSON.stringify(requestBody));
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
@@ -105,7 +93,6 @@ export default function SignUpPage() {
         })
       }
     } catch (error) {
-      console.error('Catch block error:', error);
       let errorMessage = "An unexpected error occurred during signup."
       if (error instanceof Error) {
         errorMessage = error.message
@@ -116,7 +103,6 @@ export default function SignUpPage() {
         variant: "destructive",
       })
     } finally {
-      console.log('handleSignUp finally block');
       setIsLoading(false)
     }
   }
