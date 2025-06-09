@@ -83,7 +83,7 @@ export default function SignUpPage() {
           title: "Signup Successful!",
           description: "Please proceed to login.",
         })
-        router.push("/onboarding/profile")
+        router.push("/onboarding/done")
       } else {
         const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }))
         toast({
