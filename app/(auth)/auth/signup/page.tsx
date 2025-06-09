@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/logo"
 import { toast } from "@/components/ui/use-toast"
-import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react" // Removed ChromeIcon
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -25,16 +25,47 @@ export default function SignUpPage() {
 
     const nameParts = fullName.trim().split(/\s+/)
     const firstName = nameParts[0] || ""
-    const lastName = nameParts.slice(1).join(" ") || "" // Handle multiple last names, or empty if no space
+    const lastName = nameParts.slice(1).join(" ") || ""
 
-    if (!firstName) {
-        toast({
-            title: "Validation Error",
-            description: "Full name must include at least a first name.",
-            variant: "destructive",
-        })
-        setIsLoading(false)
-        return
+    // Client-side validation checks
+    if (!firstName || !lastName) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter both first and last names in the Full Name field.",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
+    if (!email) {
+      toast({
+        title: "Validation Error",
+        description: "Email is required.",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
+    if (!password) {
+      toast({
+        title: "Validation Error",
+        description: "Password is required.",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
+    if (password.length < 8) {
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
     }
 
     try {
@@ -47,7 +78,6 @@ export default function SignUpPage() {
       })
 
       if (response.ok) {
-        // const data = await response.json() // Contains user details and token
         toast({
           title: "Signup Successful!",
           description: "Please proceed to login.",
@@ -102,19 +132,6 @@ export default function SignUpPage() {
             <Logo className="justify-center" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-brand-text-dark mb-8 text-center">Create Account</h1>
-          {/* <Button
-            variant="outline"
-            className="w-full mb-6 border-brand-border text-brand-text-dark hover:bg-brand-bg-light-gray font-medium py-4 text-lg shadow-sm"
-            disabled={isLoading}
-          >
-            <ChromeIcon className="mr-2 h-6 w-6 text-brand-red" />
-            Sign up with Google
-          </Button>
-          <div className="flex items-center my-6">
-            <hr className="flex-grow border-brand-border" />
-            <span className="mx-4 text-base text-brand-text-medium font-medium">or Sign up with Mail</span>
-            <hr className="flex-grow border-brand-border" />
-          </div> */}
           <form onSubmit={handleSignUp} className="space-y-6">
             <div>
               <Label htmlFor="fullName" className="text-base font-semibold text-brand-text-medium">Full Name</Label>
