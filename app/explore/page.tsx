@@ -383,303 +383,41 @@ function ExplorePageContent() {
     <>
       <div className="w-[65%] mx-auto"> {/* Ensure this div is properly closed before modals */}
       <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
-      company: "Atreyus Ai",
-      industry: "Information Technology",
-      logo: "/abstract-tech-logo.png",
-      type: "Full-time",
-      location: "Remote",
-      salaryRange: "$120,000 - $150,000",
-      posted: "3 days ago",
-      description: "We're looking for an experienced Frontend Developer to join our AI-driven platform team. You'll be responsible for building beautiful, responsive user interfaces that make complex AI tools accessible to everyone.",
-      requirements: ["5+ years React experience", "TypeScript proficiency", "Experience with modern build tools", "Strong UI/UX design sense"],
-      responsibilities: ["Build responsive web applications", "Collaborate with AI/ML teams", "Optimize for performance", "Code reviews and mentoring"],
-      companyInfo: {
-        size: "50-200 employees",
-        founded: 2019,
-        website: "atreyus.ai",
-        description: "Atreyus AI is building the future of artificial intelligence platforms for businesses."
-      },
-      benefits: ["Health Insurance", "Stock Options", "Remote Work", "Flexible Hours", "Learning Budget"]
-    },
-    {
-      id: 2,
-      title: "Python AI Engineer",
-      company: "Flexbone",
-      industry: "Healthcare",
-      logo: "/flexbone-logo.png",
-      type: "Contract",
-      location: "Hybrid",
-      salaryRange: "$90,000 - $110,000",
-      posted: "1 week ago",
-      description: "Join our healthcare innovation team to develop AI-powered solutions that improve patient outcomes. We're building the next generation of medical diagnostic tools.",
-      requirements: ["3+ years Python experience", "Machine Learning expertise", "Healthcare domain knowledge preferred", "Experience with TensorFlow/PyTorch"],
-      responsibilities: ["Develop ML models for medical diagnosis", "Work with healthcare professionals", "Ensure regulatory compliance", "Data analysis and visualization"],
-      companyInfo: {
-        size: "200-500 employees",
-        founded: 2015,
-        website: "flexbone.com",
-        description: "Flexbone is revolutionizing healthcare through innovative technology solutions."
-      },
-      benefits: ["Health Insurance", "Dental & Vision", "401(k)", "Professional Development", "Health Savings Account"]
-    },
-    {
-      id: 3,
-      title: "Full Stack Developer",
-      company: "Source",
-      industry: "Engineering & Construction",
-      logo: "/generic-company-logo.png",
-      type: "Full-time",
-      location: "On-site",
-      salaryRange: "$85,000 - $105,000",
-      posted: "2 weeks ago",
-      description: "We're seeking a Full Stack Developer to help build project management tools for the construction industry. You'll work on both frontend and backend systems.",
-      requirements: ["4+ years full-stack experience", "Node.js and React", "Database design experience", "API development"],
-      responsibilities: ["Full-stack web development", "Database architecture", "API design and implementation", "Code quality and testing"],
-      companyInfo: {
-        size: "100-300 employees",
-        founded: 2010,
-        website: "source-eng.com",
-        description: "Source provides innovative software solutions for the engineering and construction industry."
-      },
-      benefits: ["Health Insurance", "401(k) Matching", "Paid Time Off", "Professional Development", "Company Events"]
-    }
-  ]
-
-  const freelanceProjects = [
-    {
-      id: 1,
-      title: "E-commerce Website Redesign",
-      company: "Ra Labs",
-      industry: "Internet & Software",
-      logo: "/placeholder.svg?height=40&width=40",
-      budget: "$3,000-5,000",
-      duration: "4 weeks",
-      posted: "2 days ago",
-      description: "We need a complete redesign of our e-commerce platform. The project involves modernizing the UI/UX, improving conversion rates, and implementing responsive design across all devices.",
-      requirements: ["React/Next.js experience", "E-commerce platform knowledge", "UI/UX design skills", "Responsive design expertise"],
-      deliverables: ["Complete website redesign", "Mobile-responsive layouts", "Shopping cart optimization", "Payment gateway integration"],
-      companyInfo: {
-        size: "10-50 employees",
-        founded: 2018,
-        website: "ralabs.com",
-        description: "Ra Labs creates innovative software solutions for modern businesses."
-      },
-      skills: ["React", "Next.js", "Figma", "Shopify", "CSS/Sass"]
-    },
-    {
-      id: 2,
-      title: "React Dashboard Development",
-      company: "Instalify, Inc.",
-      industry: "Internet & Software",
-      logo: "/placeholder.svg?height=40&width=40",
-      budget: "$50/hr",
-      duration: "2-3 months",
-      posted: "5 days ago",
-      description: "Build a comprehensive admin dashboard for our SaaS platform. The dashboard will include analytics, user management, reporting features, and real-time data visualization.",
-      requirements: ["Advanced React skills", "Data visualization experience", "API integration", "Real-time features"],
-      deliverables: ["Admin dashboard interface", "Data visualization components", "User management system", "Real-time notifications"],
-      companyInfo: {
-        size: "20-100 employees",
-        founded: 2020,
-        website: "instalify.com",
-        description: "Instalify provides installation and maintenance software for service companies."
-      },
-      skills: ["React", "D3.js", "Chart.js", "WebSockets", "Material-UI"]
-    },
-    {
-      id: 3,
-      title: "Financial App UI/UX Design",
-      company: "Dynex Capital",
-      industry: "Investment / Portfolio Management",
-      logo: "/placeholder.svg?height=40&width=40",
-      budget: "$2,500-4,000",
-      duration: "3 weeks",
-      posted: "1 week ago",
-      description: "Design a modern, intuitive interface for our financial portfolio management app. Focus on clean design, data visualization, and user experience for financial professionals.",
-      requirements: ["Financial app design experience", "Figma/Sketch proficiency", "Data visualization design", "Mobile design"],
-      deliverables: ["Complete UI/UX design", "Interactive prototypes", "Design system", "Mobile app designs"],
-      companyInfo: {
-        size: "50-200 employees",
-        founded: 2012,
-        website: "dynexcapital.com",
-        description: "Dynex Capital provides innovative investment and portfolio management solutions."
-      },
-      skills: ["Figma", "Sketch", "Principle", "InVision", "Adobe Creative Suite"]
-    }
-  ]
-
-  const companies = [
-    {
-      id: 1,
-      name: "TechFlow Solutions",
-      industry: "Web Development & Design",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "50-200 employees",
-      location: "San Francisco, CA",
-      founded: 2018,
-      verified: true,
-      companyType: "Startup",
-      description: "Leading web development agency specializing in modern React applications and e-commerce solutions.",
-      mission: "To empower businesses with cutting-edge web technologies that drive growth and innovation.",
-      vision: "Becoming the go-to partner for companies seeking exceptional digital experiences.",
-      values: ["Innovation", "Quality", "Collaboration", "Continuous Learning"],
-      benefits: ["Flexible Work Hours", "Health Insurance", "Stock Options", "Professional Development", "Remote Work Options"],
-      culture: "We foster a collaborative environment where creativity meets technical excellence. Our team values work-life balance and continuous learning.",
-      recentNews: [
-        "Launched AI-powered web analytics platform",
-        "Expanded team by 40% in Q3 2024",
-        "Partnership with major e-commerce brands"
-      ],
-      website: "techflowsolutions.com",
-      email: "careers@techflowsolutions.com",
-      phone: "+1 (555) 123-4567",
-      jobOpenings: [
-        {
-          id: 101,
-          title: "Senior React Developer",
-          department: "Engineering",
-          location: "San Francisco, CA / Remote",
-          type: "Full-time",
-          salary: "$120,000 - $150,000",
-          experience: "5+ years",
-          postedDate: "2024-01-15",
-          description: "Lead development of next-generation React applications for enterprise clients."
-        },
-        {
-          id: 102,
-          title: "UI/UX Designer",
-          department: "Design",
-          location: "San Francisco, CA",
-          type: "Full-time",
-          salary: "$90,000 - $120,000",
-          experience: "3+ years",
-          postedDate: "2024-01-20",
-          description: "Design beautiful and intuitive user interfaces for web applications."
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: "WebCraft Studios",
-      industry: "Digital Agency",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "20-50 employees",
-      location: "Austin, TX",
-      founded: 2020,
-      verified: true,
-      companyType: "Agency",
-      description: "Creative digital agency focused on building exceptional web experiences for startups and established brands.",
-      mission: "Crafting digital experiences that tell your brand's story and drive meaningful connections.",
-      vision: "To be recognized as the most innovative digital agency in the creative industry.",
-      values: ["Creativity", "Authenticity", "Excellence", "Partnership"],
-      benefits: ["Creative Freedom", "Health & Dental", "Flexible PTO", "Team Retreats", "Learning Stipend"],
-      culture: "A creative playground where designers and developers collaborate to push the boundaries of what's possible on the web.",
-      recentNews: [
-        "Won 3 Webby Awards for client projects",
-        "Opened new office in Denver",
-        "Featured in Design Week Magazine"
-      ],
-      website: "webcraftstudios.com",
-      email: "hello@webcraftstudios.com",
-      phone: "+1 (555) 234-5678",
-      jobOpenings: [
-        {
-          id: 201,
-          title: "Full Stack Developer",
-          department: "Development",
-          location: "Austin, TX / Remote",
-          type: "Full-time",
-          salary: "$95,000 - $125,000",
-          experience: "4+ years",
-          postedDate: "2024-01-18",
-          description: "Build end-to-end web solutions using modern JavaScript frameworks."
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: "DevForge Technologies",
-      industry: "Software Development",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "100-500 employees",
-      location: "Seattle, WA",
-      founded: 2015,
-      verified: true,
-      companyType: "Tech Company",
-      description: "Enterprise software development company specializing in scalable web applications and cloud solutions.",
-      mission: "Forging the future of enterprise software through innovative development practices and cutting-edge technology.",
-      vision: "To be the leading provider of enterprise web solutions that transform how businesses operate.",
-      values: ["Innovation", "Reliability", "Scalability", "Team Excellence"],
-      benefits: ["Comprehensive Health Coverage", "401(k) Matching", "Sabbatical Program", "Professional Certifications", "Gym Membership"],
-      culture: "We believe in empowering our developers with the latest tools and technologies while maintaining a supportive team environment.",
-      recentNews: [
-        "Completed Series B funding round",
-        "Launched new cloud platform",
-        "Acquired two smaller tech companies"
-      ],
-      website: "devforge.tech",
-      email: "careers@devforge.tech",
-      phone: "+1 (555) 345-6789",
-      jobOpenings: [
-        {
-          id: 301,
-          title: "Backend Developer",
-          department: "Engineering",
-          location: "Seattle, WA",
-          type: "Full-time",
-          salary: "$110,000 - $140,000",
-          experience: "3+ years",
-          postedDate: "2024-01-22",
-          description: "Develop robust backend systems for enterprise-level applications."
-        },
-        {
-          id: 302,
-          title: "DevOps Engineer",
-          department: "Infrastructure",
-          location: "Seattle, WA / Remote",
-          type: "Full-time",
-          salary: "$125,000 - $155,000",
-          experience: "5+ years",
-          postedDate: "2024-01-25",
-          description: "Manage cloud infrastructure and deployment pipelines."
-        }
-      ]
-    }
-  ]
 
   const handleJobClick = (job: any) => {
-    setSelectedJob(job)
+    // setSelectedJob(job) // This line seems to be from the old static data model. Replaced by async fetch.
   }
 
   const handleProjectClick = (project: any) => {
-    setSelectedProject(project)
+    // setSelectedProject(project) // This line seems to be from the old static data model.
   }
 
-  const handleApplyClick = () => {
-    setShowApplicationModal(true)
-  }
+  // const handleApplyClick = () => { // Already defined above with API logic
+  // setShowApplicationModal(true)
+  // }
 
-  const handleProjectApplyClick = () => {
-    setShowProjectApplicationModal(true)
-  }
+  // const handleProjectApplyClick = () => { // Already defined above
+  // setShowProjectApplicationModal(true)
+  // }
 
-  const handleSubmitApplication = () => {
-    console.log("Job application submitted:", { job: selectedJob?.title, ...applicationData })
-    setShowApplicationModal(false)
-    setApplicationData({ coverLetter: "", expectedSalary: "", startDate: "", resume: null, portfolio: null })
-  }
+  // const handleSubmitApplication = () => { // Already defined above with API logic
+  // console.log("Job application submitted:", { job: selectedJob?.title, ...applicationData })
+  // setShowApplicationModal(false)
+  // setApplicationData({ coverLetter: "", expectedSalary: "", startDate: "", resume: null, portfolio: null })
+  // }
 
-  const handleSubmitProjectApplication = () => {
-    console.log("Project application submitted:", { project: selectedProject?.title, ...projectApplicationData })
-    setShowProjectApplicationModal(false)
-    setProjectApplicationData({ proposal: "", estimatedBudget: "", timeline: "", portfolio: null, experience: "" })
-  }
+  // const handleSubmitProjectApplication = () => { // Already defined above
+  // console.log("Project application submitted:", { project: selectedProject?.title, ...projectApplicationData })
+  // setShowProjectApplicationModal(false)
+  // setProjectApplicationData({ proposal: "", estimatedBudget: "", timeline: "", portfolio: null, experience: "" })
+  // }
 
-  const handleCompanyClick = (company: any) => {
+  const handleCompanyClick = (company: any) => { // This one is still used for company modal with static fallback
     setSelectedCompany(company)
   }
 
-  const handleViewJobsClick = () => {
+  const handleViewJobsClick = () => { // This is for the company modal's "View Jobs"
+  const handleViewJobsClick = () => { // This is for the company modal's "View Jobs"
     setShowJobsModal(true)
   }
 
@@ -697,6 +435,11 @@ function ExplorePageContent() {
 
   return (
     <>
+      {/* <div className="w-[65%] mx-auto"> */}
+      {/* The above div was closed after the static data, but now modals are outside it.
+          Let's adjust to ensure modals are correctly positioned relative to the main content container.
+          The main content container is now:
+      */}
       <div className="w-[65%] mx-auto">
       <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
 
