@@ -383,7 +383,7 @@ function ExplorePageContent() {
     <>
       <div>
       <div className="w-[65%] mx-auto">
-      <h1>Test</h1>
+      <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
       {/*
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="bg-gradient-to-br from-slate-50 to-[#0056B3]/10 border-none shadow-md">
@@ -603,6 +603,8 @@ function ExplorePageContent() {
         </TabsContent>
       </Tabs>
       */}
+      <h1>Test Content Area</h1>
+    </div>
     </div>
     </div>
     {/*
@@ -1272,6 +1274,7 @@ function ExplorePageContent() {
     </div>
       </DialogContent>
     </Dialog>
+    */}
     </div>
     </>
   )
