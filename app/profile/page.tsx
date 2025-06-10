@@ -265,7 +265,7 @@ function ProfilePageContent() {
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4">
                 <h2 className="text-2xl font-heading text-primary-navy">Experience</h2>
-                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary-navy hover:bg-primary-navy/5 rounded-full">
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary-navy hover:bg-primary-navy/5 rounded-full" onClick={() => setShowEditModal(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -315,7 +315,7 @@ function ProfilePageContent() {
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4">
                 <h2 className="text-2xl font-heading text-primary-navy">Education</h2>
-                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary-navy hover:bg-primary-navy/5 rounded-full">
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary-navy hover:bg-primary-navy/5 rounded-full" onClick={() => setShowEditModal(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -403,7 +403,7 @@ function ProfilePageContent() {
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4">
               <h2 className="text-xl font-heading text-primary-navy">Technical Skills</h2>
-              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary-navy hover:bg-primary-navy/5 rounded-full">
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary-navy hover:bg-primary-navy/5 rounded-full" onClick={() => setShowEditModal(true)}>
                 <Plus className="h-4 w-4" />
               </Button>
             </CardHeader>

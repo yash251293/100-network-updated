@@ -34,6 +34,7 @@ function ExplorePageContent() {
   const [selectedProject, setSelectedProject] = useState<any>(null) // Freelance projects not connected yet
   const [showProjectApplicationModal, setShowProjectApplicationModal] = useState(false) // For freelance
   const [showJobsModal, setShowJobsModal] = useState(false) // For company's jobs modal
+  const freelanceProjects: any[] = []; // Define freelanceProjects to prevent map error
   const [followedCompanies, setFollowedCompanies] = useState<number[]>([]) // Static for now
 
   // State for Job Application Modal (copied from jobs/page.tsx)
@@ -182,6 +183,9 @@ function ExplorePageContent() {
   const handleCompanyClick = (company: any) => {
     // The static company data that was in explore page previously for the modal.
     // This is a placeholder until a proper /api/companies/[id] is used.
+    // NOTE: The original static `companies` array was removed.
+    // For the modal to work with static data as before, this would need to be redefined here or passed.
+    // For now, it uses the limited data from `company` (from API list) and fills placeholders.
     const staticCompanyDetailsForModal = [
           {
       id: 1,
@@ -324,11 +328,61 @@ function ExplorePageContent() {
     setSelectedCompany(staticData || { ...company, description: "Details not fully available.", industry: "N/A", location: "N/A", size: "N/A", jobOpenings: [] });
   };
 
-  // Placeholder data for Freelance projects (static for now)
-  const freelanceProjects = [
-    {
+  // projectApplicationData, setSelectedProject, setShowProjectApplicationModal, handleSubmitProjectApplication
+  // are kept for modal structure but freelance section won't render items for now as freelanceProjects is empty.
+   const [projectApplicationData, setProjectApplicationData] = useState({
+    proposal: "",
+    estimatedBudget: "",
+    timeline: "",
+    portfolio: null,
+    experience: ""
+  });
+
+   const handleProjectClick = (project: any) => {
+    // This would ideally fetch project details if it were dynamic
+    const staticFreelanceProjectDetails = [ // Re-adding static data for modal to function visually
+        {
       id: 1,
-      title: "Senior Frontend Developer",
+      title: "E-commerce Website Redesign",
+      company: "Ra Labs",
+      industry: "Internet & Software",
+      logo: "/placeholder.svg?height=40&width=40",
+      budget: "$3,000-5,000",
+      duration: "4 weeks",
+      posted: "2 days ago",
+      description: "We need a complete redesign of our e-commerce platform. The project involves modernizing the UI/UX, improving conversion rates, and implementing responsive design across all devices.",
+      requirements: ["React/Next.js experience", "E-commerce platform knowledge", "UI/UX design skills", "Responsive design expertise"],
+      deliverables: ["Complete website redesign", "Mobile-responsive layouts", "Shopping cart optimization", "Payment gateway integration"],
+      companyInfo: { size: "10-50 employees", founded: 2018, website: "ralabs.com", description: "Ra Labs creates innovative software solutions for modern businesses." },
+      skills: ["React", "Next.js", "Figma", "Shopify", "CSS/Sass"]
+    },
+    {
+      id: 2,
+      title: "React Dashboard Development",
+      // ... other static project data ...
+    }];
+    const detail = staticFreelanceProjectDetails.find(p => p.id === project.id) || project;
+    setSelectedProject(detail);
+  };
+
+  const handleProjectApplyClick = () => {
+    setShowProjectApplicationModal(true);
+  };
+
+  const handleSubmitProjectApplication = () => {
+    console.log("Project application submitted:", { project: selectedProject?.title, ...projectApplicationData })
+    setShowProjectApplicationModal(false);
+    setProjectApplicationData({ proposal: "", estimatedBudget: "", timeline: "", portfolio: null, experience: "" });
+  };
+
+
+  // The static 'jobs' and 'companies' arrays that were here previously have been removed
+  // as 'recommendedJobsData' and 'topCompaniesData' state variables are used instead.
+
+  return (
+    <>
+      <div className="w-[65%] mx-auto"> {/* Ensure this div is properly closed before modals */}
+      <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
       company: "Atreyus Ai",
       industry: "Information Technology",
       logo: "/abstract-tech-logo.png",
@@ -738,7 +792,7 @@ function ExplorePageContent() {
             </div>
           </div>
 
-          {/* Freelance Projects Section (remains static for now) */}
+          {/* Freelance Projects Section (now using empty freelanceProjects array) */}
           <div className="mb-8 opacity-50" title="Freelance projects coming soon">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-heading text-primary-navy">
@@ -748,8 +802,8 @@ function ExplorePageContent() {
                 View more
               </Link>
             </div>
-
-            <div className="grid grid-cols-3 gap-4">
+            {freelanceProjects.length === 0 && <p className="text-slate-500">Freelance projects section is currently empty.</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {freelanceProjects.map((project) => (
                 <Card
                   key={project.id}

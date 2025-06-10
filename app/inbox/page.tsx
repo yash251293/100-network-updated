@@ -1,11 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+"use client" // Already client, but ensure
+
+import { useState, useEffect, useCallback } from "react" // Added useCallback
+import { useRouter } from 'next/navigation' // Added
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
+import { getToken } from "@/lib/authClient"; // Added
+import { toast } from "sonner"; // Added
+import ProtectedRoute from "@/components/ProtectedRoute"; // Added
+import { formatDistanceToNow } from 'date-fns'; // Added
+import NewConversationModal from "@/components/NewConversationModal"; // Added
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Search, MoreHorizontal, Circle, Star, Archive, Trash2, Send, ArrowLeft, Phone, Video, Info } from "lucide-react"
+import { Search, MoreHorizontal, Circle, Star, Archive, Trash2, Send, ArrowLeft, Phone, Video, Info, UserPlus } from "lucide-react" // Added UserPlus
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // TypeScript interfaces
@@ -190,33 +198,74 @@ const TypingIndicator = () => {
   )
 }
 
-export default function InboxPage() {
-  const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null)
-  const [newMessage, setNewMessage] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
+function InboxPageContent() {
+  const router = useRouter();
+  const [selectedMessage, setSelectedMessage] = useState<any | null>(null) // Will be less used now
+  const [newMessage, setNewMessage] = useState("") // For the right pane, keep for now
+  const [isTyping, setIsTyping] = useState(false) // For the right pane, keep for now
 
-  // Simulate someone typing after opening a conversation
+  const [conversationsList, setConversationsList] = useState<any[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false); // Added
+
+  const fetchConversations = useCallback(async () => {
+    setIsLoadingConversations(true);
+    setConversationsError(null);
+    const token = getToken();
+
+    if (!token) {
+      setConversationsError("Authentication required.");
+      toast.error("Authentication required to view messages.");
+      setIsLoadingConversations(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/conversations', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to fetch conversations" }));
+        throw new Error(errorData.message || "Failed to fetch conversations");
+      }
+      const data = await response.json();
+      setConversationsList(data.conversations || []);
+    } catch (err: any) {
+      setConversationsError(err.message);
+      toast.error(err.message || "Could not load conversations.");
+      setConversationsList([]);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (selectedMessage) {
+    fetchConversations();
+  }, [fetchConversations]);
+
+
+  // This effect for simulating typing in right pane might need adjustment if right pane is removed/changed
+  useEffect(() => {
+    if (selectedMessage) { // This selectedMessage is now less relevant for list view
       const timer = setTimeout(() => {
         setIsTyping(true)
         const stopTyping = setTimeout(() => {
           setIsTyping(false)
-        }, 3000) // Stop typing after 3 seconds
-
+        }, 3000)
         return () => clearTimeout(stopTyping)
-      }, 2000) // Start typing 2 seconds after opening conversation
-
+      }, 2000)
       return () => clearTimeout(timer)
     }
   }, [selectedMessage])
 
-  const handleMessageClick = (message: InboxMessage) => {
-    setSelectedMessage(message)
-    setIsTyping(false)
+  const handleConversationClick = (conversation: any) => {
+    // setSelectedMessage(message) // Old behavior
+    // setIsTyping(false) // Old behavior
+    router.push(`/inbox/${conversation.id}`);
   }
 
-  const handleBackToList = () => {
+  const handleBackToList = () => { // This button is in the right pane, may not be used from this page anymore
     setSelectedMessage(null)
     setIsTyping(false)
   }
@@ -389,8 +438,17 @@ export default function InboxPage() {
           <div>
             <h1 className="text-4xl font-heading text-primary-navy mb-2">Messages</h1>
             <p className="text-slate-600 font-subheading text-xl">Stay in touch with your professional network</p>
-            </div>
+          </div>
           <div className="flex items-center space-x-3">
+            <Button
+              variant="default"
+              size="sm"
+              className="rounded-full bg-primary-navy text-white hover:bg-primary-navy/90"
+              onClick={() => setShowNewConversationModal(true)}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              New Message
+            </Button>
             <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:border-primary-navy/30 hover:text-primary-navy">
               <Archive className="h-4 w-4 mr-2" />
               Archive
@@ -417,77 +475,80 @@ export default function InboxPage() {
 
         {/* Messages List */}
         <div className="space-y-3 max-w-4xl">
-          {messages.map((message) => (
-            <Card
-              key={message.id}
-              className="border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white cursor-pointer"
-              onClick={() => handleMessageClick(message)}
-            >
-              <CardContent className="p-0">
-                <div className="flex items-center space-x-4 p-6 group">
-                  <div className="relative">
-                    <Avatar className="w-14 h-14">
-                      <AvatarImage src={message.avatar || undefined} alt={message.name} />
-                      <AvatarFallback className={`${message.isPriority ? 'bg-[#0056B3]/10 text-[#0056B3]' : 'bg-slate-100 text-slate-600'} font-medium text-base`}>
-                        {message.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    {message.isOnline && (
-                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${message.isPriority ? 'bg-[#0056B3]' : 'bg-green-500'} rounded-full border-2 border-white`}></div>
-                    )}
+          {isLoadingConversations && (
+            <div className="text-center py-10"><Search className="h-12 w-12 text-slate-300 mx-auto mb-2" />Loading conversations...</div>
+          )}
+          {!isLoadingConversations && conversationsError && (
+            <div className="text-center py-10 text-red-500">Error: {conversationsError} <Button onClick={fetchConversations} variant="link">Try again</Button></div>
+          )}
+          {!isLoadingConversations && !conversationsError && conversationsList.length === 0 && (
+            <div className="text-center py-10 text-slate-500">No conversations yet.</div>
+          )}
+
+          {!isLoadingConversations && !conversationsError && conversationsList.map((conversation) => {
+            const lastMsg = conversation.lastMessage;
+            const displayDate = lastMsg?.createdAt ? formatDistanceToNow(new Date(lastMsg.createdAt), { addSuffix: true }) : formatDistanceToNow(new Date(conversation.updatedAt), { addSuffix: true });
+            const initials = conversation.name?.substring(0, 2).toUpperCase() || '??';
+
+            return (
+              <Card
+                key={conversation.id}
+                className="border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white cursor-pointer"
+                onClick={() => handleConversationClick(conversation)}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center space-x-4 p-6 group">
+                    <div className="relative">
+                      <Avatar className="w-14 h-14">
+                        <AvatarImage src={conversation.avatarUrl || undefined} alt={conversation.name} />
+                        <AvatarFallback className={'bg-slate-100 text-slate-600 font-medium text-base'}>
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* Online status not available in API list item */}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-heading text-lg text-primary-navy truncate">
+                          {conversation.name || "Conversation"}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-slate-500 font-subheading whitespace-nowrap">{displayDate}</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7">
+                                <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem onClick={(e) => {e.stopPropagation(); console.log("Archive", conversation.id)}}>
+                                <Archive className="h-4 w-4 mr-2" /> Archive
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {e.stopPropagation(); console.log("Star", conversation.id)}}>
+                                <Star className="h-4 w-4 mr-2" /> Star
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {e.stopPropagation(); console.log("Delete", conversation.id)}} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                      <p className="text-slate-600 font-subheading leading-relaxed line-clamp-2 text-sm mb-3">
+                        {lastMsg?.senderFirstName && <span className="font-medium">{lastMsg.senderFirstName}: </span>}
+                        {lastMsg?.content || "No messages yet."}
+                      </p>
+                      {/* Category and messageCount not directly available from API list item */}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-          <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-heading text-lg text-primary-navy truncate">
-                        {message.name}
-                      </h3>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-slate-500 font-subheading whitespace-nowrap">{message.date}</span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7">
-                              <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={(e) => handleArchive(message.id, e)}>
-                              <Archive className="h-4 w-4 mr-2" />
-                              Archive
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => handleStar(message.id, e)}>
-                              <Star className="h-4 w-4 mr-2" />
-                              Star
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => handleDelete(message.id, e)} className="text-red-600 focus:text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                    <p className="text-slate-600 font-subheading leading-relaxed line-clamp-2 text-sm mb-3">
-                      {message.preview}
-                    </p>
-            <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${message.isPriority ? 'bg-[#0056B3]/10 text-[#0056B3]' : 'bg-slate-100 text-slate-600'}`}>
-                          {message.category}
-                        </span>
-                        {message.messageCount > 1 && (
-                          <span className="text-xs text-slate-500">{message.messageCount} messages</span>
-                        )}
-                      </div>
-                    </div>
-            </div>
-          </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Footer Message */}
+        {/* Footer Message - can be kept or removed based on preference */}
         <Card className="border-0 shadow-sm rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white mt-8 max-w-4xl">
           <CardContent className="p-6">
             <div className="text-center">
@@ -499,6 +560,18 @@ export default function InboxPage() {
           </CardContent>
         </Card>
       </div>
+      <NewConversationModal
+        isOpen={showNewConversationModal}
+        onClose={() => setShowNewConversationModal(false)}
+      />
     </div>
+  );
+}
+
+export default function InboxPage() {
+  return (
+    <ProtectedRoute>
+      <InboxPageContent />
+    </ProtectedRoute>
   )
 }

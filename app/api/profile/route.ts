@@ -33,7 +33,11 @@ const skillSchema = z.object({
 // The current POST handler for skills expects an array of strings (skill names)
 // If the structure changes to objects, this schema needs to be used.
 // For now, we'll use z.array(z.string()) for skills based on current POST logic.
-const simpleSkillSchema = z.string().min(1, "Skill name cannot be empty.");
+// const simpleSkillSchema = z.string().min(1, "Skill name cannot be empty."); // Old schema
+const apiSkillSchema = z.object({ // New schema for skills with proficiency
+  name: z.string().min(1, "Skill name cannot be empty."),
+  proficiency_level: z.string().optional().nullable(),
+});
 
 
 const experienceSchema = z.object({
@@ -94,7 +98,7 @@ const profileUpdateSchema = z.object({
   preferredFreelanceRateType: z.string().max(50).optional().nullable(),
   freelanceRateValue: z.number().positive("Rate must be a positive number.").optional().nullable(),
 
-  skills: z.array(simpleSkillSchema).optional().nullable(), // Using array of strings for skills based on current POST logic
+  skills: z.array(apiSkillSchema).optional().nullable(), // Updated to use new apiSkillSchema
   experience: z.array(experienceSchema).optional().nullable(),
   education: z.array(educationSchema).optional().nullable(),
 });
@@ -275,19 +279,21 @@ export async function POST(request: Request) {
 
     await query('DELETE FROM user_skills WHERE user_id = $1', [userId]);
     if (profileData.skills && profileData.skills.length > 0) {
-      for (const skillName of profileData.skills) {
-        if (typeof skillName !== 'string' || skillName.trim() === '') continue;
-        let skillRes = await query('SELECT id FROM skills WHERE name = $1', [skillName.trim()]);
+      for (const skillItem of profileData.skills) { // Changed from skillName to skillItem
+        if (typeof skillItem.name !== 'string' || skillItem.name.trim() === '') continue;
+        let skillRes = await query('SELECT id FROM skills WHERE name = $1', [skillItem.name.trim()]);
         let skillId;
         if (skillRes.rows.length > 0) {
           skillId = skillRes.rows[0].id;
         } else {
-          skillRes = await query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [skillName.trim()]);
+          skillRes = await query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [skillItem.name.trim()]);
           skillId = skillRes.rows[0].id;
         }
-        await query('INSERT INTO user_skills (user_id, skill_id) VALUES ($1, $2)', [userId, skillId]);
+        // Updated query to include proficiency_level
+        await query('INSERT INTO user_skills (user_id, skill_id, proficiency_level) VALUES ($1, $2, $3)',
+                      [userId, skillId, skillItem.proficiency_level || null]);
       }
-      console.log('New skills inserted/updated');
+      console.log('New skills inserted/updated with proficiency');
     }
 
     await query('DELETE FROM user_experience WHERE user_id = $1', [userId]);

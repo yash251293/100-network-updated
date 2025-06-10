@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"; // Added useRouter
 import { Bell, Briefcase, Globe, Inbox, LayoutDashboard, MessageSquare, Users, Building2, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { logout } from "@/lib/authClient"; // Added logout
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,8 +55,14 @@ const navItems = [
 ]
 
 export default function Header() {
-  const [notifications, setNotifications] = useState(18)
+  const [notifications, setNotifications] = useState(18) // Example notification count
   const pathname = usePathname()
+  const router = useRouter(); // Initialized router
+
+  const handleLogout = () => {
+    logout();
+    router.push('/auth/login');
+  };
 
   return (
     <header className="border-b bg-background">
@@ -153,8 +160,8 @@ export default function Header() {
               <DropdownMenuItem asChild>
                 <Link href="/terms" className="font-subheading">Terms of Service</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/logout" className="font-subheading">Log out</Link>
+              <DropdownMenuItem onClick={handleLogout} className="font-subheading cursor-pointer">
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
