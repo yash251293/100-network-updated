@@ -14,17 +14,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     // Ensure this check only runs on the client-side after hydration
     if (typeof window !== 'undefined' && !isAuthenticated()) {
-      router.push('/auth/login');
+      router.push('/auth/login'); // Redirect to login if not authenticated
     }
-  }, [router]); // Add router to dependency array, though its identity is stable
+  }, [router]); // Add router to dependency array
 
-  // While checking or if redirecting, you might want to show a loader
-  // For simplicity, we'll return null if not authenticated and useEffect is about to redirect
-  // Or, render children if authenticated
+  // While checking or if redirecting, show nothing or a loader
   if (!isAuthenticated() && typeof window !== 'undefined') {
-    // This helps prevent flashing the protected content before redirect
-    // You could return a loading spinner here as well
-    return null;
+    return null; // Or a loading spinner
   }
 
   return <>{children}</>;

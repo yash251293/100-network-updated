@@ -1,165 +1,504 @@
-"use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // For future navigation from buttons
-import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input"; // Keep if search is to be implemented later
-import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, Users as GroupIcon } from "lucide-react"; // Keep Search if needed
-import { getToken } from "@/lib/authClient";
-import { formatDistanceToNowStrict } from 'date-fns';
+"use client"
 
-interface Participant {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  avatarUrl: string | null;
+import { useState, useEffect } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Search, MoreHorizontal, Circle, Star, Archive, Trash2, Send, ArrowLeft, Phone, Video, Info } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+// TypeScript interfaces
+interface Message {
+  id: number
+  sender: string
+  senderInitials: string
+  message: string
+  timestamp: string
+  isMe: boolean
 }
 
-interface LastMessage {
-  content: string;
-  senderId: string;
-  senderFirstName: string | null;
-  createdAt: string;
+interface InboxMessage {
+  id: number
+  name: string
+  initials: string
+  avatar?: string | null
+  date: string
+  preview: string
+  category: string
+  messageCount: number
+  isPriority: boolean
+  isOnline: boolean
+  conversation: Message[]
 }
 
-interface Conversation {
-  id: string;
-  type: 'one_on_one' | 'group';
-  name: string; // Partner's full name for 1-on-1, group name for group
-  avatarUrl: string | null; // Partner's avatar for 1-on-1, group avatar for group
-  participants: Participant[];
-  lastMessage: LastMessage | null;
-  updatedAt: string;
+// Sample message data
+const messages: InboxMessage[] = [
+  {
+    id: 1,
+    name: "Dr. Catrenia McLendon",
+    initials: "CM",
+    avatar: "/placeholder.svg?height=56&width=56",
+    date: "May 12",
+    preview: "Hello! Just a quick reminder to RSVP for tomorrow's networking event. Looking forward to seeing you there and discussing potential collaboration opportunities.",
+    category: "Event Reminder",
+    messageCount: 2,
+    isPriority: true,
+    isOnline: true,
+    conversation: [
+      {
+        id: 1,
+        sender: "Dr. Catrenia McLendon",
+        senderInitials: "CM",
+        message: "Hello! Just a quick reminder to RSVP for tomorrow's networking event. Looking forward to seeing you there and discussing potential collaboration opportunities.",
+        timestamp: "9:05 AM",
+        isMe: false
+      },
+      {
+        id: 2,
+        sender: "You",
+        senderInitials: "ME",
+        message: "Thank you for the reminder! I'll definitely be there. Looking forward to connecting with everyone.",
+        timestamp: "9:15 AM",
+        isMe: true
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: "Nicole Rosales",
+    initials: "NR",
+    avatar: null,
+    date: "Mar 25",
+    preview: "Don't miss out on the opportunity to join our exclusive mentorship program...",
+    category: "Mentorship",
+    messageCount: 1,
+    isPriority: false,
+    isOnline: false,
+    conversation: [
+      {
+        id: 1,
+        sender: "Nicole Rosales",
+        senderInitials: "NR",
+        message: "Don't miss out on the opportunity to join our exclusive mentorship program. We have some amazing mentors who can help accelerate your career growth.",
+        timestamp: "2:30 PM",
+        isMe: false
+      }
+    ]
+  },
+  {
+    id: 3,
+    name: "Courtney Aldaco",
+    initials: "CA",
+    avatar: "/placeholder.svg?height=48&width=48",
+    date: "Mar 11",
+    preview: "Are you ready to take your career to the next level? I have some exciting opportunities...",
+    category: "Career",
+    messageCount: 1,
+    isPriority: false,
+    isOnline: true,
+    conversation: [
+      {
+        id: 1,
+        sender: "Courtney Aldaco",
+        senderInitials: "CA",
+        message: "Are you ready to take your career to the next level? I have some exciting opportunities that might be perfect for your skill set.",
+        timestamp: "11:45 AM",
+        isMe: false
+      }
+    ]
+  },
+  {
+    id: 4,
+    name: "Corey Marasco",
+    initials: "CM",
+    avatar: null,
+    date: "Mar 5",
+    preview: "Are you ready to take the next step in your professional journey? Let's follow each other...",
+    category: "Networking",
+    messageCount: 1,
+    isPriority: false,
+    isOnline: false,
+    conversation: [
+      {
+        id: 1,
+        sender: "Corey Marasco",
+        senderInitials: "CM",
+        message: "Are you ready to take the next step in your professional journey? Let's follow each other and stay connected.",
+        timestamp: "4:20 PM",
+        isMe: false
+      }
+    ]
+  },
+  {
+    id: 5,
+    name: "Karen Adjaye",
+    initials: "KA",
+    avatar: null,
+    date: "Feb 7",
+    preview: "I am reaching out to let you know about an exciting job opportunity that matches your skills...",
+    category: "Job Opportunity",
+    messageCount: 1,
+    isPriority: false,
+    isOnline: false,
+    conversation: [
+      {
+        id: 1,
+        sender: "Karen Adjaye",
+        senderInitials: "KA",
+        message: "I am reaching out to let you know about an exciting job opportunity that matches your skills and experience. Would you be interested in learning more?",
+        timestamp: "10:15 AM",
+        isMe: false
+      }
+    ]
+  },
+  {
+    id: 6,
+    name: "Navi Singh",
+    initials: "NS",
+    avatar: "/placeholder.svg?height=48&width=48",
+    date: "Feb 5",
+    preview: "Want to master the art of AI prompting? Join our exclusive workshop series...",
+    category: "Graduate Program",
+    messageCount: 1,
+    isPriority: false,
+    isOnline: true,
+    conversation: [
+      {
+        id: 1,
+        sender: "Navi Singh",
+        senderInitials: "NS",
+        message: "Want to master the art of AI prompting? Join our exclusive workshop series designed specifically for graduate students.",
+        timestamp: "3:45 PM",
+        isMe: false
+      }
+    ]
+  }
+]
+
+// Typing indicator component
+const TypingIndicator = () => {
+  return (
+    <div className="flex items-center space-x-1 px-4 py-2">
+      <div className="flex items-center space-x-1">
+        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+      </div>
+      <span className="text-sm text-slate-500 ml-2">is typing...</span>
+    </div>
+  )
 }
 
 export default function InboxPage() {
-  const router = useRouter(); // For future use with buttons
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  // const [searchTerm, setSearchTerm] = useState(""); // For future search implementation
+  const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null)
+  const [newMessage, setNewMessage] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
 
+  // Simulate someone typing after opening a conversation
   useEffect(() => {
-    const fetchConversations = async () => {
-      setIsLoading(true);
-      setError(null);
-      const token = getToken();
-      if (!token) {
-        setError("Authentication required.");
-        setIsLoading(false);
-        // router.push('/auth/login'); // Optional: redirect if no token
-        return;
-      }
+    if (selectedMessage) {
+      const timer = setTimeout(() => {
+        setIsTyping(true)
+        const stopTyping = setTimeout(() => {
+          setIsTyping(false)
+        }, 3000) // Stop typing after 3 seconds
 
-      try {
-        const response = await fetch('/api/conversations', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `Failed to fetch conversations: ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.success && Array.isArray(data.conversations)) {
-          setConversations(data.conversations);
-        } else {
-          throw new Error("Invalid data format received from server.");
-        }
-      } catch (err: any) {
-        setError(err.message || "An unexpected error occurred.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchConversations();
-  }, []); // Removed router from dependency array as it's not used in this useEffect
+        return () => clearTimeout(stopTyping)
+      }, 2000) // Start typing 2 seconds after opening conversation
 
-  // Placeholder functions for new message/group
-  const handleNewMessage = () => {
-    // console.log("Navigate to new message / user search page"); // Optional: keep for debugging if needed
-    router.push('/inbox/new');
-  };
+      return () => clearTimeout(timer)
+    }
+  }, [selectedMessage])
 
-  const handleCreateGroup = () => {
-    console.log("Navigate to create group page");
-    // router.push('/inbox/new-group'); // Example future route
-  };
-
-  // Filtered conversations for future search implementation
-  // const filteredConversations = conversations.filter(conv =>
-  //   conv.name.toLowerCase().includes(searchTerm.toLowerCase())
-  // );
-
-  if (isLoading) {
-    return <div className="container max-w-2xl py-6 text-center">Loading messages...</div>;
+  const handleMessageClick = (message: InboxMessage) => {
+    setSelectedMessage(message)
+    setIsTyping(false)
   }
 
-  if (error) {
-    return <div className="container max-w-2xl py-6 text-center text-red-500">Error: {error}</div>;
+  const handleBackToList = () => {
+    setSelectedMessage(null)
+    setIsTyping(false)
   }
 
-  return (
-    <div className="container max-w-2xl py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <div className="space-x-2">
-          <Button variant="outline" onClick={handleNewMessage}>
-            <PlusCircle className="mr-2 h-4 w-4" /> New Message
-          </Button>
-          <Button variant="outline" onClick={handleCreateGroup}>
-            <GroupIcon className="mr-2 h-4 w-4" /> Create Group
-          </Button>
-        </div>
-      </div>
+  const handleSendMessage = () => {
+    if (newMessage.trim() && selectedMessage) {
+      // Add new message to conversation
+      const updatedMessage = {
+        ...selectedMessage,
+        conversation: [...selectedMessage.conversation, {
+          id: selectedMessage.conversation.length + 1,
+          sender: "You",
+          senderInitials: "YO",
+          message: newMessage,
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          isMe: true
+        }]
+      }
+      setSelectedMessage(updatedMessage)
+      setNewMessage("")
 
-      {/* Search input - keep for future, or remove if not implementing search now */}
-      {/*
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search messages or users..."
-          className="pl-10"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-      */}
+      // Simulate typing response
+      setTimeout(() => {
+        setIsTyping(true)
+        setTimeout(() => {
+          setIsTyping(false)
+        }, 3000)
+      }, 1000)
+    }
+  }
 
-      <div className="space-y-1">
-        {conversations.length === 0 && !isLoading && (
-          <p className="text-center text-muted-foreground py-8">No conversations yet.</p>
-        )}
-        {conversations.map((conv) => (
-          <Link href={`/inbox/${conv.id}`} key={conv.id} legacyBehavior>
-            <a className="flex items-center space-x-4 p-3 hover:bg-muted rounded-lg cursor-pointer border-b">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={conv.avatarUrl || undefined} alt={conv.name} />
-                <AvatarFallback className="text-lg">
-                  {conv.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium truncate text-base">{conv.name}</h3>
-                  {conv.lastMessage?.createdAt && (
-                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                      {formatDistanceToNowStrict(new Date(conv.lastMessage.createdAt), { addSuffix: true })}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground truncate">
-                  {conv.lastMessage
-                    ? `${conv.lastMessage.senderFirstName || 'User'}: ${conv.lastMessage.content}`
-                    : "No messages yet..."}
+  const handleArchive = (messageId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    console.log("Archive message:", messageId)
+    // Add archive logic here
+  }
+
+  const handleStar = (messageId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    console.log("Star message:", messageId)
+    // Add star logic here
+  }
+
+  const handleDelete = (messageId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    console.log("Delete message:", messageId)
+    // Add delete logic here
+  }
+
+  // If a message is selected, show the conversation view
+  if (selectedMessage) {
+    return (
+      <div className="min-h-full">
+        <div className="w-[65%] mx-auto py-4">
+          {/* Conversation Header */}
+          <div className="flex items-center justify-between mb-6 p-4 bg-white rounded-2xl shadow-sm">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBackToList}
+                className="rounded-xl"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="relative">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={selectedMessage.avatar || undefined} alt={selectedMessage.name} />
+                  <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium">
+                    {selectedMessage.initials}
+                  </AvatarFallback>
+          </Avatar>
+                {selectedMessage.isOnline && (
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                )}
+              </div>
+              <div>
+                <h1 className="text-xl font-heading text-primary-navy">{selectedMessage.name}</h1>
+                <p className="text-sm font-subheading text-slate-600">
+                  {selectedMessage.isOnline ? "Active now" : `Last seen ${selectedMessage.date}`}
                 </p>
               </div>
-              {/* Basic unread indicator placeholder - logic to be added */}
-              {/* {conv.unreadCount > 0 && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>} */}
-            </a>
-          </Link>
-        ))}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <Phone className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <Video className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <Info className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Conversation Messages */}
+          <Card className="border-0 shadow-sm rounded-2xl bg-white mb-4">
+            <CardContent className="p-6">
+              <div className="space-y-6 max-h-[500px] overflow-y-auto">
+                {selectedMessage.conversation.map((msg) => (
+                  <div key={msg.id} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex items-start space-x-3 max-w-[70%] ${msg.isMe ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className={`${msg.isMe ? 'bg-primary-navy text-white' : 'bg-slate-100 text-slate-600'} font-medium text-sm`}>
+                          {msg.senderInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className={`rounded-2xl p-4 ${msg.isMe ? 'bg-slate-50 text-slate-700 border border-slate-200' : 'bg-slate-100 text-slate-700'}`}>
+                        <p className="font-subheading text-sm leading-relaxed">{msg.message}</p>
+                        <span className={`text-xs mt-2 block ${msg.isMe ? 'text-slate-500' : 'text-slate-500'}`}>
+                          {msg.timestamp}
+                        </span>
+                      </div>
+          </div>
+        </div>
+                ))}
+
+                {/* Typing Indicator */}
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="flex items-start space-x-3 max-w-[70%]">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-slate-100 text-slate-600 font-medium text-sm">
+                          {selectedMessage.initials}
+                        </AvatarFallback>
+          </Avatar>
+                      <div className="rounded-2xl p-4 bg-slate-100">
+                        <TypingIndicator />
+            </div>
+          </div>
+        </div>
+                )}
+            </div>
+            </CardContent>
+          </Card>
+
+          {/* Message Input */}
+          <Card className="border-0 shadow-sm rounded-2xl bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <Input
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  className="flex-1 border-slate-200 focus:border-primary-navy/30 focus:ring-primary-navy/10 rounded-xl font-subheading"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  className="bg-primary-navy hover:bg-primary-navy/90 text-white rounded-xl"
+                  size="icon"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+          </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Default inbox list view
+  return (
+    <div className="min-h-full">
+      <div className="w-[65%] mx-auto py-4">
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-heading text-primary-navy mb-2">Messages</h1>
+            <p className="text-slate-600 font-subheading text-xl">Stay in touch with your professional network</p>
+            </div>
+          <div className="flex items-center space-x-3">
+            <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:border-primary-navy/30 hover:text-primary-navy">
+              <Archive className="h-4 w-4 mr-2" />
+              Archive
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:border-primary-navy/30 hover:text-primary-navy">
+              <Star className="h-4 w-4 mr-2" />
+              Starred
+            </Button>
+          </div>
+        </div>
+
+        {/* Search Section */}
+        <Card className="border-0 shadow-sm rounded-2xl bg-white mb-6 max-w-2xl">
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                placeholder="Search conversations..."
+                className="pl-12 pr-4 py-3 border-slate-200 focus:border-primary-navy/30 focus:ring-primary-navy/10 rounded-xl font-subheading"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Messages List */}
+        <div className="space-y-3 max-w-4xl">
+          {messages.map((message) => (
+            <Card
+              key={message.id}
+              className="border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white cursor-pointer"
+              onClick={() => handleMessageClick(message)}
+            >
+              <CardContent className="p-0">
+                <div className="flex items-center space-x-4 p-6 group">
+                  <div className="relative">
+                    <Avatar className="w-14 h-14">
+                      <AvatarImage src={message.avatar || undefined} alt={message.name} />
+                      <AvatarFallback className={`${message.isPriority ? 'bg-[#0056B3]/10 text-[#0056B3]' : 'bg-slate-100 text-slate-600'} font-medium text-base`}>
+                        {message.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    {message.isOnline && (
+                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${message.isPriority ? 'bg-[#0056B3]' : 'bg-green-500'} rounded-full border-2 border-white`}></div>
+                    )}
+        </div>
+
+          <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-heading text-lg text-primary-navy truncate">
+                        {message.name}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-slate-500 font-subheading whitespace-nowrap">{message.date}</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7">
+                              <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={(e) => handleArchive(message.id, e)}>
+                              <Archive className="h-4 w-4 mr-2" />
+                              Archive
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleStar(message.id, e)}>
+                              <Star className="h-4 w-4 mr-2" />
+                              Star
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleDelete(message.id, e)} className="text-red-600 focus:text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <p className="text-slate-600 font-subheading leading-relaxed line-clamp-2 text-sm mb-3">
+                      {message.preview}
+                    </p>
+            <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${message.isPriority ? 'bg-[#0056B3]/10 text-[#0056B3]' : 'bg-slate-100 text-slate-600'}`}>
+                          {message.category}
+                        </span>
+                        {message.messageCount > 1 && (
+                          <span className="text-xs text-slate-500">{message.messageCount} messages</span>
+                        )}
+                      </div>
+                    </div>
+            </div>
+          </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Footer Message */}
+        <Card className="border-0 shadow-sm rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white mt-8 max-w-4xl">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="font-heading text-xl mb-2">Stay Connected</h3>
+              <p className="text-blue-200 font-subheading leading-relaxed">
+                Keep the conversation going with your professional network. Every message is an opportunity to grow.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
-  );
+  )
 }

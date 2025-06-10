@@ -1,337 +1,406 @@
-"use client";
-
-import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import {
   ArrowLeft,
-  Bookmark as BookmarkIcon,
+  BookmarkIcon,
   Share2,
   MapPin,
-  Briefcase,
+  Clock,
   DollarSign,
   Users,
   Building2,
-  CalendarDays,
+  Calendar,
   CheckCircle,
   AlertCircle,
-  Info,
-  Award,
-  Building,
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import Image from "next/image";
-import { useToast } from "@/components/ui/use-toast";
-import JobApplicationModal from "@/components/JobApplicationModal";
-import { getToken } from "@/lib/authClient"; // Added
+} from "lucide-react"
 
-// Interface for Job Details from API (based on /api/jobs/[id] route)
-interface CompanyDetails {
-  id: string;
-  name: string;
-  description: string | null;
-  logoUrl: string | null;
-  websiteUrl: string | null;
-  industry: string | null;
-  size: string | null;
-  hqLocation: string | null;
+// Mock job data - in a real app, this would come from an API
+const getJobData = (id: string) => {
+  const jobs = {
+    "1": {
+      id: "1",
+      title: "Senior Frontend Developer",
+      company: "TechVision",
+      companyLogo: "/abstract-tech-logo.png",
+      location: "San Francisco, CA",
+      type: "Full-time",
+      remote: "Remote",
+      salary: "$120K - $150K",
+      postedDate: "3 days ago",
+      applicants: "47 applicants",
+      description: `We are seeking a highly skilled Senior Frontend Developer to join our dynamic team at TechVision. You will be responsible for developing and maintaining cutting-edge web applications using modern JavaScript frameworks.
+
+As a Senior Frontend Developer, you will work closely with our design and backend teams to create exceptional user experiences. You'll have the opportunity to mentor junior developers and contribute to architectural decisions that shape our product's future.`,
+      responsibilities: [
+        "Develop and maintain responsive web applications using React and TypeScript",
+        "Collaborate with UX/UI designers to implement pixel-perfect designs",
+        "Optimize applications for maximum speed and scalability",
+        "Mentor junior developers and conduct code reviews",
+        "Participate in architectural decisions and technical planning",
+        "Write clean, maintainable, and well-documented code",
+        "Stay up-to-date with the latest frontend technologies and best practices",
+      ],
+      requirements: [
+        "5+ years of experience in frontend development",
+        "Expert knowledge of React, TypeScript, and modern JavaScript",
+        "Experience with state management libraries (Redux, Zustand)",
+        "Proficiency in CSS preprocessors and CSS-in-JS solutions",
+        "Experience with testing frameworks (Jest, React Testing Library)",
+        "Knowledge of build tools and bundlers (Webpack, Vite)",
+        "Strong understanding of web performance optimization",
+        "Excellent communication and collaboration skills",
+      ],
+      niceToHave: [
+        "Experience with Next.js and server-side rendering",
+        "Knowledge of GraphQL and Apollo Client",
+        "Experience with design systems and component libraries",
+        "Familiarity with CI/CD pipelines",
+        "Experience with mobile app development (React Native)",
+      ],
+      benefits: [
+        "Competitive salary and equity package",
+        "Comprehensive health, dental, and vision insurance",
+        "Flexible work arrangements and remote-first culture",
+        "Professional development budget ($2,000/year)",
+        "Unlimited PTO and flexible working hours",
+        "Top-tier equipment and home office setup allowance",
+        "Team retreats and company events",
+      ],
+      companyInfo: {
+        size: "50-200 employees",
+        industry: "Information Technology",
+        founded: "2018",
+        description:
+          "TechVision is a fast-growing startup focused on building innovative solutions for the modern workplace. We're passionate about creating technology that empowers teams to work more efficiently and collaboratively.",
+      },
+      skills: ["React", "TypeScript", "Redux", "CSS", "JavaScript", "Git"],
+      experienceLevel: "Senior level",
+    },
+    "2": {
+      id: "2",
+      title: "Python AI Engineer",
+      company: "Flexbone",
+      companyLogo: "/flexbone-logo.png",
+      location: "Atlanta, GA",
+      type: "Contract",
+      remote: "Hybrid",
+      salary: "$90K - $110K",
+      postedDate: "1 week ago",
+      applicants: "23 applicants",
+      description: `Join our AI team at Flexbone to develop cutting-edge machine learning solutions for healthcare applications. You'll work on projects that directly impact patient care and medical research.
+
+We're looking for a passionate Python AI Engineer who can translate complex healthcare challenges into innovative AI solutions. You'll collaborate with medical professionals, data scientists, and software engineers to build scalable ML systems.`,
+      responsibilities: [
+        "Design and implement machine learning models for healthcare applications",
+        "Develop and maintain AI pipelines using Python and TensorFlow/PyTorch",
+        "Collaborate with healthcare professionals to understand domain requirements",
+        "Optimize model performance and ensure scalability",
+        "Implement data preprocessing and feature engineering pipelines",
+        "Deploy models to production environments using cloud platforms",
+        "Monitor model performance and implement continuous improvement strategies",
+      ],
+      requirements: [
+        "3+ years of experience in machine learning and AI development",
+        "Strong proficiency in Python and ML libraries (TensorFlow, PyTorch, scikit-learn)",
+        "Experience with data preprocessing and feature engineering",
+        "Knowledge of cloud platforms (AWS, GCP, or Azure)",
+        "Understanding of MLOps practices and model deployment",
+        "Experience with healthcare data and HIPAA compliance is a plus",
+        "Strong analytical and problem-solving skills",
+      ],
+      niceToHave: [
+        "PhD in Computer Science, AI, or related field",
+        "Experience with medical imaging and computer vision",
+        "Knowledge of natural language processing for medical texts",
+        "Experience with distributed computing frameworks",
+        "Publications in AI/ML conferences or journals",
+      ],
+      benefits: [
+        "Competitive contract rate",
+        "Flexible working arrangements",
+        "Access to cutting-edge healthcare datasets",
+        "Opportunity to work on impactful healthcare solutions",
+        "Professional development opportunities",
+        "Potential for full-time conversion",
+      ],
+      companyInfo: {
+        size: "200-500 employees",
+        industry: "Healthcare Technology",
+        founded: "2015",
+        description:
+          "Flexbone is a healthcare technology company dedicated to improving patient outcomes through innovative AI solutions. We work with hospitals and research institutions to develop next-generation medical technologies.",
+      },
+      skills: ["Python", "TensorFlow", "Machine Learning", "PyTorch", "AWS", "Data Science"],
+      experienceLevel: "Mid level",
+    },
+  }
+
+  return jobs[id as keyof typeof jobs] || jobs["1"]
 }
-interface JobDetails {
-  id: string;
-  title: string;
-  description: string | null;
-  responsibilities: string | null;
-  requirements: string | null;
-  benefits: string | null;
-  location: string | null;
-  jobType: string;
-  experienceLevel: string | null;
-  salaryMin: number | null;
-  salaryMax: number | null;
-  salaryCurrency: string | null;
-  salaryPeriod: string | null;
-  applicationDeadline: string | null;
-  status: string;
-  publishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  postedByUserId: string;
-  company: CompanyDetails;
-  skills: string[];
-  isBookmarked?: boolean;
-  hasApplied?: boolean;
-}
 
-const parseListField = (text: string | null | undefined): string[] => {
-  if (!text) return [];
-  return text.split(/\n(?=\s*[-*•–—]|\s*\d+\.\s*)/)
-             .map(item => item.replace(/^[\s*-*•–—]*/, '').replace(/^\d+\.\s*/, '').trim())
-             .filter(item => item.length > 0);
-};
-
-export default function JobDetailPage() {
-  const params = useParams();
-  const jobId = params?.id as string;
-  const { toast } = useToast();
-
-  const [jobDetails, setJobDetails] = useState<JobDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [hasApplied, setHasApplied] = useState(false);
-
-  const fetchJobAndStatus = useCallback(async () => {
-    if (!jobId) return;
-    setIsLoading(true);
-    setError(null);
-    const token = getToken(); // Get token for auth calls
-
-    try {
-      // Fetch job details (public, no token needed)
-      const jobRes = await fetch(`/api/jobs/${jobId}`);
-      if (!jobRes.ok) {
-          let errorMsg = `Failed to load job details (${jobRes.status})`;
-          try {
-            // Attempt to parse the error response body
-            const errorData = await jobRes.json();
-            if (errorData && errorData.message) {
-              errorMsg = `${errorData.message} (Status: ${jobRes.status})`;
-              if (errorData.errors && errorData.errors.id && Array.isArray(errorData.errors.id)) {
-                errorMsg += ` Details: ID Errors: ${errorData.errors.id.join(', ')}`;
-              } else if (errorData.errors && Object.keys(errorData.errors).length > 0) {
-                errorMsg += ` Details: Field Errors: ${JSON.stringify(errorData.errors)}`;
-              } else if (errorData.formErrors && Array.isArray(errorData.formErrors) && errorData.formErrors.length > 0) {
-                errorMsg += ` Details: Form Errors: ${errorData.formErrors.join(', ')}`;
-              } else if (errorData.message && errorData.message !== errorMsg.substring(0, errorMsg.indexOf(" (Status:"))) {
-                // If we captured a specific message from errorData.message and it's different from the base errorMsg
-                // and no other details were found, this means the message itself is the detail.
-                // This case might be redundant if errorData.message is always used for the base, but good for safety.
-              }
-            }
-          } catch (parseError) {
-            // Ignore if parsing fails, stick with the original status-based message
-          }
-          throw new Error(errorMsg);
-      }
-      const jobData = await jobRes.json();
-      setJobDetails(jobData.data);
-      // Set bookmark and applied status from the main API response
-      setIsBookmarked(jobData.data.isBookmarked || false);
-      setHasApplied(jobData.data.hasApplied || false);
-
-    } catch (err: any) {
-      setError(err.message);
-      // If the main fetch fails, ensure states are reset (especially if user logs out etc.)
-      setIsBookmarked(false);
-      setHasApplied(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [jobId]);
-
-  useEffect(() => {
-    fetchJobAndStatus();
-  }, [fetchJobAndStatus]);
-
-  const handleToggleBookmark = async () => {
-    if (!jobDetails) return;
-    const token = getToken();
-    if (!token) {
-      toast({ title: "Authentication Required", description: "Please log in to bookmark jobs.", variant: "destructive" });
-      return;
-    }
-
-    const originalBookmarkStatus = isBookmarked;
-    setIsBookmarked(!isBookmarked);
-
-    try {
-      const method = !originalBookmarkStatus ? 'POST' : 'DELETE';
-      const response = await fetch(`/api/jobs/${jobDetails.id}/bookmark`, {
-        method,
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) {
-        setIsBookmarked(originalBookmarkStatus);
-        const errorData = await response.json();
-        toast({ title: "Error", description: errorData.message || "Failed to update bookmark.", variant: "destructive" });
-      } else {
-        toast({ title: "Success", description: `Job ${!originalBookmarkStatus ? 'bookmarked' : 'unbookmarked'}!` });
-      }
-    } catch (err) {
-      setIsBookmarked(originalBookmarkStatus);
-      toast({ title: "Error", description: "An error occurred while updating bookmark.", variant: "destructive" });
-    }
-  };
-
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href)
-      .then(() => toast({ title: "Link Copied!", description: "Job link copied to clipboard." }))
-      .catch(() => toast({ title: "Error", description: "Failed to copy link.", variant: "destructive" }));
-  };
-
-  const formatSalaryRange = (job: JobDetails) => {
-    if (!job.salaryMin && !job.salaryMax) return "Not Disclosed";
-    const min = job.salaryMin ? `$${(job.salaryMin / 1000).toFixed(0)}K` : '';
-    const max = job.salaryMax ? `$${(job.salaryMax / 1000).toFixed(0)}K` : '';
-    const currency = job.salaryCurrency || '';
-    const period = job.salaryPeriod ? ` ${job.salaryPeriod}` : '';
-    if (min && max) return `${min} - ${max} ${currency}${period}`;
-    return `${min || max} ${currency}${period}`;
-  };
-
-  if (isLoading) {
-    return null;
-  }
-  if (error) {
-    return <div className="container max-w-4xl py-6 text-center text-red-500">{error}</div>;
-  }
-  if (!jobDetails) {
-    return <div className="container max-w-4xl py-6 text-center">Job details not available.</div>;
-  }
-
-  const responsibilitiesList = parseListField(jobDetails.responsibilities);
-  const requirementsList = parseListField(jobDetails.requirements);
-  const benefitsList = parseListField(jobDetails.benefits);
+export default function JobDetailPage({ params }: { params: { id: string } }) {
+  const job = getJobData(params.id)
 
   return (
-    <>
-      <div className="container max-w-4xl py-6">
-        <div className="flex items-center mb-6">
-          <Link href="/jobs" className="mr-4">
-            <Button variant="ghost" size="icon" aria-label="Back to jobs">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex-1"></div>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="icon" onClick={handleShare} aria-label="Share job">
-              <Share2 className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={handleToggleBookmark} aria-label={isBookmarked ? "Unbookmark job" : "Bookmark job"}>
-              <BookmarkIcon className={`h-4 w-4 ${isBookmarked ? 'text-yellow-500 fill-yellow-400' : ''}`} />
-            </Button>
-          </div>
+    <div className="max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center mb-6">
+        <Link href="/jobs" className="mr-4">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">Job Details</h1>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4 mb-6">
-                  {jobDetails.company.logoUrl ? (
-                    <Image src={jobDetails.company.logoUrl} alt={jobDetails.company.name} width={64} height={64} className="h-16 w-16 rounded-lg object-contain" />
-                  ) : (
-                    <div className="h-16 w-16 bg-muted rounded-lg flex items-center justify-center">
-                      <Building className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h1 className="text-2xl font-bold mb-1">{jobDetails.title}</h1>
-                    <div className="flex items-center space-x-4 text-muted-foreground text-sm mb-3">
-                      <div className="flex items-center"><Building2 className="h-4 w-4 mr-1" />{jobDetails.company.name}</div>
-                      {jobDetails.location && <div className="flex items-center"><MapPin className="h-4 w-4 mr-1" />{jobDetails.location}</div>}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary">{jobDetails.jobType}</Badge>
-                      {jobDetails.experienceLevel && <Badge variant="secondary">{jobDetails.experienceLevel}</Badge>}
-                      {jobDetails.applicationDeadline && <Badge variant="outline" className="border-orange-500 text-orange-600">Apply by: {new Date(jobDetails.applicationDeadline).toLocaleDateString()}</Badge>}
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg text-sm">
-                    <div><span className="font-semibold">Salary:</span> {formatSalaryRange(jobDetails)}</div>
-                    <div><span className="font-semibold">Published:</span> {jobDetails.publishedAt ? formatDistanceToNow(new Date(jobDetails.publishedAt), { addSuffix: true }) : 'N/A'}</div>
-                    {jobDetails.status && <div><span className="font-semibold">Status:</span> <Badge variant={jobDetails.status === 'Open' ? 'default' : 'secondary'}>{jobDetails.status}</Badge></div>}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle>Job Description</CardTitle></CardHeader>
-              <CardContent className="space-y-6 prose dark:prose-invert max-w-none">
-                {jobDetails.description && <p className="leading-relaxed whitespace-pre-line">{jobDetails.description}</p>}
-                {responsibilitiesList.length > 0 && (<> <Separator /> <div> <h3 className="text-lg font-semibold mb-3 flex items-center"><CheckCircle className="h-5 w-5 text-green-600 mr-2" />Key Responsibilities</h3> <ul className="list-disc pl-5 space-y-1 text-muted-foreground"> {responsibilitiesList.map((item, i) => <li key={`resp-${i}`}>{item}</li>)} </ul> </div> </>)}
-                {requirementsList.length > 0 && (<> <Separator /> <div> <h3 className="text-lg font-semibold mb-3 flex items-center"><AlertCircle className="h-5 w-5 text-orange-600 mr-2" />Requirements</h3> <ul className="list-disc pl-5 space-y-1 text-muted-foreground"> {requirementsList.map((item, i) => <li key={`req-${i}`}>{item}</li>)} </ul> </div> </>)}
-                {benefitsList.length > 0 && (<> <Separator /> <div> <h3 className="text-lg font-semibold mb-3 flex items-center"><Award className="h-5 w-5 text-indigo-600 mr-2" />Benefits & Perks</h3> <ul className="list-disc pl-5 space-y-1 text-muted-foreground"> {benefitsList.map((item, i) => <li key={`ben-${i}`}>{item}</li>)} </ul> </div> </>)}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6 lg:sticky lg:top-6">
-            <Card>
-              <CardContent className="p-6">
-                <Button
-                  className="w-full mb-3"
-                  size="lg"
-                  onClick={() => {
-                    const token = getToken();
-                    if (!token) {
-                      toast({ title: "Authentication Required", description: "Please log in to apply for jobs.", variant: "destructive" });
-                      return;
-                    }
-                    setShowApplyModal(true);
-                  }}
-                  disabled={jobDetails.status !== 'Open' || hasApplied}
-                >
-                  {hasApplied ? "Already Applied" : (jobDetails.status !== 'Open' ? `Not Accepting Applications` : "Apply for this position")}
-                </Button>
-                <Button variant="outline" className="w-full" onClick={handleToggleBookmark}>
-                  <BookmarkIcon className={`h-4 w-4 mr-2 ${isBookmarked ? 'text-yellow-500 fill-yellow-400' : ''}`} />
-                  {isBookmarked ? 'Saved' : 'Save for later'}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {jobDetails.skills && jobDetails.skills.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Required Skills</CardTitle></CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
-                  {jobDetails.skills.map((skill, i) => <Badge key={`skill-${i}`} variant="outline">{skill}</Badge>)}
-                </CardContent>
-              </Card>
-            )}
-
-            <Card>
-              <CardHeader><CardTitle className="text-lg">About {jobDetails.company.name}</CardTitle></CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center space-x-3">
-                   {jobDetails.company.logoUrl ? (
-                    <Image src={jobDetails.company.logoUrl} alt={jobDetails.company.name} width={48} height={48} className="h-12 w-12 rounded-md object-contain" />
-                  ) : (
-                    <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center">
-                      <Building className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="font-medium">{jobDetails.company.name}</h3>
-                    {jobDetails.company.industry && <p className="text-muted-foreground">{jobDetails.company.industry}</p>}
-                  </div>
-                </div>
-                {jobDetails.company.size && <div className="flex justify-between"><span className="text-muted-foreground">Size:</span><span>{jobDetails.company.size}</span></div>}
-                {jobDetails.company.hqLocation && <div className="flex justify-between"><span className="text-muted-foreground">HQ:</span><span>{jobDetails.company.hqLocation}</span></div>}
-                {jobDetails.company.websiteUrl && <Link href={jobDetails.company.websiteUrl} target="_blank" rel="noopener noreferrer"><Button variant="outline" className="w-full mt-2 text-xs">View Company Profile</Button></Link>}
-                {jobDetails.company.description && <><Separator className="my-2" /><p className="text-muted-foreground">{jobDetails.company.description}</p></>}
-              </CardContent>
-            </Card>
-          </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="icon">
+            <Share2 className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon">
+            <BookmarkIcon className="h-4 w-4" />
+          </Button>
         </div>
       </div>
-      {jobDetails && (
-        <JobApplicationModal
-          isOpen={showApplyModal}
-          onClose={() => {
-            setShowApplyModal(false);
-            fetchJobAndStatus();
-          }}
-          jobId={jobDetails.id}
-          jobTitle={jobDetails.title}
-        />
-      )}
-    </>
-  );
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Job Header */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-4 mb-6">
+                <img src={job.companyLogo || "/placeholder.svg"} alt={job.company} className="h-16 w-16 rounded-lg" />
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold mb-2">{job.title}</h1>
+                  <div className="flex items-center space-x-4 text-muted-foreground mb-4">
+                    <div className="flex items-center">
+                      <Building2 className="h-4 w-4 mr-1" />
+                      {job.company}
+                    </div>
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {job.location}
+                    </div>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {job.postedDate}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">{job.type}</Badge>
+                    <Badge variant="secondary">{job.remote}</Badge>
+                    <Badge variant="secondary">{job.experienceLevel}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                <div className="flex items-center">
+                  <DollarSign className="h-5 w-5 text-green-600 mr-2" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Salary</p>
+                    <p className="font-medium">{job.salary}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 text-blue-600 mr-2" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Applicants</p>
+                    <p className="font-medium">{job.applicants}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 text-purple-600 mr-2" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Posted</p>
+                    <p className="font-medium">{job.postedDate}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Job Description */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Job Description</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{job.description}</p>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  Key Responsibilities
+                </h3>
+                <ul className="space-y-2">
+                  {job.responsibilities.map((responsibility, index) => (
+                    <li key={index} className="flex items-start">
+                      <div className="h-2 w-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0" />
+                      <span className="text-muted-foreground">{responsibility}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
+                  Requirements
+                </h3>
+                <ul className="space-y-2">
+                  {job.requirements.map((requirement, index) => (
+                    <li key={index} className="flex items-start">
+                      <div className="h-2 w-2 bg-orange-600 rounded-full mt-2 mr-3 flex-shrink-0" />
+                      <span className="text-muted-foreground">{requirement}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Nice to Have</h3>
+                <ul className="space-y-2">
+                  {job.niceToHave.map((item, index) => (
+                    <li key={index} className="flex items-start">
+                      <div className="h-2 w-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0" />
+                      <span className="text-muted-foreground">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Benefits & Perks</h3>
+                <ul className="space-y-2">
+                  {job.benefits.map((benefit, index) => (
+                    <li key={index} className="flex items-start">
+                      <div className="h-2 w-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0" />
+                      <span className="text-muted-foreground">{benefit}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Apply Card */}
+          <Card className="sticky top-6">
+            <CardContent className="p-6">
+              <Button className="w-full mb-4" size="lg" asChild>
+                <Link href={`/jobs/${job.id}/apply`}>Apply for this position</Link>
+              </Button>
+              <Button variant="outline" className="w-full mb-4">
+                Save for later
+              </Button>
+              <p className="text-sm text-muted-foreground text-center">
+                By applying, you agree to our Terms of Service and Privacy Policy
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Skills */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Required Skills</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {job.skills.map((skill, index) => (
+                  <Badge key={index} variant="outline">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Company Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">About {job.company}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <img src={job.companyLogo || "/placeholder.svg"} alt={job.company} className="h-12 w-12 rounded" />
+                <div>
+                  <h3 className="font-medium">{job.company}</h3>
+                  <p className="text-sm text-muted-foreground">{job.companyInfo.industry}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Company size:</span>
+                  <span>{job.companyInfo.size}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Founded:</span>
+                  <span>{job.companyInfo.founded}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Industry:</span>
+                  <span>{job.companyInfo.industry}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <p className="text-sm text-muted-foreground">{job.companyInfo.description}</p>
+
+              <Button variant="outline" className="w-full">
+                View Company Profile
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Similar Jobs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Similar Jobs</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="p-3 border rounded-lg hover:bg-muted cursor-pointer">
+                  <h4 className="font-medium text-sm">Frontend Developer</h4>
+                  <p className="text-xs text-muted-foreground">Google • Remote</p>
+                  <p className="text-xs text-muted-foreground">$100K - $130K</p>
+                </div>
+                <div className="p-3 border rounded-lg hover:bg-muted cursor-pointer">
+                  <h4 className="font-medium text-sm">React Developer</h4>
+                  <p className="text-xs text-muted-foreground">Meta • San Francisco</p>
+                  <p className="text-xs text-muted-foreground">$110K - $140K</p>
+                </div>
+                <div className="p-3 border rounded-lg hover:bg-muted cursor-pointer">
+                  <h4 className="font-medium text-sm">Full Stack Engineer</h4>
+                  <p className="text-xs text-muted-foreground">Stripe • Remote</p>
+                  <p className="text-xs text-muted-foreground">$120K - $160K</p>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full" size="sm">
+                View More Jobs
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
 }

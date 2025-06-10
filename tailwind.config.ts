@@ -3,11 +3,10 @@ import type { Config } from "tailwindcss";
 const config: Config = {
     darkMode: ["class"],
     content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "*.{js,ts,jsx,tsx,mdx}"
-  ],
+      "./app/**/*.{js,ts,jsx,tsx,mdx}",
+      "./components/**/*.{js,ts,jsx,tsx,mdx}",
+      // Add other paths if necessary, e.g., "./pages/**/*.{js,ts,jsx,tsx,mdx}" if any pages folder exists outside app
+    ],
   theme: {
   	extend: {
   		colors: {
@@ -60,23 +59,7 @@ const config: Config = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-			},
-        // Custom colors from 100networks-ui
-        "brand-blue": "#1591ea",
-        "brand-blue-light": "#518ef8",
-        "brand-text-dark": "#303031",
-        "brand-text-medium": "#66645e",
-        "brand-text-light": "#807e76",
-        "brand-bg-beige": "#f3f0ea",
-        "brand-bg-light-gray": "#f9f9f9",
-        "brand-bg-input": "#f9f9f9",
-        "brand-bg-gray": "#ececec",
-        "brand-green": "#28b446",
-        "brand-yellow": "#fbbb00",
-        "brand-red": "#f14336",
-        "brand-border": "#bfbfbf",
-        "brand-black": "#000000",
-        "brand-token-blue": "#007aff",
+			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

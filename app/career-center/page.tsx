@@ -5,13 +5,12 @@ import { BookOpen, Calendar, FileText, Lightbulb, Users } from "lucide-react"
 
 export default function CareerCenterPage() {
   return (
-    <div className="container max-w-5xl py-6">
+    <div className="max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Career Center</h1>
 
       <Tabs defaultValue="resources" className="mb-8">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="resources">Resources</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="career-fairs">Career Fairs</TabsTrigger>
         </TabsList>
@@ -77,7 +76,7 @@ export default function CareerCenterPage() {
                   <Users className="h-5 w-5 mr-2 text-purple-500" />
                   Networking
                 </CardTitle>
-                <CardDescription>Build your connections</CardDescription>
+                <CardDescription>Build your following</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
@@ -108,13 +107,7 @@ export default function CareerCenterPage() {
             </Card>
           </div>
         </TabsContent>
-        <TabsContent value="events">
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium mb-2">No upcoming events</h3>
-            <p className="text-muted-foreground mb-4">Check back later for career center events</p>
-            <Button>Browse All Events</Button>
-          </div>
-        </TabsContent>
+
         <TabsContent value="appointments">
           <div className="text-center py-12">
             <h3 className="text-lg font-medium mb-2">No scheduled appointments</h3>
@@ -126,7 +119,7 @@ export default function CareerCenterPage() {
           <div className="text-center py-12">
             <h3 className="text-lg font-medium mb-2">No upcoming career fairs</h3>
             <p className="text-muted-foreground mb-4">Check back later for career fairs at your school</p>
-            <Button>Browse All Events</Button>
+            <Button>View Career Fairs</Button>
           </div>
         </TabsContent>
       </Tabs>

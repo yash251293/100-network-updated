@@ -1,20 +1,20 @@
 "use client"
 
 import type React from "react"
-import ProtectedRoute from "../../components/ProtectedRoute" // Added
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { BookmarkIcon, Heart, MessageCircle, MoreHorizontal, X, Send, ImageIcon } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { BookmarkIcon, Heart, MessageCircle, MoreHorizontal, X, Send, ImageIcon, Plus, Smile, AtSign, Hash } from "lucide-react"
 import { useState } from "react"
 
 export default function FeedPage() {
   const [postText, setPostText] = useState("")
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -32,7 +32,7 @@ export default function FeedPage() {
     console.log("Posting:", { text: postText, image: selectedImage })
     setPostText("")
     setSelectedImage(null)
-    setIsExpanded(false)
+    setIsDialogOpen(false)
   }
 
   const removeImage = () => {
@@ -40,240 +40,280 @@ export default function FeedPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="container max-w-5xl py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-          <h1 className="text-2xl font-bold">What's happening today</h1>
-        </div>
-        <div className="flex items-center">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder-user.jpg" alt="User" />
-            <AvatarFallback>UN</AvatarFallback>
-          </Avatar>
-        </div>
+            <div className="min-h-full">
+      <div className="w-[65%] mx-auto py-4">
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-8">
+        <div>
+            <h1 className="text-4xl font-heading text-primary-navy mb-2">What's Happening Today?</h1>
+            <p className="text-slate-600 font-subheading text-xl">Follow, share, and grow with your network</p>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex space-x-2 mb-6">
-          <Button variant="outline" className="rounded-full">
-            All
+          {/* New Post Button */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-primary-navy hover:bg-primary-navy/90 text-white rounded-full px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 font-subheading"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Post
           </Button>
-          <Button variant="outline" className="rounded-full">
-            Your major
-          </Button>
-          <Button variant="outline" className="rounded-full">
-            Your school
-          </Button>
-          <Button variant="outline" className="rounded-full">
-            Career tips
-          </Button>
-          <Button variant="outline" className="rounded-full">
-            Employers
-          </Button>
-          <Button variant="outline" className="rounded-full">
-            Intros
-          </Button>
-        </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] p-0 bg-white rounded-2xl shadow-2xl border-0 [&>button]:!outline-none [&>button]:!ring-0 [&>button]:!shadow-none [&>button]:focus:!outline-none [&>button]:focus:!ring-0 [&>button]:focus:!shadow-none">
+              <DialogHeader className="p-6 pb-4 border-b border-slate-100">
+                <DialogTitle className="text-xl font-heading text-primary-navy">Create a Post</DialogTitle>
+              </DialogHeader>
 
-        {/* Enhanced Post Creation Section */}
-        <Card className="border-2 border-dashed border-gray-200 hover:border-blue-300 transition-colors">
-          <CardContent className="p-4">
-            <div className="flex space-x-4">
-              <Avatar>
+              <div className="p-6">
+                <div className="flex space-x-4 mb-4">
+                  <Avatar className="w-12 h-12">
                 <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                <AvatarFallback>UN</AvatarFallback>
+                    <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium">UN</AvatarFallback>
               </Avatar>
-              <div className="flex-1 space-y-3">
-                {!isExpanded ? (
-                  <Input
-                    placeholder="Share something with the community..."
-                    className="cursor-pointer"
-                    onClick={() => setIsExpanded(true)}
-                    readOnly
-                  />
-                ) : (
+                  <div className="flex-1">
                   <Textarea
-                    placeholder="What's on your mind? Share your thoughts, achievements, or ask questions..."
+                      placeholder="What's happening in your professional journey?"
                     value={postText}
                     onChange={(e) => setPostText(e.target.value)}
-                    className="min-h-[100px] resize-none border-0 focus-visible:ring-0 text-base"
+                      className="min-h-[120px] resize-none border-slate-200 !outline-none !ring-0 !shadow-none focus:!outline-none focus:!ring-0 focus:!shadow-none focus:!border-slate-200 text-base font-subheading rounded-xl"
                     autoFocus
                   />
-                )}
+                  </div>
+                </div>
 
                 {selectedImage && (
-                  <div className="relative inline-block">
+                  <div className="relative mb-4">
                     <img
-                      src={selectedImage || "/placeholder.svg"}
+                      src={selectedImage}
                       alt="Selected"
-                      className="max-w-full h-48 object-cover rounded-lg border"
+                      className="w-full h-64 object-cover rounded-xl border border-slate-200"
                     />
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute top-2 right-2 h-6 w-6 rounded-full"
+                      className="absolute top-3 right-3 h-8 w-8 rounded-full shadow-lg"
                       onClick={removeImage}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
 
-                {isExpanded && (
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center space-x-2">
+                {/* Post Options */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <div className="flex items-center space-x-4">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
-                        id="image-upload"
+                      id="image-upload-modal"
                       />
-                      <label htmlFor="image-upload">
-                        <Button variant="ghost" size="sm" className="cursor-pointer" asChild>
+                    <label htmlFor="image-upload-modal">
+                                           <Button variant="ghost" size="sm" className="cursor-pointer text-slate-600 hover:text-primary-navy hover:bg-primary-navy/10" asChild>
                           <span>
-                            <ImageIcon className="h-4 w-4 mr-2" />
+                         <ImageIcon className="h-5 w-5 mr-2" />
                             Photo
                           </span>
                         </Button>
                       </label>
+
+                   <Button variant="ghost" size="sm" className="text-slate-600 hover:text-primary-navy hover:bg-primary-navy/10">
+                     <Smile className="h-5 w-5 mr-2" />
+                     Emoji
+                   </Button>
+
+                   <Button variant="ghost" size="sm" className="text-slate-600 hover:text-primary-navy hover:bg-primary-navy/10">
+                     <AtSign className="h-5 w-5 mr-2" />
+                     Mention
+                   </Button>
                     </div>
 
-                    <div className="flex space-x-2">
+                  <div className="flex space-x-3">
                       <Button
                         variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setIsExpanded(false)
-                          setPostText("")
-                          setSelectedImage(null)
-                        }}
+                      onClick={() => setIsDialogOpen(false)}
+                      className="rounded-full px-6 border-slate-200 text-slate-600 hover:bg-slate-50"
                       >
                         Cancel
                       </Button>
                       <Button
-                        size="sm"
                         onClick={handlePost}
                         disabled={!postText.trim() && !selectedImage}
-                        className="bg-blue-600 hover:bg-blue-700"
+                       className="bg-primary-navy hover:bg-primary-navy/90 text-white rounded-full px-6 shadow-md hover:shadow-lg transition-all"
                       >
                         <Send className="h-4 w-4 mr-2" />
                         Post
                       </Button>
                     </div>
                   </div>
-                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-        <Card className="overflow-hidden">
-          <div className="p-4 flex justify-between items-start">
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap gap-3 mb-8">
+          <Button variant="default" className="rounded-full bg-primary-navy hover:bg-primary-navy/90 text-white shadow-sm">
+            All Posts
+          </Button>
+          <Button variant="outline" className="rounded-full border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white">
+            Tech Industry
+          </Button>
+          <Button variant="outline" className="rounded-full border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white">
+            Job Opportunities
+          </Button>
+          <Button variant="outline" className="rounded-full border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white">
+            Career Insights
+          </Button>
+          <Button variant="outline" className="rounded-full border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white">
+            Success Stories
+          </Button>
+          <Button variant="outline" className="rounded-full border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white">
+            Professional Tips
+          </Button>
+            </div>
+
+        {/* Feed Posts */}
+        <div className="space-y-6">
+          {/* Featured Post */}
+          <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
+            <CardContent className="p-8">
+              <div className="flex justify-between items-start mb-6">
             <div className="flex space-x-4">
-              <Avatar>
+                  <Avatar className="w-16 h-16">
                 <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                <AvatarFallback>CL</AvatarFallback>
+                    <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">CL</AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">Carl Livingston</div>
-                <div className="text-sm text-muted-foreground">Computer Science · 2024</div>
+                    <div className="font-heading text-xl text-primary-navy">Carl Livingston</div>
+                    <div className="text-base text-slate-500 font-subheading">Computer Science · Stanford University · 2024</div>
+                    <div className="text-sm text-slate-400 mt-1">2 hours ago</div>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10">
+                  <MoreHorizontal className="h-6 w-6" />
+                </Button>
               </div>
+
+              <div className="mb-6">
+                <p className="text-slate-700 font-subheading leading-relaxed text-base">
+                  Just finished my final interview round at Google! 🎉 The preparation was intense, but these interview tips from the 100 Networks community were game-changers.
+
+                  Key takeaways that helped me:
+                  • Research the company culture deeply
+                  • Practice behavioral questions with real examples
+                  • Ask thoughtful questions about the role
+
+                  Grateful for this amazing community! 💙
+                </p>
             </div>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+
+              <div className="rounded-xl overflow-hidden border border-slate-100 mb-6">
+                <img src="/campus-walk.png" alt="Students on campus" className="w-full h-52 object-cover" />
+                <div className="p-6 bg-slate-50">
+                  <h3 className="font-heading text-lg text-primary-navy mb-2">5 Interview Tips That Actually Work</h3>
+                  <p className="text-base text-slate-600 font-subheading">Transform your interview game with research-backed strategies...</p>
+                  <p className="text-sm text-[#0056B3] mt-2 font-medium">100networks.com</p>
           </div>
-          <CardContent className="p-4 pt-0">
-            <p className="mb-4">I have a job interview tomorrow and am def going to use some of these tips.</p>
-            <div className="rounded-md overflow-hidden border mb-4">
-              <img src="/campus-walk.png" alt="Students on campus" className="w-full h-48 object-cover" />
-              <div className="p-4">
-                <h3 className="font-medium mb-1">3 interview tips for college students</h3>
-                <p className="text-sm text-muted-foreground">Up your interview game with research, answer...</p>
-                <p className="text-xs text-muted-foreground mt-2">100networks.com</p>
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6 text-slate-500">
+                  <span className="text-base font-subheading">127 likes • 23 comments</span>
             </div>
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div>32 likes · 2 replies</div>
               <div className="flex space-x-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Heart className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10">
+                    <Heart className="h-6 w-6" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MessageCircle className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10">
+                    <MessageCircle className="h-6 w-6" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <BookmarkIcon className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10">
+                    <BookmarkIcon className="h-6 w-6" />
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <div className="p-4 flex justify-between items-start">
+          {/* Regular Post */}
+          <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
+            <CardContent className="p-8">
+              <div className="flex justify-between items-start mb-6">
             <div className="flex space-x-4">
-              <Avatar>
+                  <Avatar className="w-16 h-16">
                 <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
-                <AvatarFallback>IA</AvatarFallback>
+                    <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">IA</AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">Ian Arruda, MPM, CAPM</div>
-                <div className="text-sm text-muted-foreground">Arizona State University</div>
+                    <div className="font-heading text-xl text-primary-navy">Ian Arruda, MPM, CAPM</div>
+                    <div className="text-base text-slate-500 font-subheading">Arizona State University · Project Management</div>
+                    <div className="text-sm text-slate-400 mt-1">1 day ago</div>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="text-sm text-muted-foreground">3d</div>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10">
+                  <MoreHorizontal className="h-6 w-6" />
               </Button>
             </div>
+
+              <div className="mb-6">
+                <p className="text-slate-700 font-subheading leading-relaxed text-base">
+                  🎓 I finally did it! After two years of balancing work, studies, and life, I've earned my Master of Project Management degree from Arizona State University.
+
+                  This journey taught me that persistence pays off. Thank you to everyone who supported me along the way – mentors, classmates, and the incredible 100 Networks community!
+
+                  Next chapter: Leading impactful projects and helping others achieve their goals. 🚀
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6 text-slate-500">
+                  <span className="text-base font-subheading">89 likes • 12 comments</span>
           </div>
-          <CardContent className="p-4 pt-0">
-            <p>
-              I finally did it! I have earned my graduate degree, a Master of Project Management, at Arizona State
-              University. I am grateful to all who supported me.
-            </p>
-            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-              <div>45 likes · 8 replies</div>
               <div className="flex space-x-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Heart className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10">
+                    <Heart className="h-6 w-6" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MessageCircle className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10">
+                    <MessageCircle className="h-6 w-6" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <BookmarkIcon className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10">
+                    <BookmarkIcon className="h-6 w-6" />
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex items-start space-x-4">
-            <div className="bg-amber-100 text-amber-800 p-2 rounded-lg">
-              <span className="text-xl">👋</span>
+          {/* Community Spotlight Card */}
+          <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white">
+            <CardContent className="p-8">
+              <div className="flex items-start space-x-6">
+                <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
+                  <span className="text-3xl">✨</span>
             </div>
             <div className="flex-1">
-              <h3 className="font-medium text-lg mb-1">New! Feed is for community</h3>
-              <p className="text-muted-foreground mb-4">
-                Thousands of students and peers are on the feed right now. Connecting, asking questions, and sharing
-                knowledge. Join them in the comments, or publish a post of your own.
-              </p>
+                  <h3 className="font-heading text-2xl mb-3">Welcome to the Community Feed!</h3>
+                  <p className="text-[#0056B3]/30 font-subheading leading-relaxed mb-6 text-lg">
+                    Follow thousands of students and professionals. Share your journey, get advice, and discover opportunities that align with your goals.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    className="bg-white text-primary-navy hover:bg-primary-navy hover:text-white rounded-full font-subheading border border-white px-6 py-3 text-base"
+                    onClick={() => setIsDialogOpen(true)}
+                  >
+                    Share Your Story
+                  </Button>
             </div>
-            <Button variant="ghost" size="icon">
-              <X className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10 h-10 w-10">
+                  <X className="h-6 w-6" />
             </Button>
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
-    </ProtectedRoute>
   )
 }
