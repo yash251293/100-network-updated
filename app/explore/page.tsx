@@ -383,7 +383,223 @@ function ExplorePageContent() {
     <>
       <div className="w-[65%] mx-auto"> {/* Ensure this div is properly closed before modals */}
       <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Card className="bg-gradient-to-br from-slate-50 to-[#0056B3]/10 border-none shadow-md">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-heading text-primary-navy mb-3">Welcome to 100 Networks</h2>
+            <p className="text-muted-foreground font-subheading mb-6 text-lg">
+              Follow professionals, find opportunities, and grow your career with our global network.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" className="bg-primary-navy hover:bg-primary-navy/90">
+                Complete Profile
+              </Button>
+              <Button size="sm" variant="outline" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white" asChild>
+                <Link href="/jobs">Explore Jobs</Link>
+              </Button>
+              <Button size="sm" variant="outline" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white whitespace-nowrap" asChild>
+                <Link href="/jobs/freelance">Explore Freelance</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
+        <Card className="shadow-md">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-heading text-primary-navy mb-3">Get Discovered</h2>
+            <p className="text-muted-foreground font-subheading mb-6 text-lg">
+              Update your skills and preferences to get matched with the right opportunities.
+            </p>
+            <Button variant="outline" className="w-full border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white" asChild>
+              <Link href="/career-interests">Update Career Interests</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="recommended" className="mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="recommended" className="font-subheading data-[state=active]:bg-primary-navy data-[state=active]:text-white">Recommended</TabsTrigger>
+          <TabsTrigger value="trending" className="font-subheading data-[state=active]:bg-primary-navy data-[state=active]:text-white">Trending</TabsTrigger>
+          <TabsTrigger value="nearby" className="font-subheading data-[state=active]:bg-primary-navy data-[state=active]:text-white">Nearby</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="recommended">
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-heading text-primary-navy">
+                Opportunities for <span className="text-[#0056B3]">software developers</span>
+              </h2>
+              <Link href="/jobs" className="text-base text-[#0056B3] hover:underline font-subheading">
+                View more
+              </Link>
+            </div>
+            {isLoadingJobs && <p>Loading recommended jobs...</p>}
+            {jobsError && <p className="text-red-500">Error: {jobsError}</p>}
+            {!isLoadingJobs && !jobsError && recommendedJobsData.length === 0 && <p>No recommended jobs found at the moment.</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recommendedJobsData.map((job) => (
+                <Card
+                  key={job.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200"
+                  onClick={() => handleJobClick(job)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex items-start space-x-3">
+                        <img src={job.company_logo_url || "/placeholder-logo.png"} alt={job.company_name || "Company"} className="h-12 w-12 rounded" />
+                        <div>
+                          <p className="font-subheading font-medium text-base">{job.company_name || "N/A"}</p>
+                          <p className="text-sm text-muted-foreground">{job.company?.industry || "N/A"}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 hover:bg-primary-navy/10"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* Handle bookmark logic */ }}
+                      >
+                        <BookmarkIcon className="h-5 w-5" />
+                      </Button>
+                    </div>
+                    <h3 className="font-heading text-primary-navy mb-2 text-lg truncate" title={job.title}>{job.title}</h3>
+                    <p className="text-base text-muted-foreground mb-3 font-subheading capitalize">
+                      {job.job_type?.replace("_", "-") || "N/A"} • {job.location_city && job.location_state ? `${job.location_city}, ${job.location_state}` : job.location_country || "N/A"}
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {formatSalary(job)} • Posted {job.published_at ? formatDistanceToNow(new Date(job.published_at), { addSuffix: true }) : "N/A"}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Freelance Projects Section (now using empty freelanceProjects array) */}
+          <div className="mb-8 opacity-50" title="Freelance projects coming soon">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-heading text-primary-navy">
+                Freelance projects in <span className="text-[#0056B3]">web development</span>
+              </h2>
+              <Link href="/jobs/freelance" className="text-base text-[#0056B3] hover:underline font-subheading">
+                View more
+              </Link>
+            </div>
+            {freelanceProjects.length === 0 && <p className="text-slate-500">Freelance projects section is currently empty.</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {freelanceProjects.map((project) => (
+                <Card
+                  key={project.id}
+                  className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => handleProjectClick(project)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex items-start space-x-3">
+                        <img src={project.logo} alt={project.company} className="h-12 w-12 rounded" />
+                        <div>
+                          <p className="font-subheading font-medium text-base">{project.company}</p>
+                          <p className="text-sm text-muted-foreground">{project.industry}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 hover:bg-primary-navy/10"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          // Handle bookmark logic
+                        }}
+                      >
+                        <BookmarkIcon className="h-5 w-5" />
+                      </Button>
+                    </div>
+                    <h3 className="font-heading text-primary-navy mb-2 text-lg">{project.title}</h3>
+                    <p className="text-base text-muted-foreground mb-3 font-subheading">{project.budget} • {project.duration}</p>
+                    <p className="text-sm text-muted-foreground mb-4">Posted {project.posted}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-heading text-primary-navy">
+                Top companies for <span className="text-[#0056B3]">web development</span>
+              </h2>
+              <Link href="/employers" className="text-base text-[#0056B3] hover:underline font-subheading">
+                View more
+              </Link>
+            </div>
+            {isLoadingCompanies && <p>Loading top companies...</p>}
+            {companiesError && <p className="text-red-500">Error: {companiesError}</p>}
+            {!isLoadingCompanies && !companiesError && topCompaniesData.length === 0 && <p>No top companies found at the moment.</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {topCompaniesData.map((company) => (
+                <Card
+                  key={company.id}
+                  className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => handleCompanyClick(company)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex items-start space-x-4">
+                        <img src={company.logo_url || "/placeholder-logo.png"} alt={company.name || "Company"} className="h-16 w-16 rounded" />
+                        <div>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <p className="font-subheading font-medium text-base truncate" title={company.name}>{company.name || "N/A"}</p>
+                            {/* Verified status not in API list */}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{company.industry || "N/A"}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 hover:bg-primary-navy/10"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* Handle bookmark logic */}}
+                      >
+                        <BookmarkIcon className="h-5 w-5" />
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>{company.hq_location_city && company.hq_location_state ? `${company.hq_location_city}, ${company.hq_location_state}` : company.hq_location_country || "N/A"}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        <span>{company.size || "N/A"}</span>
+                      </div>
+                       <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                        <Building2 className="h-3 w-3" />
+                        <span>{company.jobs_count !== undefined ? `${company.jobs_count} open position${company.jobs_count !== 1 ? 's' : ''}` : "Jobs: N/A"}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="trending">
+          <div className="text-center py-12">
+            <h3 className="text-lg font-heading text-primary-navy mb-2">Trending content coming soon</h3>
+            <p className="text-muted-foreground font-subheading">We're gathering the most popular opportunities for you</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="nearby">
+          <div className="text-center py-12">
+            <h3 className="text-lg font-heading text-primary-navy mb-2">Enable location services</h3>
+            <p className="text-muted-foreground font-subheading mb-4">Allow location access to see opportunities near you</p>
+            <Button className="bg-primary-navy hover:bg-primary-navy/90">Enable Location</Button>
+          </div>
+        </TabsContent>
+      </Tabs>
     {/* Job Details Modal (copied & adapted from jobs/page.tsx) */}
     {(selectedJob || detailedJobLoading || detailedJobError) && !showApplicationModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
