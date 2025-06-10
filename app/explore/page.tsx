@@ -1,9 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react" // Added useEffect, useCallback
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { getToken } from "@/lib/authClient"; // Added
+import { toast } from "sonner"; // Added
+import { formatDistanceToNow } from 'date-fns'; // Added
+// No ProtectedRoute for explore page for now
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -13,30 +17,315 @@ import { Separator } from "@/components/ui/separator"
 import { BookmarkIcon, ArrowLeft, X, Send, MessageCircle, Building2, MapPin, Calendar, DollarSign, Clock, Users, Star, Award, CheckCircle, Target, Upload } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default function ExplorePage() {
-  const [selectedJob, setSelectedJob] = useState<any>(null)
-  const [selectedProject, setSelectedProject] = useState<any>(null)
-  const [selectedCompany, setSelectedCompany] = useState<any>(null)
-  const [showApplicationModal, setShowApplicationModal] = useState(false)
-  const [showProjectApplicationModal, setShowProjectApplicationModal] = useState(false)
-  const [showJobsModal, setShowJobsModal] = useState(false)
-  const [followedCompanies, setFollowedCompanies] = useState<number[]>([])
+
+// Helper function to format salary (copied from jobs/page.tsx)
+const formatSalary = (job: any) => {
+  if (!job.salary_min && !job.salary_max) return "Not Disclosed";
+  let salaryString = "";
+  if (job.salary_min) salaryString += `$${(job.salary_min / 1000).toFixed(0)}k`;
+  if (job.salary_max) salaryString += `${job.salary_min ? ' - ' : ''}${(job.salary_max / 1000).toFixed(0)}k`;
+  if (job.salary_currency) salaryString += ` ${job.salary_currency}`;
+  if (job.salary_period) salaryString += `/${job.salary_period.charAt(0).toUpperCase() + job.salary_period.slice(1)}`;
+  return salaryString;
+};
+
+function ExplorePageContent() {
+  // State for Modals and static interactions (kept from original)
+  const [selectedProject, setSelectedProject] = useState<any>(null) // Freelance projects not connected yet
+  const [showProjectApplicationModal, setShowProjectApplicationModal] = useState(false) // For freelance
+  const [showJobsModal, setShowJobsModal] = useState(false) // For company's jobs modal
+  const [followedCompanies, setFollowedCompanies] = useState<number[]>([]) // Static for now
+
+  // State for Job Application Modal (copied from jobs/page.tsx)
   const [applicationData, setApplicationData] = useState({
     coverLetter: "",
-    expectedSalary: "",
-    startDate: "",
-    resume: null,
-    portfolio: null
-  })
-  const [projectApplicationData, setProjectApplicationData] = useState({
-    proposal: "",
-    estimatedBudget: "",
-    timeline: "",
-    portfolio: null,
-    experience: ""
-  })
+    expectedSalary: "", // Not sent to API
+    startDate: "", // Not sent to API
+    resume: null, // Not sent to API
+    portfolio: null // Not sent to API
+  });
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState(false)
 
-  const jobs = [
+  // State for Recommended Jobs
+  const [recommendedJobsData, setRecommendedJobsData] = useState<any[]>([])
+  const [isLoadingJobs, setIsLoadingJobs] = useState(true)
+  const [jobsError, setJobsError] = useState<string | null>(null)
+  const [selectedJob, setSelectedJob] = useState<any>(null) // For job detail modal
+  const [detailedJobLoading, setDetailedJobLoading] = useState(false)
+  const [detailedJobError, setDetailedJobError] = useState<string | null>(null)
+
+  // State for Top Companies
+  const [topCompaniesData, setTopCompaniesData] = useState<any[]>([])
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true)
+  const [companiesError, setCompaniesError] = useState<string | null>(null)
+  const [selectedCompany, setSelectedCompany] = useState<any>(null) // For company detail modal (limited data)
+
+  // Fetch Recommended Jobs
+  const fetchRecommendedJobs = useCallback(async () => {
+    setIsLoadingJobs(true);
+    setJobsError(null);
+    try {
+      const response = await fetch(`/api/jobs?limit=3&sortBy=published_at&sortOrder=desc`); // Example: 3 most recent jobs
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to fetch recommended jobs" }));
+        throw new Error(errorData.message || "Failed to fetch recommended jobs");
+      }
+      const data = await response.json();
+      setRecommendedJobsData(data.data || []);
+    } catch (err: any) {
+      setJobsError(err.message);
+      toast.error(err.message || "Could not load recommended jobs.");
+    } finally {
+      setIsLoadingJobs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRecommendedJobs();
+  }, [fetchRecommendedJobs]);
+
+  // Fetch Top Companies
+  const fetchTopCompanies = useCallback(async () => {
+    setIsLoadingCompanies(true);
+    setCompaniesError(null);
+    const token = getToken(); // Needed if /api/companies is protected
+    // If /api/companies can be public for listings, token might be optional or not needed for this call
+
+    try {
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`/api/companies?limit=3`); // Example: 3 companies
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to fetch top companies" }));
+        throw new Error(errorData.message || "Failed to fetch top companies");
+      }
+      const data = await response.json();
+      setTopCompaniesData(data.data || []);
+    } catch (err: any) {
+      setCompaniesError(err.message);
+      toast.error(err.message || "Could not load top companies.");
+    } finally {
+      setIsLoadingCompanies(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTopCompanies();
+  }, [fetchTopCompanies]);
+
+  // Handle Job Click (for job details modal - copied from jobs/page.tsx)
+  const handleJobClick = async (jobSummary: any) => {
+    if (!jobSummary || !jobSummary.id) {
+      setDetailedJobError("Cannot fetch details for this job.");
+      setSelectedJob(null);
+      return;
+    }
+    setDetailedJobLoading(true);
+    setDetailedJobError(null);
+    setSelectedJob(null);
+    try {
+      const response = await fetch(`/api/jobs/${jobSummary.id}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to fetch job details" }));
+        throw new Error(errorData.message || "Failed to fetch job details");
+      }
+      const data = await response.json();
+      setSelectedJob(data.data);
+    } catch (err: any) {
+      setDetailedJobError(err.message);
+      toast.error(err.message || "Could not load job details.");
+      setSelectedJob(null);
+    } finally {
+      setDetailedJobLoading(false);
+    }
+  };
+
+  const handleApplyClick = () => setShowApplicationModal(true);
+
+  // Handle Submit Application (copied from jobs/page.tsx)
+  const handleSubmitApplication = async () => {
+    if (!selectedJob || !selectedJob.id) {
+      toast.error("No job selected for application.");
+      return;
+    }
+    setIsSubmittingApplication(true);
+    const token = getToken();
+    if (!token) {
+      toast.error("Authentication required to apply.");
+      setIsSubmittingApplication(false);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/jobs/${selectedJob.id}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ coverLetter: applicationData.coverLetter }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        toast.success(result.message || "Application submitted successfully!");
+        setShowApplicationModal(false);
+        setApplicationData({ coverLetter: "", expectedSalary: "", startDate: "", resume: null, portfolio: null });
+      } else {
+        toast.error(result.message || "Failed to submit application.");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setIsSubmittingApplication(false);
+    }
+  };
+
+  // Handle Company Click (for company details modal - uses limited data from list)
+  const handleCompanyClick = (company: any) => {
+    // The static company data that was in explore page previously for the modal.
+    // This is a placeholder until a proper /api/companies/[id] is used.
+    const staticCompanyDetailsForModal = [
+          {
+      id: 1,
+      name: "TechFlow Solutions",
+      industry: "Web Development & Design",
+      logo: "/placeholder.svg?height=60&width=60",
+      size: "50-200 employees",
+      location: "San Francisco, CA",
+      founded: 2018,
+      verified: true,
+      companyType: "Startup",
+      description: "Leading web development agency specializing in modern React applications and e-commerce solutions.",
+      mission: "To empower businesses with cutting-edge web technologies that drive growth and innovation.",
+      vision: "Becoming the go-to partner for companies seeking exceptional digital experiences.",
+      values: ["Innovation", "Quality", "Collaboration", "Continuous Learning"],
+      benefits: ["Flexible Work Hours", "Health Insurance", "Stock Options", "Professional Development", "Remote Work Options"],
+      culture: "We foster a collaborative environment where creativity meets technical excellence. Our team values work-life balance and continuous learning.",
+      recentNews: [
+        "Launched AI-powered web analytics platform",
+        "Expanded team by 40% in Q3 2024",
+        "Partnership with major e-commerce brands"
+      ],
+      website: "techflowsolutions.com",
+      email: "careers@techflowsolutions.com",
+      phone: "+1 (555) 123-4567",
+      jobOpenings: [
+        {
+          id: 101,
+          title: "Senior React Developer",
+          department: "Engineering",
+          location: "San Francisco, CA / Remote",
+          type: "Full-time",
+          salary: "$120,000 - $150,000",
+          experience: "5+ years",
+          postedDate: "2024-01-15",
+          description: "Lead development of next-generation React applications for enterprise clients."
+        },
+        {
+          id: 102,
+          title: "UI/UX Designer",
+          department: "Design",
+          location: "San Francisco, CA",
+          type: "Full-time",
+          salary: "$90,000 - $120,000",
+          experience: "3+ years",
+          postedDate: "2024-01-20",
+          description: "Design beautiful and intuitive user interfaces for web applications."
+        }
+      ]
+    },
+    {
+      id: 2,
+      name: "WebCraft Studios",
+      industry: "Digital Agency",
+      logo: "/placeholder.svg?height=60&width=60",
+      size: "20-50 employees",
+      location: "Austin, TX",
+      founded: 2020,
+      verified: true,
+      companyType: "Agency",
+      description: "Creative digital agency focused on building exceptional web experiences for startups and established brands.",
+      mission: "Crafting digital experiences that tell your brand's story and drive meaningful connections.",
+      vision: "To be recognized as the most innovative digital agency in the creative industry.",
+      values: ["Creativity", "Authenticity", "Excellence", "Partnership"],
+      benefits: ["Creative Freedom", "Health & Dental", "Flexible PTO", "Team Retreats", "Learning Stipend"],
+      culture: "A creative playground where designers and developers collaborate to push the boundaries of what's possible on the web.",
+      recentNews: [
+        "Won 3 Webby Awards for client projects",
+        "Opened new office in Denver",
+        "Featured in Design Week Magazine"
+      ],
+      website: "webcraftstudios.com",
+      email: "hello@webcraftstudios.com",
+      phone: "+1 (555) 234-5678",
+      jobOpenings: [
+        {
+          id: 201,
+          title: "Full Stack Developer",
+          department: "Development",
+          location: "Austin, TX / Remote",
+          type: "Full-time",
+          salary: "$95,000 - $125,000",
+          experience: "4+ years",
+          postedDate: "2024-01-18",
+          description: "Build end-to-end web solutions using modern JavaScript frameworks."
+        }
+      ]
+    },
+    {
+      id: 3,
+      name: "DevForge Technologies",
+      industry: "Software Development",
+      logo: "/placeholder.svg?height=60&width=60",
+      size: "100-500 employees",
+      location: "Seattle, WA",
+      founded: 2015,
+      verified: true,
+      companyType: "Tech Company",
+      description: "Enterprise software development company specializing in scalable web applications and cloud solutions.",
+      mission: "Forging the future of enterprise software through innovative development practices and cutting-edge technology.",
+      vision: "To be the leading provider of enterprise web solutions that transform how businesses operate.",
+      values: ["Innovation", "Reliability", "Scalability", "Team Excellence"],
+      benefits: ["Comprehensive Health Coverage", "401(k) Matching", "Sabbatical Program", "Professional Certifications", "Gym Membership"],
+      culture: "We believe in empowering our developers with the latest tools and technologies while maintaining a supportive team environment.",
+      recentNews: [
+        "Completed Series B funding round",
+        "Launched new cloud platform",
+        "Acquired two smaller tech companies"
+      ],
+      website: "devforge.tech",
+      email: "careers@devforge.tech",
+      phone: "+1 (555) 345-6789",
+      jobOpenings: [
+        {
+          id: 301,
+          title: "Backend Developer",
+          department: "Engineering",
+          location: "Seattle, WA",
+          type: "Full-time",
+          salary: "$110,000 - $140,000",
+          experience: "3+ years",
+          postedDate: "2024-01-22",
+          description: "Develop robust backend systems for enterprise-level applications."
+        },
+        {
+          id: 302,
+          title: "DevOps Engineer",
+          department: "Infrastructure",
+          location: "Seattle, WA / Remote",
+          type: "Full-time",
+          salary: "$125,000 - $155,000",
+          experience: "5+ years",
+          postedDate: "2024-01-25",
+          description: "Manage cloud infrastructure and deployment pipelines."
+        }
+      ]
+    }
+    ];
+    const staticData = staticCompanyDetailsForModal.find(c => company.name && c.name.toLowerCase().includes(company.name.toLowerCase()));
+    setSelectedCompany(staticData || { ...company, description: "Details not fully available.", industry: "N/A", location: "N/A", size: "N/A", jobOpenings: [] });
+  };
+
+  // Placeholder data for Freelance projects (static for now)
+  const freelanceProjects = [
     {
       id: 1,
       title: "Senior Frontend Developer",
@@ -408,9 +697,11 @@ export default function ExplorePage() {
                 View more
               </Link>
             </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {jobs.map((job) => (
+            {isLoadingJobs && <p>Loading recommended jobs...</p>}
+            {jobsError && <p className="text-red-500">Error: {jobsError}</p>}
+            {!isLoadingJobs && !jobsError && recommendedJobsData.length === 0 && <p>No recommended jobs found at the moment.</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recommendedJobsData.map((job) => (
                 <Card
                   key={job.id}
                   className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200"
@@ -419,35 +710,36 @@ export default function ExplorePage() {
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex items-start space-x-3">
-                        <img src={job.logo} alt={job.company} className="h-12 w-12 rounded" />
+                        <img src={job.company_logo_url || "/placeholder-logo.png"} alt={job.company_name || "Company"} className="h-12 w-12 rounded" />
                         <div>
-                          <p className="font-subheading font-medium text-base">{job.company}</p>
-                          <p className="text-sm text-muted-foreground">{job.industry}</p>
+                          <p className="font-subheading font-medium text-base">{job.company_name || "N/A"}</p>
+                          <p className="text-sm text-muted-foreground">{job.company?.industry || "N/A"}</p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-10 w-10 hover:bg-primary-navy/10"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          // Handle bookmark logic
-                        }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* Handle bookmark logic */ }}
                       >
                         <BookmarkIcon className="h-5 w-5" />
                       </Button>
                     </div>
-                    <h3 className="font-heading text-primary-navy mb-2 text-lg">{job.title}</h3>
-                    <p className="text-base text-muted-foreground mb-3 font-subheading">{job.type} • {job.location}</p>
-                    <p className="text-sm text-muted-foreground mb-4">{job.salaryRange} • Posted {job.posted}</p>
+                    <h3 className="font-heading text-primary-navy mb-2 text-lg truncate" title={job.title}>{job.title}</h3>
+                    <p className="text-base text-muted-foreground mb-3 font-subheading capitalize">
+                      {job.job_type?.replace("_", "-") || "N/A"} • {job.location_city && job.location_state ? `${job.location_city}, ${job.location_state}` : job.location_country || "N/A"}
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {formatSalary(job)} • Posted {job.published_at ? formatDistanceToNow(new Date(job.published_at), { addSuffix: true }) : "N/A"}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
 
-          <div className="mb-8">
+          {/* Freelance Projects Section (remains static for now) */}
+          <div className="mb-8 opacity-50" title="Freelance projects coming soon">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-heading text-primary-navy">
                 Freelance projects in <span className="text-[#0056B3]">web development</span>
@@ -504,9 +796,11 @@ export default function ExplorePage() {
                 View more
               </Link>
             </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {companies.map((company) => (
+            {isLoadingCompanies && <p>Loading top companies...</p>}
+            {companiesError && <p className="text-red-500">Error: {companiesError}</p>}
+            {!isLoadingCompanies && !companiesError && topCompaniesData.length === 0 && <p>No top companies found at the moment.</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {topCompaniesData.map((company) => (
                 <Card
                   key={company.id}
                   className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
@@ -515,28 +809,20 @@ export default function ExplorePage() {
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex items-start space-x-4">
-                        <img src={company.logo} alt={company.name} className="h-16 w-16 rounded" />
+                        <img src={company.logo_url || "/placeholder-logo.png"} alt={company.name || "Company"} className="h-16 w-16 rounded" />
                         <div>
                           <div className="flex items-center space-x-2 mb-2">
-                            <p className="font-subheading font-medium text-base">{company.name}</p>
-                            {company.verified && (
-                              <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                                <CheckCircle className="h-4 w-4 text-white" />
-                              </div>
-                            )}
+                            <p className="font-subheading font-medium text-base truncate" title={company.name}>{company.name || "N/A"}</p>
+                            {/* Verified status not in API list */}
                           </div>
-                          <p className="text-sm text-muted-foreground">{company.industry}</p>
+                          <p className="text-sm text-muted-foreground">{company.industry || "N/A"}</p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-10 w-10 hover:bg-primary-navy/10"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          // Handle bookmark logic
-                        }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* Handle bookmark logic */}}
                       >
                         <BookmarkIcon className="h-5 w-5" />
                       </Button>
@@ -544,19 +830,19 @@ export default function ExplorePage() {
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4" />
-                        <span>{company.location}</span>
+                        <span>{company.hq_location_city && company.hq_location_state ? `${company.hq_location_city}, ${company.hq_location_state}` : company.hq_location_country || "N/A"}</span>
                       </div>
                       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                         <Users className="h-3 w-3" />
-                        <span>{company.size}</span>
+                        <span>{company.size || "N/A"}</span>
                       </div>
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                       <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                         <Building2 className="h-3 w-3" />
-                        <span>{company.jobOpenings.length} open position{company.jobOpenings.length !== 1 ? 's' : ''}</span>
+                        <span>{company.jobs_count !== undefined ? `${company.jobs_count} open position${company.jobs_count !== 1 ? 's' : ''}` : "Jobs: N/A"}</span>
                       </div>
                     </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
@@ -579,139 +865,51 @@ export default function ExplorePage() {
       </Tabs>
     </div>
 
-    {/* Job Details Modal */}
-    {selectedJob && !showApplicationModal && (
+    {/* Job Details Modal (copied & adapted from jobs/page.tsx) */}
+    {(selectedJob || detailedJobLoading || detailedJobError) && !showApplicationModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedJob(null)}
-                  className="rounded-xl"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
+                <Button variant="ghost" size="icon" onClick={() => { setSelectedJob(null); setDetailedJobError(null); }} className="rounded-xl"><ArrowLeft className="h-5 w-5" /></Button>
                 <h1 className="text-2xl font-heading text-primary-navy">Job Details</h1>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedJob(null)}
-                className="rounded-xl"
-              >
-                <X className="h-5 w-5" />
-              </Button>
+                <Button variant="ghost" size="icon" onClick={() => { setSelectedJob(null); setDetailedJobError(null); }} className="rounded-xl"><X className="h-5 w-5" /></Button>
             </div>
-
-            {/* Job Content */}
+            {detailedJobLoading && <div className="text-center py-10"><Clock className="h-12 w-12 text-primary-navy mx-auto animate-spin mb-4" /><p>Loading job details...</p></div>}
+            {!detailedJobLoading && detailedJobError && <div className="text-center py-10"><XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" /><p className="text-red-600">{detailedJobError}</p></div>}
+            {!detailedJobLoading && !detailedJobError && selectedJob && (
             <div className="space-y-6">
-              {/* Basic Info */}
-              <div className="flex items-start space-x-4">
-                <img src={selectedJob.logo} alt={selectedJob.company} className="h-16 w-16 rounded-xl" />
+              <div className="flex items-start space-x-6">
+                <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
+                  <img src={selectedJob.company?.logo_url || "/placeholder-logo.png"} alt={selectedJob.company?.name || "Company"} className="w-full h-full object-cover" />
+                </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-heading text-primary-navy mb-1">{selectedJob.title}</h2>
-                  <p className="text-lg text-slate-600 font-subheading mb-2">{selectedJob.company}</p>
-                  <div className="grid grid-cols-2 gap-4 text-slate-600 font-subheading mb-4">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-4 w-4 text-slate-500" />
-                      <span>{selectedJob.industry}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-slate-500" />
-                      <span>{selectedJob.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <DollarSign className="h-4 w-4 text-slate-500" />
-                      <span>{selectedJob.salaryRange}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-slate-500" />
-                      <span>{selectedJob.type}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-slate-500" />
-                      <span>Posted {selectedJob.posted}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-slate-500" />
-                      <span>{selectedJob.companyInfo.size}</span>
-                    </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-2xl font-heading text-primary-navy">{selectedJob.title}</h2>
+                    <span className={`px-3 py-1 rounded-full text-sm font-subheading ${selectedJob.location_type?.toLowerCase() === "remote" ? "bg-green-100 text-green-700" : selectedJob.location_type?.toLowerCase() === "hybrid" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"}`}>
+                      {selectedJob.location_type?.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-6 text-slate-600 font-subheading mb-3">
+                    <div className="flex items-center space-x-1"><Building className="h-4 w-4" /><span>{selectedJob.company?.name || "N/A"}</span></div>
+                    <div className="flex items-center space-x-1"><MapPin className="h-4 w-4" /><span>{selectedJob.location || "N/A"}</span></div>
+                    <div className="flex items-center space-x-1"><DollarSign className="h-4 w-4" /><span className="font-heading text-primary-navy">{formatSalary(selectedJob)}</span></div>
+                  </div>
+                  <div className="flex items-center space-x-4 text-slate-500 font-subheading">
+                    <span className="capitalize">{selectedJob.job_type?.replace("_", "-") || "N/A"}</span>
+                    <span>•</span>
+                    <span>Posted {selectedJob.published_at ? formatDistanceToNow(new Date(selectedJob.published_at), { addSuffix: true }) : "N/A"}</span>
+                    {selectedJob.application_deadline && <><span>•</span><span>Apply by {new Date(selectedJob.application_deadline).toLocaleDateString()}</span></>}
                   </div>
                 </div>
               </div>
-
               <Separator />
-
-              {/* Description */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Job Description</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed">{selectedJob.description}</p>
-              </div>
-
-              {/* Requirements */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
-                <div className="space-y-2">
-                  {selectedJob.requirements.map((req: string, index: number) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-                      <span className="text-slate-600 font-subheading">{req}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Responsibilities */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Responsibilities</h3>
-                <div className="space-y-2">
-                  {selectedJob.responsibilities.map((resp: string, index: number) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-slate-600 font-subheading">{resp}</span>
-                    </div>
-                  ))}
-                </div>
-        </div>
-
-              {/* Company Info */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedJob.company}</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed mb-3">{selectedJob.companyInfo.description}</p>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-500">Founded:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedJob.companyInfo.founded}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Size:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedJob.companyInfo.size}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Website:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedJob.companyInfo.website}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Benefits */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Benefits</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedJob.benefits.map((benefit: string, index: number) => (
-                    <Badge key={index} className="bg-green-100 text-green-700 font-subheading">
-                      <Award className="h-3 w-3 mr-1" />
-                      {benefit}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Apply Button */}
+              <div><h3 className="text-lg font-heading text-primary-navy mb-3">Job Description</h3><div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: selectedJob.description || "<p>N/A</p>"}} /></div>
+              {selectedJob.skills?.length > 0 && <div><h3 className="text-lg font-heading text-primary-navy mb-3">Skills</h3><div className="flex flex-wrap gap-2">{selectedJob.skills.map((skill:string, i:number) => <Badge key={i}>{skill}</Badge>)}</div></div>}
+              {selectedJob.requirements?.length > 0 && <div><h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3><ul className="list-disc pl-5 space-y-1">{selectedJob.requirements.map((r:string, i:number) => <li key={i}>{r}</li>)}</ul></div>}
+              {selectedJob.responsibilities?.length > 0 && <div><h3 className="text-lg font-heading text-primary-navy mb-3">Responsibilities</h3><ul className="list-disc pl-5 space-y-1">{selectedJob.responsibilities.map((r:string, i:number) => <li key={i}>{r}</li>)}</ul></div>}
+              {selectedJob.benefits && <div><h3 className="text-lg font-heading text-primary-navy mb-3">Benefits</h3><p>{selectedJob.benefits}</p></div>}
+              {selectedJob.company && <div><h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedJob.company.name}</h3> <p>{selectedJob.company.description || "N/A"}</p> </div>}
               <div className="pt-4">
                 <Button
                   className="w-full bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
@@ -949,16 +1147,16 @@ export default function ExplorePage() {
             <Button
               className="flex-1 bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
               onClick={handleSubmitApplication}
+              disabled={isSubmittingApplication}
             >
-              <Send className="h-4 w-4 mr-2" />
-              Submit Application
+              {isSubmittingApplication ? "Submitting..." : "Submit Application"}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
 
-    {/* Project Application Modal */}
+    {/* Project Application Modal (remains static for now) */}
     <Dialog open={showProjectApplicationModal} onOpenChange={setShowProjectApplicationModal}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1335,4 +1533,10 @@ export default function ExplorePage() {
     </Dialog>
     </>
   )
+}
+
+export default function ExplorePage() {
+  // No ProtectedRoute here, explore page is public
+  // Suspense can be added if there are other client components that need it.
+  return <ExplorePageContent />;
 }

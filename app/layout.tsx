@@ -3,7 +3,6 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 import { Inter, Lora, Abhaya_Libre } from "next/font/google";
 import "./globals.css";
 import HeaderWrapper from "@/components/header-wrapper"; // Existing import from new UI
@@ -22,13 +21,6 @@ const abhayaLibre = Abhaya_Libre({
   variable: "--font-abhaya-libre",
   weight: ["400", "500", "600", "700", "800"]
 });
-
-// Metadata remains as is
-export const metadata: Metadata = {
-  title: "100 Networks",
-  description: "Follow employers and find your dream job",
-  generator: 'v0.dev'
-};
 
 export default function RootLayout({
   children,

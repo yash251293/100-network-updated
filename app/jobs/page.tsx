@@ -1,10 +1,15 @@
 "use client"
 
-import { useState } from "react"
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { formatDistanceToNow } from 'date-fns'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BookmarkIcon, Filter, Search, Clock, CheckCircle, XCircle, Calendar, Briefcase, MapPin, DollarSign, Building, FileText, ChevronRight, Star, Users, Award, TrendingUp, Zap, Globe, ArrowLeft, X, Send, Upload } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getToken } from "@/lib/authClient"; // Added
+import { toast } from "sonner"; // Added (likely already present, but ensure)
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -107,13 +112,26 @@ const getStatusBadge = (status: string, statusText: string) => {
   return <Badge className={`${variants[status as keyof typeof variants]} font-subheading`}>{statusText}</Badge>
 }
 
+// Helper function to format salary
+const formatSalary = (job: any) => {
+  if (!job.salary_min && !job.salary_max) return "Not Disclosed";
+  let salaryString = "";
+  if (job.salary_min) salaryString += `$${(job.salary_min / 1000).toFixed(0)}k`; // Assuming salary is in cents or smallest unit
+  if (job.salary_max) salaryString += `${job.salary_min ? ' - ' : ''}${(job.salary_max / 1000).toFixed(0)}k`;
+  if (job.salary_currency) salaryString += ` ${job.salary_currency}`;
+  if (job.salary_period) salaryString += `/${job.salary_period.charAt(0).toUpperCase() + job.salary_period.slice(1)}`;
+  return salaryString;
+};
+
+
 export default function JobsPage() {
+  // Existing states
   const [showFilters, setShowFilters] = useState(false)
-  const [salaryRange, setSalaryRange] = useState([40000, 200000])
-  const [experienceRange, setExperienceRange] = useState([0, 15])
-  const [selectedJob, setSelectedJob] = useState<any>(null)
-  const [showApplicationModal, setShowApplicationModal] = useState(false)
-  const [applicationData, setApplicationData] = useState({
+  const [salaryRange, setSalaryRange] = useState([40000, 200000]) // Keep for now, not wired to API
+  const [experienceRange, setExperienceRange] = useState([0, 15]) // Keep for now, not wired to API
+  const [selectedJob, setSelectedJob] = useState<any>(null) // Keep for modal
+  const [showApplicationModal, setShowApplicationModal] = useState(false) // Keep for modal
+  const [applicationData, setApplicationData] = useState({ // Keep for modal
     coverLetter: "",
     expectedSalary: "",
     availableStartDate: "",
@@ -121,14 +139,77 @@ export default function JobsPage() {
     portfolio: null
   })
 
-  const statusCounts = {
+  // New state variables for API data
+  const [jobsData, setJobsData] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  const [jobTypeFilter, setJobTypeFilter] = useState("") // Example: "full-time"
+  const [experienceLevelFilter, setExperienceLevelFilter] = useState("") // Example: "senior-level"
+  const [locationFilter, setLocationFilter] = useState("") // Example: "San Francisco, CA"
+
+  // State for detailed job modal
+  const [detailedJobLoading, setDetailedJobLoading] = useState(false);
+  const [detailedJobError, setDetailedJobError] = useState<string | null>(null);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false); // Added
+
+  // Existing static data (will be removed or adapted)
+  const statusCounts = { // This will need to be dynamic if "My Applications" tab is implemented
     total: appliedJobs.length,
     pending: appliedJobs.filter(job => job.status === "applied" || job.status === "under_review").length,
     interviews: appliedJobs.filter(job => job.status === "interview_scheduled").length,
     hired: appliedJobs.filter(job => job.status === "accepted").length,
   }
 
-  const jobs = [
+  // Debounce search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1); // Reset to first page on new search
+    }, 500);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
+  const fetchJobs = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: "5", // Or your desired limit
+      });
+      if (debouncedSearchTerm) params.append("search", debouncedSearchTerm);
+      if (jobTypeFilter) params.append("job_type", jobTypeFilter);
+      if (experienceLevelFilter) params.append("experience_levels", experienceLevelFilter); // API uses experience_levels
+      if (locationFilter) params.append("location", locationFilter);
+
+      const response = await fetch(`/api/jobs?${params.toString()}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to fetch jobs" }));
+        throw new Error(errorData.message || "Failed to fetch jobs");
+      }
+      const data = await response.json();
+      setJobsData(data.data || []);
+      setTotalPages(data.pagination.total_pages || 1);
+    } catch (err: any) {
+      setError(err.message);
+      setJobsData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, debouncedSearchTerm, jobTypeFilter, experienceLevelFilter, locationFilter]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  // REMOVE STATIC JOBS ARRAY LATER or IF IT INTERFERES
+  const jobs = [ // This is static data, will be replaced by jobsData
     {
       id: 1,
       title: "Senior Frontend Developer",
@@ -341,25 +422,87 @@ export default function JobsPage() {
     }
   ]
 
-  const handleJobClick = (job: any) => {
-    setSelectedJob(job)
-  }
+  const handleJobClick = async (jobSummary: any) => {
+    // setSelectedJob(jobSummary) // Old behavior
+    if (!jobSummary || !jobSummary.id) {
+      console.error("Job summary or ID is missing", jobSummary);
+      setDetailedJobError("Cannot fetch details for this job.");
+      setSelectedJob(null);
+      return;
+    }
+
+    setDetailedJobLoading(true);
+    setDetailedJobError(null);
+    setSelectedJob(null); // Clear previous selection immediately
+
+    try {
+      const response = await fetch(`/api/jobs/${jobSummary.id}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to fetch job details" }));
+        throw new Error(errorData.message || "Failed to fetch job details");
+      }
+      const data = await response.json();
+      setSelectedJob(data.data); // API returns details under data.data
+    } catch (err: any) {
+      setDetailedJobError(err.message);
+      setSelectedJob(null);
+    } finally {
+      setDetailedJobLoading(false);
+    }
+  };
 
   const handleApplyClick = () => {
     setShowApplicationModal(true)
   }
 
-  const handleSubmitApplication = () => {
-    // Handle application submission here
-    console.log("Application submitted:", { job: selectedJob?.title, ...applicationData })
-    setShowApplicationModal(false)
-    setApplicationData({
-      coverLetter: "",
-      expectedSalary: "",
-      availableStartDate: "",
-      resume: null,
-      portfolio: null
-    })
+  const handleSubmitApplication = async () => {
+    if (!selectedJob || !selectedJob.id) {
+      toast.error("No job selected for application.");
+      return;
+    }
+    setIsSubmittingApplication(true);
+    const token = getToken();
+
+    if (!token) {
+      toast.error("Authentication required to apply.");
+      setIsSubmittingApplication(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/jobs/${selectedJob.id}/apply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          coverLetter: applicationData.coverLetter,
+          // Not sending other fields as per subtask instructions
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success(result.message || "Application submitted successfully!");
+        setShowApplicationModal(false);
+        setApplicationData({
+          coverLetter: "",
+          expectedSalary: "",
+          availableStartDate: "",
+          resume: null,
+          portfolio: null
+        });
+      } else {
+        toast.error(result.message || "Failed to submit application.");
+      }
+    } catch (error) {
+      console.error("Application submission error:", error);
+      toast.error("An unexpected error occurred while submitting your application.");
+    } finally {
+      setIsSubmittingApplication(false);
+    }
   }
 
   return (
@@ -662,6 +805,38 @@ export default function JobsPage() {
                 <Input
                   placeholder="Search positions, companies, or keywords..."
                   className="pl-12 h-12 border-slate-200 focus:border-slate-300 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-subheading rounded-xl w-full"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              {/* Basic Filter Examples - to be wired up or expanded later */}
+              <div className="mt-4 flex gap-4">
+                <Select onValueChange={(value) => {setJobTypeFilter(value); setCurrentPage(1);}}>
+                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Job Type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="full-time">Full-time</SelectItem>
+                    <SelectItem value="part-time">Part-time</SelectItem>
+                    <SelectItem value="contract">Contract</SelectItem>
+                    <SelectItem value="internship">Internship</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select onValueChange={(value) => {setExperienceLevelFilter(value); setCurrentPage(1);}}>
+                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Experience Level" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Levels</SelectItem>
+                    <SelectItem value="entry-level">Entry Level</SelectItem>
+                    <SelectItem value="mid-level">Mid Level</SelectItem>
+                    <SelectItem value="senior-level">Senior Level</SelectItem>
+                    <SelectItem value="lead">Lead</SelectItem>
+                    <SelectItem value="principal">Principal</SelectItem>
+                  </SelectContent>
+                </Select>
+                 <Input
+                  placeholder="Location (e.g. city, country)"
+                  className="h-10 border-slate-200 focus:border-slate-300 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-subheading rounded-xl w-[200px]"
+                  value={locationFilter}
+                  onChange={(e) => {setLocationFilter(e.target.value); setCurrentPage(1);}} // Basic, can be debounced too
                 />
               </div>
             </CardContent>
@@ -669,87 +844,132 @@ export default function JobsPage() {
 
           {/* Job Listings */}
           <div className="space-y-4">
-            {jobs.map((job) => {
-              const getRemoteColor = (remote: string) => {
-                switch (remote) {
-                  case "Remote":
-                    return "bg-green-100 text-green-700"
-                  case "Hybrid":
-                    return "bg-blue-100 text-blue-700"
-                  case "On-site":
-                    return "bg-red-100 text-red-700"
+            {isLoading && jobsData.length === 0 && (
+              <>
+                {[...Array(3)].map((_, i) => (
+                  <Card key={`skeleton-${i}`} className="border-slate-200">
+                    <CardContent className="p-6">
+                      <div className="animate-pulse flex space-x-4">
+                        <div className="rounded-lg bg-slate-200 h-16 w-16"></div>
+                        <div className="flex-1 space-y-3 py-1">
+                          <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                          <div className="space-y-2">
+                            <div className="h-3 bg-slate-200 rounded"></div>
+                            <div className="h-3 bg-slate-200 rounded w-5/6"></div>
+                          </div>
+                          <div className="h-8 bg-slate-200 rounded w-1/4 mt-3"></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )}
+
+            {!isLoading && error && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="p-6 text-center">
+                  <XCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+                  <h3 className="text-lg font-semibold text-red-700">Error Fetching Jobs</h3>
+                  <p className="text-red-600">{error}</p>
+                  <Button onClick={fetchJobs} className="mt-4">Try Again</Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isLoading && !error && jobsData.length === 0 && (
+              <Card className="border-slate-200">
+                <CardContent className="p-6 text-center">
+                  <Search className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+                  <h3 className="text-lg font-semibold text-slate-700">No Jobs Found</h3>
+                  <p className="text-slate-500">Try adjusting your search terms or filters.</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!error && jobsData.map((job) => {
+              // Determine remote badge color based on API's location_type
+              const getLocationTypeColor = (locationType: string | null) => {
+                switch (locationType?.toLowerCase()) {
+                  case "remote":
+                    return "bg-green-100 text-green-700";
+                  case "hybrid":
+                    return "bg-blue-100 text-blue-700";
+                  case "on-site":
+                  case "on_site": // handle potential API variations
+                    return "bg-red-100 text-red-700";
                   default:
-                    return "bg-slate-100 text-slate-700"
+                    return "bg-slate-100 text-slate-700";
                 }
-              }
+              };
+              const locationTypeLabel = job.location_type?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || "N/A";
+
 
               return (
                 <Card
-                  key={job.id}
+                  key={job.id} // API provides job.id
                   className="border-slate-200 hover:shadow-lg hover:border-primary-navy/30 transition-all duration-200 group cursor-pointer"
-                  onClick={() => handleJobClick(job)}
+                  onClick={() => handleJobClick(job)} // handleJobClick will need to be adapted for API job structure
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start space-x-4 mb-4">
                           <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
-                            <img src={job.logo} alt={job.company} className="w-full h-full object-cover" />
+                            <img src={job.company_logo_url || "/placeholder-logo.png"} alt={job.company_name || "Company"} className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="text-xl font-heading text-primary-navy group-hover:text-primary-navy transition-colors line-clamp-1">{job.title}</h3>
                             <div className="flex items-center space-x-3 text-slate-600 mt-1 text-base">
                               <div className="flex items-center space-x-1">
                                 <Building className="h-4 w-4" />
-                                <span className="font-subheading truncate">{job.company}</span>
+                                <span className="font-subheading truncate">{job.company_name || "N/A"}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <MapPin className="h-4 w-4" />
-                                <span className="font-subheading truncate">{job.location}</span>
+                                <span className="font-subheading truncate">{job.location_city && job.location_state ? `${job.location_city}, ${job.location_state}` : job.location_country || "N/A"}</span>
                               </div>
                             </div>
-                      </div>
-                    </div>
+                          </div>
+                        </div>
 
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {job.skills.slice(0, 4).map((skill, index) => (
+                          {(job.skills || []).slice(0, 4).map((skill: string, index: number) => (
                             <span
                               key={index}
-                              className={`px-3 py-1 rounded-full text-sm font-subheading ${
-                                skill.includes('+') || skill.includes('years')
-                                  ? 'bg-primary-navy/10 text-primary-navy'
-                                  : 'bg-slate-100 text-slate-700'
-                              }`}
+                              className={`px-3 py-1 rounded-full text-sm font-subheading bg-slate-100 text-slate-700`}
                             >
                               {skill}
                             </span>
                           ))}
-                          {job.skills.length > 4 && (
+                          {(job.skills || []).length > 4 && (
                             <span className="px-3 py-1 rounded-full text-sm font-subheading bg-slate-100 text-slate-700">
-                              +{job.skills.length - 4} more
+                              +{(job.skills || []).length - 4} more
                             </span>
                           )}
-                    </div>
+                        </div>
 
                         <p className="text-slate-600 font-subheading leading-relaxed mb-4 text-base line-clamp-3">
-                          {job.description}
+                          {job.description_short || job.description?.substring(0, 150) + "..." || "No description available."}
                         </p>
 
                         <div className="flex items-center justify-between text-base">
                           <div className="flex items-center space-x-4 text-slate-500">
                             <div className="flex items-center space-x-1">
                               <DollarSign className="h-4 w-4" />
-                              <span className="font-subheading">{job.salary}</span>
+                              <span className="font-subheading">{formatSalary(job)}</span>
                             </div>
-                            <span className="font-subheading">{job.type}</span>
-                            <span className={`px-3 py-1 rounded-full text-sm font-subheading ${getRemoteColor(job.remote)}`}>
-                              {job.remote}
+                            <span className="font-subheading capitalize">{job.job_type?.replace("_", "-") || "N/A"}</span>
+                             <span className={`px-3 py-1 rounded-full text-sm font-subheading ${getLocationTypeColor(job.location_type)}`}>
+                              {locationTypeLabel}
                             </span>
                           </div>
-                          <span className="text-sm text-slate-400 font-subheading">Posted {job.posted}</span>
-                    </div>
-                  </div>
-                  <Button
+                          <span className="text-sm text-slate-400 font-subheading">
+                             {job.published_at ? formatDistanceToNow(new Date(job.published_at), { addSuffix: true }) : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
                     variant="ghost"
                     size="icon"
                         className="text-slate-400 hover:text-primary-navy hover:bg-primary-navy/5 rounded-full flex-shrink-0"
@@ -765,172 +985,214 @@ export default function JobsPage() {
                 </Card>
               )
             })}
-                      </div>
+          </div>
+          {/* Pagination Controls */}
+          {!isLoading && !error && jobsData.length > 0 && totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-4 mt-8">
+              <Button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                variant="outline"
+              >
+                Previous
+              </Button>
+              <span className="text-sm font-subheading">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                variant="outline"
+              >
+                Next
+              </Button>
+            </div>
+          )}
                     </div>
                     </div>
                   </div>
 
-    {/* Job Details Modal */}
-    {selectedJob && !showApplicationModal && (
+    {/* Job Details Modal - Updated for API data and loading/error states */}
+    {(selectedJob || detailedJobLoading || detailedJobError) && !showApplicationModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                  onClick={() => setSelectedJob(null)}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => { setSelectedJob(null); setDetailedJobError(null);}}
                   className="rounded-xl"
                 >
                   <ArrowLeft className="h-5 w-5" />
-                  </Button>
+                </Button>
                 <h1 className="text-2xl font-heading text-primary-navy">Job Details</h1>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                onClick={() => setSelectedJob(null)}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => { setSelectedJob(null); setDetailedJobError(null);}}
                 className="rounded-xl"
-                  >
+              >
                 <X className="h-5 w-5" />
-                  </Button>
+              </Button>
             </div>
 
-            {/* Job Content */}
-            <div className="space-y-6">
-              {/* Basic Info */}
-              <div className="flex items-start space-x-6">
-                <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
-                  <img src={selectedJob.logo} alt={selectedJob.company} className="w-full h-full object-cover" />
-                </div>
+            {/* Conditional Content: Loading, Error, or Job Details */}
+            {detailedJobLoading && (
+              <div className="text-center py-10">
+                <Clock className="h-12 w-12 text-primary-navy mx-auto animate-spin mb-4" />
+                <p className="text-lg font-semibold text-primary-navy">Loading job details...</p>
+              </div>
+            )}
+
+            {!detailedJobLoading && detailedJobError && (
+              <div className="text-center py-10">
+                <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <p className="text-lg font-semibold text-red-700">Error</p>
+                <p className="text-red-600 mb-4">{detailedJobError}</p>
+                <Button onClick={() => { setSelectedJob(null); setDetailedJobError(null); /* Optionally retry: handleJobClick(lastClickedJobSummary) */ }}>Close</Button>
+              </div>
+            )}
+
+            {!detailedJobLoading && !detailedJobError && selectedJob && (
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div className="flex items-start space-x-6">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
+                    <img src={selectedJob.company?.logo_url || "/placeholder-logo.png"} alt={selectedJob.company?.name || "Company"} className="w-full h-full object-cover" />
+                  </div>
                   <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-2xl font-heading text-primary-navy">{selectedJob.title}</h2>
-                    <span className={`px-3 py-1 rounded-full text-sm font-subheading ${
-                      selectedJob.remote === "Remote" ? "bg-green-100 text-green-700" :
-                      selectedJob.remote === "Hybrid" ? "bg-blue-100 text-blue-700" :
-                      selectedJob.remote === "On-site" ? "bg-red-100 text-red-700" :
-                      "bg-slate-100 text-slate-700"
-                    }`}>
-                      {selectedJob.remote}
-                    </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-2xl font-heading text-primary-navy">{selectedJob.title}</h2>
+                      <span className={`px-3 py-1 rounded-full text-sm font-subheading ${
+                        selectedJob.location_type?.toLowerCase() === "remote" ? "bg-green-100 text-green-700" :
+                        selectedJob.location_type?.toLowerCase() === "hybrid" ? "bg-blue-100 text-blue-700" :
+                        selectedJob.location_type?.toLowerCase() === "on-site" || selectedJob.location_type?.toLowerCase() === "on_site" ? "bg-red-100 text-red-700" :
+                        "bg-slate-100 text-slate-700"
+                      }`}>
+                        {selectedJob.location_type?.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-6 text-slate-600 font-subheading mb-3">
+                      <div className="flex items-center space-x-1">
+                        <Building className="h-4 w-4" />
+                        <span>{selectedJob.company?.name || "N/A"}</span>
                       </div>
-                  <div className="flex items-center space-x-6 text-slate-600 font-subheading mb-3">
-                    <div className="flex items-center space-x-1">
-                      <Building className="h-4 w-4" />
-                      <span>{selectedJob.company}</span>
+                      <div className="flex items-center space-x-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>{selectedJob.location || "N/A"}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <DollarSign className="h-4 w-4" />
+                        <span className="font-heading text-primary-navy">{formatSalary(selectedJob)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{selectedJob.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <DollarSign className="h-4 w-4" />
-                      <span className="font-heading text-primary-navy">{selectedJob.salary}</span>
+                    <div className="flex items-center space-x-4 text-slate-500 font-subheading">
+                      <span className="capitalize">{selectedJob.job_type?.replace("_", "-") || "N/A"}</span>
+                      <span>•</span>
+                      <span>Posted {selectedJob.published_at ? formatDistanceToNow(new Date(selectedJob.published_at), { addSuffix: true }) : "N/A"}</span>
+                      {selectedJob.application_deadline && (
+                        <>
+                          <span>•</span>
+                          <span>Apply by {new Date(selectedJob.application_deadline).toLocaleDateString()}</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4 text-slate-500 font-subheading">
-                    <span>{selectedJob.type}</span>
-                    <span>•</span>
-                    <span>Posted {selectedJob.posted}</span>
-                    <span>•</span>
-                    <span>Apply by {selectedJob.applicationDeadline}</span>
+                </div>
+
+                <Separator />
+
+                {/* Job Description */}
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Job Description</h3>
+                  <div className="prose prose-sm max-w-none text-slate-600 font-subheading" dangerouslySetInnerHTML={{ __html: selectedJob.description || "<p>No description available.</p>" }} />
+                </div>
+
+                {/* Skills Required */}
+                {selectedJob.skills && selectedJob.skills.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-heading text-primary-navy mb-3">Skills Required</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedJob.skills.map((skill: string, index: number) => (
+                        <Badge key={index} className="font-subheading bg-slate-100 text-slate-700">{skill}</Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </div>
+                )}
 
-              <Separator />
+                {/* Requirements */}
+                {selectedJob.requirements && selectedJob.requirements.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
+                    <ul className="space-y-2">
+                      {selectedJob.requirements.map((requirement: string, index: number) => (
+                        <li key={index} className="flex items-start space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                          <span className="text-slate-600 font-subheading">{requirement}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {/* Job Description */}
-                      <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Job Description</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed">{selectedJob.fullDescription}</p>
-                      </div>
+                {/* Responsibilities */}
+                {selectedJob.responsibilities && selectedJob.responsibilities.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-heading text-primary-navy mb-3">Responsibilities</h3>
+                    <ul className="space-y-2">
+                      {selectedJob.responsibilities.map((responsibility: string, index: number) => (
+                        <li key={index} className="flex items-start space-x-2">
+                          <CheckCircle className="h-4 w-4 text-primary-navy mt-1 flex-shrink-0" />
+                          <span className="text-slate-600 font-subheading">{responsibility}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {/* Skills Required */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Skills Required</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedJob.skills.map((skill: string, index: number) => (
-                    <Badge key={index} className={`font-subheading ${
-                      skill.includes('+') || skill.includes('years')
-                        ? 'bg-[#0056B3]/10 text-[#0056B3]'
-                        : 'bg-slate-100 text-slate-700'
-                    }`}>{skill}</Badge>
-                  ))}
-                </div>
-              </div>
+                {/* Benefits */}
+                {selectedJob.benefits && (
+                  <div>
+                    <h3 className="text-lg font-heading text-primary-navy mb-3">Benefits</h3>
+                    <p className="text-slate-600 font-subheading">{selectedJob.benefits}</p>
+                  </div>
+                )}
 
-              {/* Requirements */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
-                <ul className="space-y-2">
-                  {selectedJob.requirements.map((requirement: string, index: number) => (
-                    <li key={index} className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-                      <span className="text-slate-600 font-subheading">{requirement}</span>
-                    </li>
-                  ))}
-                </ul>
-          </div>
 
-              {/* Responsibilities */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Responsibilities</h3>
-                <ul className="space-y-2">
-                  {selectedJob.responsibilities.map((responsibility: string, index: number) => (
-                    <li key={index} className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-primary-navy mt-1 flex-shrink-0" />
-                      <span className="text-slate-600 font-subheading">{responsibility}</span>
-                    </li>
-                  ))}
-                </ul>
-          </div>
-
-              {/* Company Information */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">About the Company</h3>
-                <Card className="border-slate-200">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
+                {/* Company Information */}
+                {selectedJob.company && (
+                  <div>
+                    <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedJob.company.name}</h3>
+                    <Card className="border-slate-200">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
                           <div>
-                        <h4 className="font-heading text-primary-navy">{selectedJob.companyInfo.name}</h4>
-                        <div className="flex items-center space-x-4 mt-1 text-sm text-slate-500">
-                          <span>{selectedJob.companyInfo.size}</span>
-                          <span>•</span>
-                          <span>{selectedJob.companyInfo.industry}</span>
-                          <span>•</span>
-                          <span>Founded {selectedJob.companyInfo.founded}</span>
+                            <h4 className="font-heading text-primary-navy">{selectedJob.company.name}</h4>
+                            <div className="flex items-center space-x-4 mt-1 text-sm text-slate-500">
+                              {selectedJob.company.size && <span>{selectedJob.company.size}</span>}
+                              {selectedJob.company.industry && <><span>•</span><span>{selectedJob.company.industry}</span></>}
+                            </div>
+                          </div>
+                          {selectedJob.company.description && <p className="text-slate-600 font-subheading">{selectedJob.company.description}</p>}
+                          {selectedJob.company.website_url && (
+                             <p className="text-sm">
+                                <Link href={selectedJob.company.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                  Visit website <Globe className="h-3 w-3 inline-block ml-1" />
+                                </Link>
+                              </p>
+                          )}
                         </div>
-                      </div>
-                      <p className="text-slate-600 font-subheading">{selectedJob.companyInfo.description}</p>
-                      <div>
-                        <h5 className="font-subheading font-medium text-primary-navy mb-2">Benefits</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedJob.companyInfo.benefits.map((benefit: string, index: number) => (
-                            <Badge key={index} className="bg-green-50 text-green-700 font-subheading">{benefit}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h5 className="font-subheading font-medium text-primary-navy mb-2">Company Culture</h5>
-                        <p className="text-slate-600 font-subheading">{selectedJob.companyInfo.culture}</p>
-                        </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
-              {/* Hiring Manager */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Hiring Manager</h3>
-                <p className="text-slate-600 font-subheading">{selectedJob.hiringManager}</p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex space-x-4 pt-4">
+                {/* Action Buttons */}
+                <div className="flex space-x-4 pt-4">
                 <Button
                   className="flex-1 bg-primary-navy hover:bg-primary-navy/90 text-white rounded-xl font-subheading"
                   onClick={handleApplyClick}
@@ -1050,9 +1312,19 @@ export default function JobsPage() {
             <Button
               className="flex-1 bg-primary-navy hover:bg-primary-navy/90 text-white rounded-xl font-subheading"
               onClick={handleSubmitApplication}
+              disabled={isSubmittingApplication}
             >
-              <Send className="h-4 w-4 mr-2" />
-              Submit Application
+              {isSubmittingApplication ? (
+                <>
+                  <Send className="h-4 w-4 mr-2 animate-pulse" /> {/* Or a spinner */}
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Submit Application
+                </>
+              )}
             </Button>
           </div>
     </div>
