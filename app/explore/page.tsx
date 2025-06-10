@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { BookmarkIcon, ArrowLeft, X, Send, MessageCircle, Building2, MapPin, Calendar, DollarSign, Clock, Users, Star, Award, CheckCircle, Target, Upload, XCircle, Building } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 
 // Helper function to format salary
@@ -1009,5 +1010,10 @@ function ExplorePageContent() {
 }
 
 export default function ExplorePage() {
-  return <ExplorePageContent />;
+  // Suspense can be added if there are other client components that need it.
+  return (
+    <ProtectedRoute>
+      <ExplorePageContent />
+    </ProtectedRoute>
+  );
 }

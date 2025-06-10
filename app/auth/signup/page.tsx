@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useRouter } from "next/navigation"; // Added
-import { toast } from "sonner"; // Added
+
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -22,7 +21,6 @@ export default function SignupPage() {
     confirmPassword: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter(); // Added
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     uppercase: false,
@@ -35,45 +33,18 @@ export default function SignupPage() {
     setIsLoading(true)
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match!");
+      alert("Passwords don't match!")
       setIsLoading(false)
       return
     }
 
-    const isPwdValid = Object.values(passwordValidation).every(Boolean);
-    if (!isPwdValid) {
-      toast.error("Password does not meet requirements.");
-      setIsLoading(false);
-      return;
-    }
+    // TODO: Add signup logic here
+    console.log("Signup attempt:", formData)
 
-    try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success("Signup Successful!", { description: "Please proceed to login." });
-        router.push("/auth/login");
-      } else {
-        const errorData = await response.json();
-        toast.error("Signup Failed", { description: errorData.message || "Could not create account. Please try again." });
-      }
-    } catch (error) {
-      console.error("Signup error:", error);
-      toast.error("Signup Failed", { description: "An unexpected error occurred. Please try again." });
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
       setIsLoading(false)
-    }
+    }, 1000)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

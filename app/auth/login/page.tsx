@@ -1,9 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useRouter } from "next/navigation"; // Added
-import { login as authLogin } from "@/lib/authClient"; // Added
-import { toast } from "sonner"; // Added
+
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -19,36 +17,18 @@ export default function LoginPage() {
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter(); // Added
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+    // TODO: Add login logic here
+    console.log("Login attempt:", formData)
 
-      if (response.ok) {
-        const data = await response.json();
-        authLogin(data.token); // Assuming the token is in data.token
-        toast.success("Login Successful", { description: "Welcome back!" });
-        router.push("/feed"); // Redirect to feed page
-      } else {
-        const errorData = await response.json();
-        toast.error("Login Failed", { description: errorData.message || "Invalid credentials or server error." });
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Login Failed", { description: "An unexpected error occurred. Please try again." });
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
       setIsLoading(false)
-    }
+    }, 1000)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
