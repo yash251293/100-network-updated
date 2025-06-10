@@ -381,7 +381,8 @@ function ExplorePageContent() {
 
   return (
     <>
-      <div className="w-[65%] mx-auto"> {/* Ensure this div is properly closed before modals */}
+      <div>
+      <div className="w-[65%] mx-auto">
       <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="bg-gradient-to-br from-slate-50 to-[#0056B3]/10 border-none shadow-md">
@@ -1266,6 +1267,7 @@ function ExplorePageContent() {
     </div>
       </DialogContent>
     </Dialog>
+    </div>
     </>
   )
 }
