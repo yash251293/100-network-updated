@@ -1,13 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect, useCallback } from "react" // Added useEffect, useCallback
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { getToken } from "@/lib/authClient"; // Added
-import { toast } from "sonner"; // Added
-import { formatDistanceToNow } from 'date-fns'; // Added
-// No ProtectedRoute for explore page for now
+import { getToken } from "@/lib/authClient";
+import { toast } from "sonner";
+import { formatDistanceToNow } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +17,7 @@ import { BookmarkIcon, ArrowLeft, X, Send, MessageCircle, Building2, MapPin, Cal
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 
-// Helper function to format salary (copied from jobs/page.tsx)
+// Helper function to format salary
 const formatSalary = (job: any) => {
   if (!job.salary_min && !job.salary_max) return "Not Disclosed";
   let salaryString = "";
@@ -30,20 +29,20 @@ const formatSalary = (job: any) => {
 };
 
 function ExplorePageContent() {
-  // State for Modals and static interactions (kept from original)
-  const [selectedProject, setSelectedProject] = useState<any>(null) // Freelance projects not connected yet
-  const [showProjectApplicationModal, setShowProjectApplicationModal] = useState(false) // For freelance
-  const [showJobsModal, setShowJobsModal] = useState(false) // For company's jobs modal
+  // State for Modals and static interactions
+  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [showProjectApplicationModal, setShowProjectApplicationModal] = useState(false)
+  const [showJobsModal, setShowJobsModal] = useState(false)
   const freelanceProjects: any[] = []; // Define freelanceProjects to prevent map error
-  const [followedCompanies, setFollowedCompanies] = useState<number[]>([]) // Static for now
+  const [followedCompanies, setFollowedCompanies] = useState<number[]>([2]) // Static for now, pre-follow one company for demo
 
-  // State for Job Application Modal (copied from jobs/page.tsx)
+  // State for Job Application Modal
   const [applicationData, setApplicationData] = useState({
     coverLetter: "",
-    expectedSalary: "", // Not sent to API
-    startDate: "", // Not sent to API
-    resume: null, // Not sent to API
-    portfolio: null // Not sent to API
+    expectedSalary: "",
+    startDate: "",
+    resume: null,
+    portfolio: null
   });
   const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false)
@@ -60,14 +59,14 @@ function ExplorePageContent() {
   const [topCompaniesData, setTopCompaniesData] = useState<any[]>([])
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true)
   const [companiesError, setCompaniesError] = useState<string | null>(null)
-  const [selectedCompany, setSelectedCompany] = useState<any>(null) // For company detail modal (limited data)
+  const [selectedCompany, setSelectedCompany] = useState<any>(null)
 
   // Fetch Recommended Jobs
   const fetchRecommendedJobs = useCallback(async () => {
     setIsLoadingJobs(true);
     setJobsError(null);
     try {
-      const response = await fetch(`/api/jobs?limit=3&sortBy=published_at&sortOrder=desc`); // Example: 3 most recent jobs
+      const response = await fetch(`/api/jobs?limit=3&sortBy=published_at&sortOrder=desc`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Failed to fetch recommended jobs" }));
         throw new Error(errorData.message || "Failed to fetch recommended jobs");
@@ -90,14 +89,11 @@ function ExplorePageContent() {
   const fetchTopCompanies = useCallback(async () => {
     setIsLoadingCompanies(true);
     setCompaniesError(null);
-    const token = getToken(); // Needed if /api/companies is protected
-    // If /api/companies can be public for listings, token might be optional or not needed for this call
-
+    const token = getToken();
     try {
       const headers: HeadersInit = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const response = await fetch(`/api/companies?limit=3`); // Example: 3 companies
+      const response = await fetch(`/api/companies?limit=3`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Failed to fetch top companies" }));
         throw new Error(errorData.message || "Failed to fetch top companies");
@@ -116,7 +112,7 @@ function ExplorePageContent() {
     fetchTopCompanies();
   }, [fetchTopCompanies]);
 
-  // Handle Job Click (for job details modal - copied from jobs/page.tsx)
+  // Handle Job Click (for job details modal)
   const handleJobClick = async (jobSummary: any) => {
     if (!jobSummary || !jobSummary.id) {
       setDetailedJobError("Cannot fetch details for this job.");
@@ -145,7 +141,7 @@ function ExplorePageContent() {
 
   const handleApplyClick = () => setShowApplicationModal(true);
 
-  // Handle Submit Application (copied from jobs/page.tsx)
+  // Handle Submit Application
   const handleSubmitApplication = async () => {
     if (!selectedJob || !selectedJob.id) {
       toast.error("No job selected for application.");
@@ -179,6 +175,7 @@ function ExplorePageContent() {
     }
   };
 
+  // *** FIX: DEFINED THE MISSING HANDLER FUNCTIONS FOR THE COMPANY MODAL ***
   const handleViewJobsClick = () => {
     setShowJobsModal(true);
   };
@@ -199,156 +196,28 @@ function ExplorePageContent() {
 
   // Handle Company Click (for company details modal - uses limited data from list)
   const handleCompanyClick = (company: any) => {
-    // The static company data that was in explore page previously for the modal.
     // This is a placeholder until a proper /api/companies/[id] is used.
-    // NOTE: The original static `companies` array was removed.
-    // For the modal to work with static data as before, this would need to be redefined here or passed.
-    // For now, it uses the limited data from `company` (from API list) and fills placeholders.
+    // It uses the limited data from the API list and finds a match in a static detailed object.
     const staticCompanyDetailsForModal = [
-          {
-      id: 1,
-      name: "TechFlow Solutions",
-      industry: "Web Development & Design",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "50-200 employees",
-      location: "San Francisco, CA",
-      founded: 2018,
-      verified: true,
-      companyType: "Startup",
-      description: "Leading web development agency specializing in modern React applications and e-commerce solutions.",
-      mission: "To empower businesses with cutting-edge web technologies that drive growth and innovation.",
-      vision: "Becoming the go-to partner for companies seeking exceptional digital experiences.",
-      values: ["Innovation", "Quality", "Collaboration", "Continuous Learning"],
-      benefits: ["Flexible Work Hours", "Health Insurance", "Stock Options", "Professional Development", "Remote Work Options"],
-      culture: "We foster a collaborative environment where creativity meets technical excellence. Our team values work-life balance and continuous learning.",
-      recentNews: [
-        "Launched AI-powered web analytics platform",
-        "Expanded team by 40% in Q3 2024",
-        "Partnership with major e-commerce brands"
-      ],
-      website: "techflowsolutions.com",
-      email: "careers@techflowsolutions.com",
-      phone: "+1 (555) 123-4567",
-      jobOpenings: [
         {
-          id: 101,
-          title: "Senior React Developer",
-          department: "Engineering",
-          location: "San Francisco, CA / Remote",
-          type: "Full-time",
-          salary: "$120,000 - $150,000",
-          experience: "5+ years",
-          postedDate: "2024-01-15",
-          description: "Lead development of next-generation React applications for enterprise clients."
+            id: 1, name: "TechFlow Solutions", industry: "Web Development & Design", logo: "/placeholder.svg?height=60&width=60", size: "50-200 employees", location: "San Francisco, CA", founded: 2018, verified: true, companyType: "Startup", description: "Leading web development agency specializing in modern React applications and e-commerce solutions.", mission: "To empower businesses with cutting-edge web technologies that drive growth and innovation.", vision: "Becoming the go-to partner for companies seeking exceptional digital experiences.", values: ["Innovation", "Quality", "Collaboration", "Continuous Learning"], benefits: ["Flexible Work Hours", "Health Insurance", "Stock Options", "Professional Development", "Remote Work Options"], culture: "We foster a collaborative environment where creativity meets technical excellence. Our team values work-life balance and continuous learning.", recentNews: ["Launched AI-powered web analytics platform", "Expanded team by 40% in Q3 2024", "Partnership with major e-commerce brands"], website: "techflowsolutions.com", email: "careers@techflowsolutions.com", phone: "+1 (555) 123-4567",
+            jobOpenings: [{ id: 101, title: "Senior React Developer", department: "Engineering", location: "San Francisco, CA / Remote", type: "Full-time", salary: "$120,000 - $150,000", experience: "5+ years", postedDate: "2024-01-15", description: "Lead development of next-generation React applications for enterprise clients." }, { id: 102, title: "UI/UX Designer", department: "Design", location: "San Francisco, CA", type: "Full-time", salary: "$90,000 - $120,000", experience: "3+ years", postedDate: "2024-01-20", description: "Design beautiful and intuitive user interfaces for web applications." }]
         },
         {
-          id: 102,
-          title: "UI/UX Designer",
-          department: "Design",
-          location: "San Francisco, CA",
-          type: "Full-time",
-          salary: "$90,000 - $120,000",
-          experience: "3+ years",
-          postedDate: "2024-01-20",
-          description: "Design beautiful and intuitive user interfaces for web applications."
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: "WebCraft Studios",
-      industry: "Digital Agency",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "20-50 employees",
-      location: "Austin, TX",
-      founded: 2020,
-      verified: true,
-      companyType: "Agency",
-      description: "Creative digital agency focused on building exceptional web experiences for startups and established brands.",
-      mission: "Crafting digital experiences that tell your brand's story and drive meaningful connections.",
-      vision: "To be recognized as the most innovative digital agency in the creative industry.",
-      values: ["Creativity", "Authenticity", "Excellence", "Partnership"],
-      benefits: ["Creative Freedom", "Health & Dental", "Flexible PTO", "Team Retreats", "Learning Stipend"],
-      culture: "A creative playground where designers and developers collaborate to push the boundaries of what's possible on the web.",
-      recentNews: [
-        "Won 3 Webby Awards for client projects",
-        "Opened new office in Denver",
-        "Featured in Design Week Magazine"
-      ],
-      website: "webcraftstudios.com",
-      email: "hello@webcraftstudios.com",
-      phone: "+1 (555) 234-5678",
-      jobOpenings: [
-        {
-          id: 201,
-          title: "Full Stack Developer",
-          department: "Development",
-          location: "Austin, TX / Remote",
-          type: "Full-time",
-          salary: "$95,000 - $125,000",
-          experience: "4+ years",
-          postedDate: "2024-01-18",
-          description: "Build end-to-end web solutions using modern JavaScript frameworks."
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: "DevForge Technologies",
-      industry: "Software Development",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "100-500 employees",
-      location: "Seattle, WA",
-      founded: 2015,
-      verified: true,
-      companyType: "Tech Company",
-      description: "Enterprise software development company specializing in scalable web applications and cloud solutions.",
-      mission: "Forging the future of enterprise software through innovative development practices and cutting-edge technology.",
-      vision: "To be the leading provider of enterprise web solutions that transform how businesses operate.",
-      values: ["Innovation", "Reliability", "Scalability", "Team Excellence"],
-      benefits: ["Comprehensive Health Coverage", "401(k) Matching", "Sabbatical Program", "Professional Certifications", "Gym Membership"],
-      culture: "We believe in empowering our developers with the latest tools and technologies while maintaining a supportive team environment.",
-      recentNews: [
-        "Completed Series B funding round",
-        "Launched new cloud platform",
-        "Acquired two smaller tech companies"
-      ],
-      website: "devforge.tech",
-      email: "careers@devforge.tech",
-      phone: "+1 (555) 345-6789",
-      jobOpenings: [
-        {
-          id: 301,
-          title: "Backend Developer",
-          department: "Engineering",
-          location: "Seattle, WA",
-          type: "Full-time",
-          salary: "$110,000 - $140,000",
-          experience: "3+ years",
-          postedDate: "2024-01-22",
-          description: "Develop robust backend systems for enterprise-level applications."
+            id: 2, name: "WebCraft Studios", industry: "Digital Agency", logo: "/placeholder.svg?height=60&width=60", size: "20-50 employees", location: "Austin, TX", founded: 2020, verified: true, companyType: "Agency", description: "Creative digital agency focused on building exceptional web experiences for startups and established brands.", mission: "Crafting digital experiences that tell your brand's story and drive meaningful connections.", vision: "To be recognized as the most innovative digital agency in the creative industry.", values: ["Creativity", "Authenticity", "Excellence", "Partnership"], benefits: ["Creative Freedom", "Health & Dental", "Flexible PTO", "Team Retreats", "Learning Stipend"], culture: "A creative playground where designers and developers collaborate to push the boundaries of what's possible on the web.", recentNews: ["Won 3 Webby Awards for client projects", "Opened new office in Denver", "Featured in Design Week Magazine"], website: "webcraftstudios.com", email: "hello@webcraftstudios.com", phone: "+1 (555) 234-5678",
+            jobOpenings: [{ id: 201, title: "Full Stack Developer", department: "Development", location: "Austin, TX / Remote", type: "Full-time", salary: "$95,000 - $125,000", experience: "4+ years", postedDate: "2024-01-18", description: "Build end-to-end web solutions using modern JavaScript frameworks." }]
         },
         {
-          id: 302,
-          title: "DevOps Engineer",
-          department: "Infrastructure",
-          location: "Seattle, WA / Remote",
-          type: "Full-time",
-          salary: "$125,000 - $155,000",
-          experience: "5+ years",
-          postedDate: "2024-01-25",
-          description: "Manage cloud infrastructure and deployment pipelines."
+            id: 3, name: "DevForge Technologies", industry: "Software Development", logo: "/placeholder.svg?height=60&width=60", size: "100-500 employees", location: "Seattle, WA", founded: 2015, verified: true, companyType: "Tech Company", description: "Enterprise software development company specializing in scalable web applications and cloud solutions.", mission: "Forging the future of enterprise software through innovative development practices and cutting-edge technology.", vision: "To be the leading provider of enterprise web solutions that transform how businesses operate.", values: ["Innovation", "Reliability", "Scalability", "Team Excellence"], benefits: ["Comprehensive Health Coverage", "401(k) Matching", "Sabbatical Program", "Professional Certifications", "Gym Membership"], culture: "We believe in empowering our developers with the latest tools and technologies while maintaining a supportive team environment.", recentNews: ["Completed Series B funding round", "Launched new cloud platform", "Acquired two smaller tech companies"], website: "devforge.tech", email: "careers@devforge.tech", phone: "+1 (555) 345-6789",
+            jobOpenings: [{ id: 301, title: "Backend Developer", department: "Engineering", location: "Seattle, WA", type: "Full-time", salary: "$110,000 - $140,000", experience: "3+ years", postedDate: "2024-01-22", description: "Develop robust backend systems for enterprise-level applications." }, { id: 302, title: "DevOps Engineer", department: "Infrastructure", location: "Seattle, WA / Remote", type: "Full-time", salary: "$125,000 - $155,000", experience: "5+ years", postedDate: "2024-01-25", description: "Manage cloud infrastructure and deployment pipelines." }]
         }
-      ]
-    }
     ];
     const staticData = staticCompanyDetailsForModal.find(c => company.name && c.name.toLowerCase().includes(company.name.toLowerCase()));
     setSelectedCompany(staticData || { ...company, description: "Details not fully available.", industry: "N/A", location: "N/A", size: "N/A", jobOpenings: [] });
   };
 
-  // projectApplicationData, setSelectedProject, setShowProjectApplicationModal, handleSubmitProjectApplication
-  // are kept for modal structure but freelance section won't render items for now as freelanceProjects is empty.
-   const [projectApplicationData, setProjectApplicationData] = useState({
+  // Handlers for (static) freelance project modals
+  const [projectApplicationData, setProjectApplicationData] = useState({
     proposal: "",
     estimatedBudget: "",
     timeline: "",
@@ -356,29 +225,12 @@ function ExplorePageContent() {
     experience: ""
   });
 
-   const handleProjectClick = (project: any) => {
-    // This would ideally fetch project details if it were dynamic
-    const staticFreelanceProjectDetails = [ // Re-adding static data for modal to function visually
+  const handleProjectClick = (project: any) => {
+    const staticFreelanceProjectDetails = [
         {
-      id: 1,
-      title: "E-commerce Website Redesign",
-      company: "Ra Labs",
-      industry: "Internet & Software",
-      logo: "/placeholder.svg?height=40&width=40",
-      budget: "$3,000-5,000",
-      duration: "4 weeks",
-      posted: "2 days ago",
-      description: "We need a complete redesign of our e-commerce platform. The project involves modernizing the UI/UX, improving conversion rates, and implementing responsive design across all devices.",
-      requirements: ["React/Next.js experience", "E-commerce platform knowledge", "UI/UX design skills", "Responsive design expertise"],
-      deliverables: ["Complete website redesign", "Mobile-responsive layouts", "Shopping cart optimization", "Payment gateway integration"],
-      companyInfo: { size: "10-50 employees", founded: 2018, website: "ralabs.com", description: "Ra Labs creates innovative software solutions for modern businesses." },
-      skills: ["React", "Next.js", "Figma", "Shopify", "CSS/Sass"]
-    },
-    {
-      id: 2,
-      title: "React Dashboard Development",
-      // ... other static project data ...
-    }];
+            id: 1, title: "E-commerce Website Redesign", company: "Ra Labs", industry: "Internet & Software", logo: "/placeholder.svg?height=40&width=40", budget: "$3,000-5,000", duration: "4 weeks", posted: "2 days ago", description: "We need a complete redesign of our e-commerce platform. The project involves modernizing the UI/UX, improving conversion rates, and implementing responsive design across all devices.", requirements: ["React/Next.js experience", "E-commerce platform knowledge", "UI/UX design skills", "Responsive design expertise"], deliverables: ["Complete website redesign", "Mobile-responsive layouts", "Shopping cart optimization", "Payment gateway integration"], companyInfo: { size: "10-50 employees", founded: 2018, website: "ralabs.com", description: "Ra Labs creates innovative software solutions for modern businesses." }, skills: ["React", "Next.js", "Figma", "Shopify", "CSS/Sass"]
+        },
+    ];
     const detail = staticFreelanceProjectDetails.find(p => p.id === project.id) || project;
     setSelectedProject(detail);
   };
@@ -389,19 +241,17 @@ function ExplorePageContent() {
 
   const handleSubmitProjectApplication = () => {
     console.log("Project application submitted:", { project: selectedProject?.title, ...projectApplicationData })
+    toast.success("Your proposal has been submitted (demo).");
     setShowProjectApplicationModal(false);
     setProjectApplicationData({ proposal: "", estimatedBudget: "", timeline: "", portfolio: null, experience: "" });
   };
 
 
-  // The static 'jobs' and 'companies' arrays that were here previously have been removed
-  // as 'recommendedJobsData' and 'topCompaniesData' state variables are used instead.
-
   return (
     <>
-      <div className="w-[65%] mx-auto"> {/* Ensure this div is properly closed before modals */}
+      <div>
+      <div className="w-[65%] mx-auto">
       <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="bg-gradient-to-br from-slate-50 to-[#0056B3]/10 border-none shadow-md">
           <CardContent className="p-8">
@@ -504,7 +354,7 @@ function ExplorePageContent() {
                 View more
               </Link>
             </div>
-            {freelanceProjects.length === 0 && <p className="text-slate-500">Freelance projects section is currently empty.</p>}
+            {freelanceProjects.length === 0 && <p className="text-slate-500">Freelance projects section is currently under development.</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {freelanceProjects.map((project) => (
                 <Card
@@ -569,7 +419,6 @@ function ExplorePageContent() {
                         <div>
                           <div className="flex items-center space-x-2 mb-2">
                             <p className="font-subheading font-medium text-base truncate" title={company.name}>{company.name || "N/A"}</p>
-                            {/* Verified status not in API list */}
                           </div>
                           <p className="text-sm text-muted-foreground">{company.industry || "N/A"}</p>
                         </div>
@@ -592,7 +441,7 @@ function ExplorePageContent() {
                         <Users className="h-3 w-3" />
                         <span>{company.size || "N/A"}</span>
                       </div>
-                       <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                         <Building2 className="h-3 w-3" />
                         <span>{company.jobs_count !== undefined ? `${company.jobs_count} open position${company.jobs_count !== 1 ? 's' : ''}` : "Jobs: N/A"}</span>
                       </div>
@@ -619,10 +468,9 @@ function ExplorePageContent() {
           </div>
         </TabsContent>
       </Tabs>
-    </div> {/* This closes the w-[65%] mx-auto div */}
-    {/* Removed an extra closing div here that was part of the duplicated structure an extra </div> was here */}
+    </div> {/* Closes w-[65%] mx-auto div */}
 
-    {/* Job Details Modal (copied & adapted from jobs/page.tsx) */}
+    {/* Job Details Modal */}
     {(selectedJob || detailedJobLoading || detailedJobError) && !showApplicationModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -677,6 +525,7 @@ function ExplorePageContent() {
                 </Button>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -687,7 +536,6 @@ function ExplorePageContent() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
                 <Button
@@ -709,10 +557,7 @@ function ExplorePageContent() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-
-            {/* Project Content */}
             <div className="space-y-6">
-              {/* Basic Info */}
               <div className="flex items-start space-x-4">
                 <img src={selectedProject.logo} alt={selectedProject.company} className="h-16 w-16 rounded-xl" />
                 <div className="flex-1">
@@ -738,16 +583,11 @@ function ExplorePageContent() {
                   </div>
                 </div>
               </div>
-
               <Separator />
-
-              {/* Description */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Project Description</h3>
                 <p className="text-slate-600 font-subheading leading-relaxed">{selectedProject.description}</p>
               </div>
-
-              {/* Requirements */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
                 <div className="space-y-2">
@@ -759,8 +599,6 @@ function ExplorePageContent() {
                   ))}
                 </div>
               </div>
-
-              {/* Deliverables */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Deliverables</h3>
                 <div className="space-y-2">
@@ -772,8 +610,6 @@ function ExplorePageContent() {
                   ))}
                 </div>
               </div>
-
-              {/* Required Skills */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Required Skills</h3>
                 <div className="flex flex-wrap gap-2">
@@ -784,8 +620,6 @@ function ExplorePageContent() {
                   ))}
                 </div>
               </div>
-
-              {/* Company Info */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedProject.company}</h3>
                 <p className="text-slate-600 font-subheading leading-relaxed mb-3">{selectedProject.companyInfo.description}</p>
@@ -804,8 +638,6 @@ function ExplorePageContent() {
                   </div>
                 </div>
               </div>
-
-              {/* Apply Button */}
               <div className="pt-4">
                 <Button
                   className="w-full bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
@@ -831,22 +663,20 @@ function ExplorePageContent() {
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          {/* Job Info */}
           {selectedJob && (
             <Card className="border-slate-200 bg-slate-50">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <img src={selectedJob.logo} alt={selectedJob.company} className="h-12 w-12 rounded" />
+                  <img src={selectedJob.company?.logo_url || "/placeholder-logo.png"} alt={selectedJob.company?.name} className="h-12 w-12 rounded" />
                   <div>
                     <h4 className="font-heading text-primary-navy">{selectedJob.title}</h4>
-                    <p className="text-slate-600 font-subheading text-sm">{selectedJob.company} • {selectedJob.location}</p>
+                    <p className="text-slate-600 font-subheading text-sm">{selectedJob.company?.name} • {selectedJob.location}</p>
                   </div>
                 </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Cover Letter */}
           <div>
             <Label htmlFor="coverLetter" className="font-subheading text-primary-navy">Cover Letter</Label>
             <Textarea
@@ -857,8 +687,6 @@ function ExplorePageContent() {
               className="mt-2 min-h-[120px] rounded-xl font-subheading"
             />
           </div>
-
-          {/* Expected Salary */}
           <div>
             <Label htmlFor="salary" className="font-subheading text-primary-navy">Expected Salary</Label>
             <Input
@@ -869,8 +697,6 @@ function ExplorePageContent() {
               className="mt-2 rounded-xl font-subheading"
             />
           </div>
-
-          {/* Start Date */}
           <div>
             <Label htmlFor="startDate" className="font-subheading text-primary-navy">Available Start Date</Label>
             <Input
@@ -881,8 +707,6 @@ function ExplorePageContent() {
               className="mt-2 rounded-xl font-subheading"
             />
           </div>
-
-          {/* Resume Upload */}
           <div>
             <Label className="font-subheading text-primary-navy">Resume</Label>
             <div className="mt-2 border-2 border-dashed border-slate-200 rounded-xl p-6 text-center">
@@ -891,8 +715,6 @@ function ExplorePageContent() {
               <p className="text-slate-400 font-subheading text-sm">PDF, DOC, or DOCX (max 5MB)</p>
             </div>
           </div>
-
-          {/* Action Buttons */}
           <div className="flex space-x-4 pt-4">
             <Button
               variant="outline"
@@ -913,7 +735,7 @@ function ExplorePageContent() {
       </DialogContent>
     </Dialog>
 
-    {/* Project Application Modal (remains static for now) */}
+    {/* Project Application Modal (static) */}
     <Dialog open={showProjectApplicationModal} onOpenChange={setShowProjectApplicationModal}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -921,12 +743,10 @@ function ExplorePageContent() {
             Submit Proposal for {selectedProject?.title}
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-6 mt-4">
-          {/* Project Info */}
           {selectedProject && (
             <Card className="border-slate-200 bg-slate-50">
-            <CardContent className="p-4">
+              <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <img src={selectedProject.logo} alt={selectedProject.company} className="h-12 w-12 rounded" />
                   <div>
@@ -937,8 +757,6 @@ function ExplorePageContent() {
               </CardContent>
             </Card>
           )}
-
-          {/* Proposal */}
           <div>
             <Label htmlFor="proposal" className="font-subheading text-primary-navy">Project Proposal</Label>
             <Textarea
@@ -949,8 +767,6 @@ function ExplorePageContent() {
               className="mt-2 min-h-[120px] rounded-xl font-subheading"
             />
           </div>
-
-          {/* Budget */}
           <div>
             <Label htmlFor="budget" className="font-subheading text-primary-navy">Your Budget Estimate</Label>
             <Input
@@ -961,8 +777,6 @@ function ExplorePageContent() {
               className="mt-2 rounded-xl font-subheading"
             />
           </div>
-
-          {/* Timeline */}
           <div>
             <Label htmlFor="timeline" className="font-subheading text-primary-navy">Estimated Timeline</Label>
             <Input
@@ -973,8 +787,6 @@ function ExplorePageContent() {
               className="mt-2 rounded-xl font-subheading"
             />
           </div>
-
-          {/* Portfolio Upload */}
           <div>
             <Label className="font-subheading text-primary-navy">Portfolio/Previous Work</Label>
             <div className="mt-2 border-2 border-dashed border-slate-200 rounded-xl p-6 text-center">
@@ -983,8 +795,6 @@ function ExplorePageContent() {
               <p className="text-slate-400 font-subheading text-sm">PDF, Images, or ZIP (max 10MB)</p>
             </div>
           </div>
-
-          {/* Action Buttons */}
           <div className="flex space-x-4 pt-4">
             <Button
               variant="outline"
@@ -1010,32 +820,18 @@ function ExplorePageContent() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedCompany(null)}
-                  className="rounded-xl"
-                >
+                <Button variant="ghost" size="icon" onClick={() => setSelectedCompany(null)} className="rounded-xl">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <h1 className="text-2xl font-heading text-primary-navy">Company Profile</h1>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedCompany(null)}
-                className="rounded-xl"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setSelectedCompany(null)} className="rounded-xl">
                 <X className="h-5 w-5" />
               </Button>
             </div>
-
-            {/* Company Content */}
             <div className="space-y-6">
-              {/* Basic Info */}
               <div className="flex items-start space-x-4">
                 <img src={selectedCompany.logo} alt={selectedCompany.name} className="h-20 w-20 rounded-xl" />
                 <div className="flex-1">
@@ -1058,111 +854,54 @@ function ExplorePageContent() {
                   </div>
                   <p className="text-lg text-slate-600 font-subheading mb-3">{selectedCompany.industry}</p>
                   <div className="grid grid-cols-2 gap-4 text-slate-600 font-subheading">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-slate-500" />
-                      <span>{selectedCompany.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-slate-500" />
-                      <span>{selectedCompany.size}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-slate-500" />
-                      <span>Founded {selectedCompany.founded}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-4 w-4 text-slate-500" />
-                      <span>{selectedCompany.jobOpenings.length} open positions</span>
-                    </div>
+                    <div className="flex items-center space-x-2"><MapPin className="h-4 w-4 text-slate-500" /><span>{selectedCompany.location}</span></div>
+                    <div className="flex items-center space-x-2"><Users className="h-4 w-4 text-slate-500" /><span>{selectedCompany.size}</span></div>
+                    <div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-slate-500" /><span>Founded {selectedCompany.founded}</span></div>
+                    <div className="flex items-center space-x-2"><Building2 className="h-4 w-4 text-slate-500" /><span>{selectedCompany.jobOpenings.length} open positions</span></div>
                   </div>
                 </div>
               </div>
-
               <Separator />
-
-              {/* About */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedCompany.name}</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed">{selectedCompany.description}</p>
-              </div>
-
-              {/* Mission & Vision */}
+              <div><h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedCompany.name}</h3><p className="text-slate-600 font-subheading leading-relaxed">{selectedCompany.description}</p></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-heading text-primary-navy mb-2">Mission</h4>
-                  <p className="text-slate-600 font-subheading">{selectedCompany.mission}</p>
-                </div>
-                <div>
-                  <h4 className="font-heading text-primary-navy mb-2">Vision</h4>
-                  <p className="text-slate-600 font-subheading">{selectedCompany.vision}</p>
-                </div>
+                <div><h4 className="font-heading text-primary-navy mb-2">Mission</h4><p className="text-slate-600 font-subheading">{selectedCompany.mission}</p></div>
+                <div><h4 className="font-heading text-primary-navy mb-2">Vision</h4><p className="text-slate-600 font-subheading">{selectedCompany.vision}</p></div>
               </div>
-
-              {/* Values */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Our Values</h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedCompany.values.map((value: string, index: number) => (
-                    <Badge key={index} className="bg-blue-100 text-blue-700 font-subheading">
-                      <Star className="h-3 w-3 mr-1" />
-                      {value}
-                    </Badge>
+                    <Badge key={index} className="bg-blue-100 text-blue-700 font-subheading"><Star className="h-3 w-3 mr-1" />{value}</Badge>
                   ))}
                 </div>
               </div>
-
-              {/* Benefits */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Benefits & Perks</h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedCompany.benefits.map((benefit: string, index: number) => (
-                    <Badge key={index} className="bg-green-100 text-green-700 font-subheading">
-                      <Award className="h-3 w-3 mr-1" />
-                      {benefit}
-                    </Badge>
+                    <Badge key={index} className="bg-green-100 text-green-700 font-subheading"><Award className="h-3 w-3 mr-1" />{benefit}</Badge>
                   ))}
                 </div>
               </div>
-
-              {/* Culture */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Company Culture</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed">{selectedCompany.culture}</p>
-              </div>
-
-              {/* Recent News */}
+              <div><h3 className="text-lg font-heading text-primary-navy mb-3">Company Culture</h3><p className="text-slate-600 font-subheading leading-relaxed">{selectedCompany.culture}</p></div>
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Recent News</h3>
                 <div className="space-y-2">
                   {selectedCompany.recentNews.map((news: string, index: number) => (
                     <div key={index} className="flex items-start space-x-2">
-                      <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-slate-600 font-subheading">{news}</span>
+                      <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div><span className="text-slate-600 font-subheading">{news}</span>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* Contact Info */}
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Contact Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-500">Website:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedCompany.website}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Email:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedCompany.email}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Phone:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedCompany.phone}</span>
-                  </div>
+                  <div><span className="text-slate-500">Website:</span><span className="ml-2 text-slate-700 font-subheading">{selectedCompany.website}</span></div>
+                  <div><span className="text-slate-500">Email:</span><span className="ml-2 text-slate-700 font-subheading">{selectedCompany.email}</span></div>
+                  <div><span className="text-slate-500">Phone:</span><span className="ml-2 text-slate-700 font-subheading">{selectedCompany.phone}</span></div>
                 </div>
               </div>
-
-              {/* Action Buttons */}
               <div className="flex space-x-4 pt-4">
                 <Button
                   className="flex-1 bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
@@ -1181,15 +920,9 @@ function ExplorePageContent() {
                   onClick={() => handleFollowClick(selectedCompany.id)}
                 >
                   {isFollowed(selectedCompany.id) ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Following
-                    </>
+                    <><CheckCircle className="h-4 w-4 mr-2" />Following</>
                   ) : (
-                    <>
-                      <Users className="h-4 w-4 mr-2" />
-                      Follow
-                    </>
+                    <><Users className="h-4 w-4 mr-2" />Follow</>
                   )}
                 </Button>
               </div>
@@ -1207,9 +940,7 @@ function ExplorePageContent() {
             Open Positions at {selectedCompany?.name}
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-6 mt-4">
-          {/* Company Info Header */}
           {selectedCompany && (
             <Card className="border-slate-200 bg-slate-50">
               <CardContent className="p-4">
@@ -1223,8 +954,6 @@ function ExplorePageContent() {
               </CardContent>
             </Card>
           )}
-
-          {/* Job Listings */}
           <div className="space-y-4">
             {selectedCompany?.jobOpenings.map((job: any) => (
               <Card key={job.id} className="border-slate-200 hover:shadow-md transition-shadow">
@@ -1233,57 +962,34 @@ function ExplorePageContent() {
                     <div className="flex-1">
                       <h3 className="text-lg font-heading text-primary-navy mb-2">{job.title}</h3>
                       <p className="text-slate-600 font-subheading mb-3">{job.description}</p>
-
                       <div className="grid grid-cols-2 gap-4 text-sm text-slate-600 font-subheading mb-4">
-                        <div className="flex items-center space-x-2">
-                          <Building2 className="h-4 w-4 text-slate-500" />
-                          <span>{job.department}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-slate-500" />
-                          <span>{job.location}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="h-4 w-4 text-slate-500" />
-                          <span>{job.salary}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-slate-500" />
-                          <span>{job.type}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Star className="h-4 w-4 text-slate-500" />
-                          <span>{job.experience} experience</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-slate-500" />
-                          <span>Posted {new Date(job.postedDate).toLocaleDateString()}</span>
-                        </div>
+                        <div className="flex items-center space-x-2"><Building2 className="h-4 w-4 text-slate-500" /><span>{job.department}</span></div>
+                        <div className="flex items-center space-x-2"><MapPin className="h-4 w-4 text-slate-500" /><span>{job.location}</span></div>
+                        <div className="flex items-center space-x-2"><DollarSign className="h-4 w-4 text-slate-500" /><span>{job.salary}</span></div>
+                        <div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-slate-500" /><span>{job.type}</span></div>
+                        <div className="flex items-center space-x-2"><Star className="h-4 w-4 text-slate-500" /><span>{job.experience} experience</span></div>
+                        <div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-slate-500" /><span>Posted {new Date(job.postedDate).toLocaleDateString()}</span></div>
                       </div>
                     </div>
                   </div>
-
                   <div className="flex justify-end">
+                    {/* *** FIX: Made this button functional *** */}
                     <Button
                       className="bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
                       onClick={() => {
-                        setShowJobsModal(false); // Close current (jobs) modal
-                        // setSelectedCompany(null); // Optionally reset selected company if it causes issues, user code didn't have this here
-                        handleJobClick({ id: job.id, ...job }); // Pass necessary job details, ensure 'id' is present for handleJobClick
-                                                              // User code had: handleJobClick({ id: job.id });
-                                                              // Spreading job ensures other details used by Job Application Modal are available if needed from this context.
+                        setShowJobsModal(false);
+                        // setSelectedCompany(null); // User confirmed this was not needed here
+                        handleJobClick({ id: job.id, ...job }); // Spread job to ensure all details are passed
                       }}
                     >
                       <Target className="h-4 w-4 mr-2" />
                       Apply Now
                     </Button>
                   </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
             ))}
-        </div>
-
-          {/* Back Button */}
+          </div>
           <div className="flex justify-center pt-4">
             <Button
               variant="outline"
@@ -1293,16 +999,15 @@ function ExplorePageContent() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Company Profile
             </Button>
-      </div>
-    </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
+      </div> {/* Closes the outer wrapper div */}
     </>
   )
 }
 
 export default function ExplorePage() {
-  // No ProtectedRoute here, explore page is public
-  // Suspense can be added if there are other client components that need it.
   return <ExplorePageContent />;
 }
