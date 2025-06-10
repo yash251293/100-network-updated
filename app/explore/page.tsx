@@ -383,7 +383,8 @@ function ExplorePageContent() {
     <>
       <div>
       <div className="w-[65%] mx-auto">
-      <h1 className="text-4xl font-heading text-primary-navy mb-6">Explore</h1>
+      <h1>Test</h1>
+      {/*
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="bg-gradient-to-br from-slate-50 to-[#0056B3]/10 border-none shadow-md">
           <CardContent className="p-8">
@@ -601,6 +602,10 @@ function ExplorePageContent() {
           </div>
         </TabsContent>
       </Tabs>
+      */}
+    </div>
+    </div>
+    {/*
     {/* Job Details Modal (copied & adapted from jobs/page.tsx) */}
     {(selectedJob || detailedJobLoading || detailedJobError) && !showApplicationModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
