@@ -66,7 +66,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex justify-center bg-white py-8">
       <div className="flex w-full max-w-6xl mx-auto rounded-2xl shadow-xl border">
         {/* Left Side - Image and Text from new login page */}
         <div className="w-1/2 flex-col items-center justify-center bg-[#FFFCF6] p-12 hidden md:flex">
@@ -86,7 +86,7 @@ export default function LoginPage() {
           </p>
         </div>
         {/* Right Side - Card from new login page */}
-        <div className="w-full md:w-1/2 flex flex-col bg-white p-6 sm:p-12 min-h-full overflow-y-auto">
+        <div className="w-full md:w-1/2 flex flex-col bg-white p-6 sm:p-12 overflow-y-auto">
           <div className="mb-8 text-center">
             <span className="text-2xl font-black text-brand-text-dark" style={{fontFamily: 'Inter, sans-serif'}}>100</span>
             <span className="text-2xl font-black text-brand-blue ml-1" style={{fontFamily: 'Inter, sans-serif'}}>Networks</span>
