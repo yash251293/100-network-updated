@@ -51,6 +51,7 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 - A public landing page for unauthenticated users.
 - Initialized Prisma with SQLite for local database.
 - Defined data models (User, Company, Job, Post, JobApplication, Experience, Education, PasswordResetToken) in `prisma/schema.prisma` including relations. Array-like fields are defined as `Json` type for SQLite compatibility.
+- Attempted initial Prisma migration (`npx prisma migrate dev --name init`). Command execution failed/inconclusive due to environment limitations. This step needs to be run manually to create the database schema and generate Prisma Client. **Manual setup instructions are available in `MANUAL_SETUP_GUIDE.md`.**
 
 **Important Next Steps for Production-Ready Auth & Profile:**
 - Implement password hashing for user credentials.
@@ -59,7 +60,7 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 - Implement profile picture file uploads.
 - Enhance profile editing (e.g., for experience and education arrays).
 - Thorough testing of all authentication and profile flows.
-- Manually run `pnpm add -D prisma`, `pnpm add @prisma/client`, and `npx prisma init` if not already effectively completed (tool environment had issues).
+- Manually run `pnpm add -D prisma`, `pnpm add @prisma/client`, and `npx prisma init` if not already effectively completed (tool environment had issues - see `MANUAL_SETUP_GUIDE.md`).
 - Manually run `pnpm run lint` and `pnpm run build` in a local development environment to identify and fix any ESLint or TypeScript errors.
 
 ## Phase 2: Core Content & Interaction
@@ -69,8 +70,9 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 *   Updated `lib/inMemoryStore.ts` to manage `Post` objects, including `addPost` (prepends to array for chronological order), `getPosts`, and `findPostById` functions.
 
 **Next Steps:**
-*   Run initial Prisma migration (`npx prisma migrate dev --name init`) to create database schema based on `prisma/schema.prisma` and generate Prisma Client.
-*   Implement API endpoints for creating posts (`POST /api/posts`) and reading posts (`GET /api/posts`), now using Prisma Client to interact with the database.
-*   Develop a UI component for creating new posts.
-*   Develop the main feed page (`/feed`) to display posts from the API (via Prisma).
-*   Implement functionality for liking and commenting on posts (API and UI, using Prisma).
+1.  **Complete Manual Prisma Setup:** Follow the instructions in `MANUAL_SETUP_GUIDE.md` to ensure Prisma dependencies are installed and the initial migration (`npx prisma migrate dev --name init`) is successfully executed.
+2.  Once the above manual steps are confirmed, begin refactoring authentication (`/api/auth/...`) and user profile APIs (`/api/users/...`) to use Prisma Client for database interaction, including the crucial step of implementing password hashing during registration and login.
+3.  Implement API endpoints for creating posts (`POST /api/posts`) and reading posts (`GET /api/posts`), using Prisma Client.
+4.  Develop a UI component for creating new posts.
+5.  Develop the main feed page (`/feed`) to display posts from the API (via Prisma).
+6.  Implement functionality for liking and commenting on posts (API and UI, using Prisma).
