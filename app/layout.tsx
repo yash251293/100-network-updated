@@ -4,7 +4,7 @@ import { Inter, Lora, Abhaya_Libre } from "next/font/google"
 import "./globals.css"
 // import HeaderWrapper from "@/components/header-wrapper"; // Still Commented out
 import { ThemeProvider } from "@/components/theme-provider"; // UNCOMMENTED
-// import { SessionProvider } from "next-auth/react"; // Still Commented out
+import { SessionProvider } from "next-auth/react"; // UNCOMMENTED
 
 const inter = Inter({ subsets: ["latin"] })
 const lora = Lora({ 
@@ -36,19 +36,19 @@ export default function RootLayout({
           meta tags to place directly here, but it doesn't hurt for clarity. */}
       <head />
       <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable}`}>
-        {/* <SessionProvider> */} {/* Still Commented out */}
+        <SessionProvider> {/* UNCOMMENTED */}
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
-            // disableTransitionOnChange // Keep as is from previous state, or decide if needed
+            // disableTransitionOnChange // Keep as is
           >
-            <div className="flex flex-col h-screen overflow-hidden bg-background"> {/* bg-background re-added */}
+            <div className="flex flex-col h-screen overflow-hidden bg-background">
               {/* <HeaderWrapper /> */} {/* Still Commented out */}
               <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
             </div>
           </ThemeProvider>
-        {/* </SessionProvider> */} {/* Still Commented out */}
+        </SessionProvider> {/* UNCOMMENTED */}
       </body>
     </html>
   );
