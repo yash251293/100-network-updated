@@ -172,10 +172,10 @@ model JobApplication {
 
 model PasswordResetToken {
   id        String   @id @default(cuid())
-  token     String   @unique
-  email     String
+  token     String   @unique // The hashed token
+  email     String   // Email of the user requesting reset (can be used for lookup if not directly related via userId)
   expiresAt DateTime
   createdAt DateTime @default(now())
-  // userId    String   @unique // Optional: if direct relation to User is preferred over email lookup
-  // user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Relation to the User model
+  userId    String   @unique // Ensures one active token per user and provides the foreign key
 }
