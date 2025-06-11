@@ -108,7 +108,7 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen flex justify-center bg-white py-8">
-      <div className="flex w-full max-w-6xl mx-auto rounded-2xl shadow-xl border">
+      <div className="flex flex-1 w-full max-w-6xl mx-auto rounded-2xl shadow-xl border">
         <div className="w-1/2 flex-col items-center justify-center bg-[#FFFCF6] p-12 hidden md:flex">
           <Image
             src="/imagex.png"
