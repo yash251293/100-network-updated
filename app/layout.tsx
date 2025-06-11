@@ -52,7 +52,7 @@ export default function RootLayout({
     return (
       <html lang="en" className="light" suppressHydrationWarning>
         {/* Using new UI's fonts for loading screen body */}
-        <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable} h-full bg-background text-foreground overflow-hidden`}>
+        <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable} min-h-screen bg-background text-foreground`}>
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <div className="text-xl font-semibold text-foreground animate-pulse">
               Loading...
@@ -66,7 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" suppressHydrationWarning>
       {/* Using new UI's fonts for main body */}
-      <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable} h-full bg-background text-foreground overflow-hidden`}>
+      <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable} min-h-screen bg-background text-foreground`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
