@@ -41,29 +41,36 @@ function ResetPasswordForm() {
       setError("Passwords do not match.");
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    // Aligning with API's current validation for this step
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await fetch('/api/auth/reset-password', { // Endpoint is correct
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword: password }),
+        body: JSON.stringify({ token, newPassword: password }), // Ensure 'token' and 'newPassword' are sent
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setMessage(data.message || "Password reset successfully! You can now login.");
+        setMessage(data.message || "Password reset successfully! Redirecting to login...");
+        // toast.success(data.message || "Password reset successfully! Redirecting to login..."); // If using sonner
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 3000); // Redirect after 3 seconds
       } else {
-        setError(data.message || "Failed to reset password. Please try again.");
+        setError(data.error || "Failed to reset password. The link may be invalid or expired.");
+        // toast.error(data.error || "Failed to reset password. The link may be invalid or expired.");
       }
     } catch (err: any) {
       console.error("Reset password error:", err);
       setError("An unexpected error occurred. Please try again.");
+      // toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }

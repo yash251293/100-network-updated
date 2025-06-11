@@ -1,68 +1,91 @@
+// app/api/companies/[id]/route.ts
 import { NextResponse } from 'next/server';
-import type { Company } from '@/lib/types';
-
-const sampleCompanies: Company[] = [
-  {
-    id: "comp1",
-    name: "Innovatech Solutions",
-    industry: "Technology",
-    logo: "/placeholder-logo.svg",
-    size: "50-200 employees",
-    location: "San Francisco, CA",
-    founded: 2015,
-    website: "https://innovatech.example.com",
-    description: "Innovatech Solutions is a dynamic and forward-thinking technology company specializing in cloud computing, AI-driven analytics, and custom software development. We empower businesses to transform and thrive in the digital age.",
-    mission: "To provide cutting-edge technology solutions that drive innovation and efficiency for our clients.",
-    vision: "To be a global leader in technology innovation, shaping the future of business.",
-    values: ["Innovation", "Customer Centricity", "Integrity", "Collaboration"],
-    benefits: ["Comprehensive health, dental, and vision insurance", "Generous PTO and flexible work hours", "Stock options and performance bonuses", "Continuous learning and development programs", "Modern and collaborative workspace"],
-    culture: "We foster a culture of creativity, continuous learning, and mutual respect. Our team is passionate about technology and solving complex challenges.",
-    verified: true,
-    companyType: "Private",
-    jobOpeningsCount: 5, // Example: could be dynamically calculated
-    contactEmail: "careers@innovatech.example.com",
-  },
-  {
-    id: "comp2",
-    name: "Synergy Corp",
-    industry: "Software",
-    logo: "/tech-startup-logo.png",
-    size: "200-500 employees",
-    location: "New York, NY",
-    founded: "2010",
-    website: "https://synergycorp.example.com",
-    description: "Synergy Corp develops enterprise software solutions that streamline operations and enhance productivity for businesses across various sectors. Our flagship product is a leader in its market segment.",
-    mission: "To create powerful and intuitive software that simplifies complex business processes.",
-    benefits: ["Competitive salaries", "Health and wellness programs", "Retirement savings plan", "Paid parental leave"],
-    culture: "A fast-paced yet supportive environment where innovation is encouraged and collaboration is key.",
-    verified: true,
-    companyType: "Startup",
-    jobOpeningsCount: 12,
-    contactEmail: "hr@synergycorp.example.com",
-  },
-  {
-    id: "comp3",
-    name: "HealthTrack Inc.",
-    industry: "Healthcare Technology",
-    logo: "/finance-company-logo.png", // Placeholder, ideally a health-related logo
-    size: "100-250 employees",
-    location: "Boston, MA",
-    founded: 2018,
-    website: "https://healthtrack.example.com",
-    description: "HealthTrack Inc. is dedicated to developing innovative digital health solutions that empower individuals to take control of their well-being. We specialize in wearable technology and health data analytics.",
-    mission: "To make health tracking accessible and actionable for everyone.",
-    verified: false,
-    companyType: "Startup",
-    jobOpeningsCount: 3,
-    contactEmail: "info@healthtrack.example.com",
-    contactPhone: "1-800-555-1234"
-  }
-];
+import prisma from '@/lib/prisma'; // Adjusted path
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Adjust path
+import type { Company } from '@prisma/client'; // Using Prisma's generated Company type
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const company = sampleCompanies.find(c => c.id === params.id);
-  if (company) {
+  try {
+    const companyId = params.id;
+    if (!companyId) {
+      return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
+    }
+
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      // include: { jobs: true } // Optionally include related jobs
+    });
+
+    if (!company) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    }
     return NextResponse.json(company);
+  } catch (error) {
+    console.error(`Error fetching company ${params.id}:`, error);
+    return NextResponse.json({ error: 'Failed to fetch company' }, { status: 500 });
   }
-  return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+}
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    const companyId = params.id;
+
+    if (!companyId) {
+      return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
+    }
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized: Must be logged in to update a company' }, { status: 401 });
+    }
+    // TODO: Implement more granular authorization (e.g., only company admin/owner can update).
+    // For now, any authenticated user can update any company. This is a simplification.
+
+    const body = await request.json();
+    const {
+      name, industry, logoUrl, size, location, founded,
+      website, description, mission, vision, values, culture,
+      verified, companyType, contactEmail, contactPhone
+    } = body as Partial<Company>;
+
+    // Construct an object with only the fields that are actually provided in the request body
+    const companyDataToUpdate: { [key: string]: any } = {};
+    if (name !== undefined) companyDataToUpdate.name = name;
+    if (industry !== undefined) companyDataToUpdate.industry = industry;
+    if (logoUrl !== undefined) companyDataToUpdate.logoUrl = logoUrl;
+    if (size !== undefined) companyDataToUpdate.size = size;
+    if (location !== undefined) companyDataToUpdate.location = location;
+    if (founded !== undefined) companyDataToUpdate.founded = founded;
+    if (website !== undefined) companyDataToUpdate.website = website;
+    if (description !== undefined) companyDataToUpdate.description = description;
+    if (mission !== undefined) companyDataToUpdate.mission = mission;
+    if (vision !== undefined) companyDataToUpdate.vision = vision;
+    if (values !== undefined) companyDataToUpdate.values = values; // Assumes 'values' is a JSON-compatible array
+    if (culture !== undefined) companyDataToUpdate.culture = culture;
+    if (verified !== undefined) companyDataToUpdate.verified = verified;
+    if (companyType !== undefined) companyDataToUpdate.companyType = companyType;
+    if (contactEmail !== undefined) companyDataToUpdate.contactEmail = contactEmail;
+    if (contactPhone !== undefined) companyDataToUpdate.contactPhone = contactPhone;
+
+    if (Object.keys(companyDataToUpdate).length === 0) {
+      return NextResponse.json({ error: 'No fields provided for update' }, { status: 400 });
+    }
+
+    const updatedCompany = await prisma.company.update({
+      where: { id: companyId },
+      data: companyDataToUpdate,
+    });
+
+    return NextResponse.json(updatedCompany);
+  } catch (error: any) {
+    console.error(`Error updating company ${params.id}:`, error);
+    if (error.code === 'P2025') { // Prisma error code for record not found during update
+        return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    }
+    if (error.message.includes("JSON")) { // Check if it's a JSON parsing error
+        return NextResponse.json({ error: "Invalid JSON payload provided." }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Failed to update company', details: error.message }, { status: 500 });
+  }
 }

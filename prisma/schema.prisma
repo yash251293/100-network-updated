@@ -147,6 +147,20 @@ model Post {
 
   authorId                String
   author                  User      @relation(fields: [authorId], references: [id])
+  likes                   Like[]    // Relation to Likes
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId]) // A user can like a post only once
 }
 
 model JobApplication {

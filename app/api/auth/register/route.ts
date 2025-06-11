@@ -1,10 +1,9 @@
 // app/api/auth/register/route.ts
 import { NextResponse } from 'next/server';
-import { users, addUser, findUserByEmail } from '@/lib/inMemoryStore'; // Adjust path if necessary
-import type { User } from '@/lib/types'; // Import User type
-
-// THIS IS A TEMPORARY IN-MEMORY REGISTRATION PROCESS.
-// DO NOT USE IN PRODUCTION WITHOUT A PROPER DATABASE AND SECURE PASSWORD HASHING.
+import prisma from '@/lib/prisma'; // Adjusted path to the new prisma client instance
+import bcryptjs from 'bcryptjs';
+// User type from lib/types might still be useful for request body, but Prisma types will be primary for DB interaction.
+// import type { User } from '@/lib/types';
 
 export async function POST(request: Request) {
   try {
@@ -24,49 +23,53 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Password must be at least 6 characters long.' }, { status: 400 });
     }
 
-    const existingUser = findUserByEmail(email);
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email },
+    });
+
     if (existingUser) {
       console.log("Registration attempt for existing email:", email);
       return NextResponse.json({ error: 'User already exists with this email.' }, { status: 409 }); // 409 Conflict
     }
 
-    // !!IMPORTANT!!: In a real application, you MUST hash the password here before saving.
-    // Storing plain text passwords is a major security vulnerability.
-    // Example using a hypothetical hashing function:
-    // const hashedPassword = await hashPassword(password);
-    // For this demo, password is NOT hashed.
+    const saltRounds = 10;
+    const hashedPassword = await bcryptjs.hash(password, saltRounds);
 
-    const newUserCredentials: Pick<User, 'id' | 'name' | 'email' | 'password'> = {
-      id: Date.now().toString(), // Simple unique ID
-      name,
-      email,
-      password: password, // Storing plain text password (BAD PRACTICE for production)
-    };
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        headline: '', // Default empty string
+        summary: '',  // Default empty string
+        location: '', // Default empty string
+        profilePictureUrl: null,
+        linkedInProfileUrl: null,
+        githubProfileUrl: null,
+        personalWebsiteUrl: null,
+        skills: [], // Prisma handles Json for SQLite, which can store arrays
+        // Experience and Education are separate related models, so they are empty by default.
+      },
+    });
 
-    // Using the addUser function from inMemoryStore which includes a check, though redundant here as we checked above.
-    // In a real scenario, addUser would handle the DB insertion.
-    let registeredUser: User;
-    try {
-        registeredUser = addUser(newUserCredentials); // This will use the users array imported from inMemoryStore
-    } catch (e: any) {
-        // This catch is mainly if addUser itself could throw an error (e.g., DB error)
-        // or if the redundant check within addUser (if kept) finds a user.
-        return NextResponse.json({ error: e.message || 'Failed to add user to store.' }, { status: 409 });
-    }
-
-    console.log('User registered:', { id: registeredUser.id, name: registeredUser.name, email: registeredUser.email }); // Don't log password
-    console.log('Total users in store:', users.length);
-
+    console.log('User registered with Prisma:', { id: newUser.id, name: newUser.name, email: newUser.email });
 
     // Do not return the password in the response
     return NextResponse.json({
         message: 'User registered successfully.',
-        user: { id: registeredUser.id, name: registeredUser.name, email: registeredUser.email }
+        userId: newUser.id // Return userId, name, and email if desired
+        // user: { id: newUser.id, name: newUser.name, email: newUser.email }
     }, { status: 201 });
 
   } catch (error) {
     console.error('Registration error:', error);
     let errorMessage = 'Failed to register user.';
+    // Check if it's a Prisma known error
+    if (error instanceof Error && 'code' in error && (error as any).code?.startsWith('P')) {
+      errorMessage = `Database error: ${(error as any).code}`; // More specific DB error
+    } else if (error instanceof Error) {
+        errorMessage = error.message;
+    }
     if (error instanceof Error) {
         errorMessage = error.message;
     }

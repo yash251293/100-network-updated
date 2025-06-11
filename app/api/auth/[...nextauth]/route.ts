@@ -1,10 +1,9 @@
 // app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions, User as NextAuthUser } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { users, findUserByEmail, UserRecord } from '@/lib/inMemoryStore'; // Adjust path if necessary
-
-// THIS IS A TEMPORARY IN-MEMORY STORE FOR USERS VIA CredentialsProvider
-// DO NOT USE IN PRODUCTION WITHOUT A PROPER DATABASE AND SECURE PASSWORD HASHING.
+import prisma from '@/lib/prisma'; // Adjusted path
+import bcryptjs from 'bcryptjs';
+// UserRecord is no longer needed from inMemoryStore
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,30 +15,47 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req): Promise<NextAuthUser | null> {
         if (!credentials) {
-          console.log("No credentials provided");
+          console.log("NextAuth: No credentials provided");
           return null;
         }
 
-        console.log("Attempting authorization for email:", credentials.email);
-        const user = findUserByEmail(credentials.email);
+        console.log("NextAuth: Attempting authorization for email:", credentials.email);
 
-        if (user) {
-          console.log("User found in store:", user.email);
-          // !!IMPORTANT!!: In a real app, HASH passwords during registration
-          // and COMPARE HASHED PASSWORDS here.
-          // Storing plain text passwords as done in this demo is a major security risk.
-          if (user.password === credentials.password) { // PLAIN TEXT PASSWORD COMPARISON (BAD PRACTICE)
-            console.log("Password match for user:", user.email);
-            // Return the user object expected by NextAuth
-            return { id: user.id, name: user.name, email: user.email };
-          } else {
-            console.log("Password mismatch for user:", user.email);
-            return null;
-          }
-        } else {
-          console.log("User not found in store:", credentials.email);
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user) {
+          console.log("NextAuth: User not found in database:", credentials.email);
           return null;
         }
+
+        // Ensure user.password is not null (it's not optional in Prisma schema for User)
+        // const isValidPassword = await bcryptjs.compare(credentials.password, user.password);
+        // console.log(`NextAuth: Password validation result for ${user.email}: ${isValidPassword}`);
+
+        // if (isValidPassword) {
+        // Temporary check without bcrypt until it can be installed and tested
+        if (user.password && credentials.password === user.password && process.env.TEMPORARY_PASSWORD_CHECK === 'true') {
+            console.warn(`NextAuth: TEMPORARY PLAIN TEXT PASSWORD CHECK FOR ${user.email}. Bcrypt comparison skipped.`);
+            const isValidPassword = true; // Assuming plain text match for now
+             if (isValidPassword) { // This will be true if above temporary check passes
+                console.log("NextAuth: Password match for user:", user.email);
+                return { id: user.id, name: user.name, email: user.email }; // Return necessary fields
+             }
+        } else if (user.password) {
+            // This is the actual bcryptjs comparison block
+            const isValidPassword = await bcryptjs.compare(credentials.password, user.password);
+            console.log(`NextAuth: Password validation result for ${user.email}: ${isValidPassword}`);
+            if (isValidPassword) {
+                console.log("NextAuth: Password match for user (hashed):", user.email);
+                return { id: user.id, name: user.name, email: user.email };
+            }
+        }
+
+        // If password validation fails or user.password was unexpectedly null
+        console.log("NextAuth: Password mismatch or missing stored password for user:", user.email);
+        return null;
       }
     })
   ],

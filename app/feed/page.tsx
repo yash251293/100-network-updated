@@ -2,19 +2,86 @@
 
 import type React from "react"
 
+import type React from "react" // Added React import
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+// Input not directly used in feed display/post creation text area, but keeping if needed for other parts.
+// import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { BookmarkIcon, Heart, MessageCircle, MoreHorizontal, X, Send, ImageIcon, Plus, Smile, AtSign, Hash } from "lucide-react"
-import { useState } from "react"
+import {
+  BookmarkIcon, Heart, MessageCircle, MoreHorizontal, X, Send, ImageIcon, Plus, Smile, AtSign, Hash,
+  Edit3Icon, // For Edit button
+  Trash2Icon // For Delete button
+} from "lucide-react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import type { Post } from "@/lib/types"
+import { formatDistanceToNow } from 'date-fns';
+import Link from "next/link"; // For Edit button navigation
+// import { toast } from "sonner"; // Assuming Sonner is available
+
 
 export default function FeedPage() {
+  const { data: session } = useSession();
+  const currentUserId = (session?.user as any)?.id;
+
   const [postText, setPostText] = useState("")
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchPosts = async () => {
+    setIsLoadingPosts(true);
+    setFetchError(null);
+    try {
+      const response = await fetch('/api/posts');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch posts');
+      }
+      const data: Post[] = await response.json();
+      setPosts(data);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      setFetchError(error instanceof Error ? error.message : 'Unknown error occurred');
+      // alert(error instanceof Error ? error.message : 'Failed to fetch posts'); // Using alert if no toast
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete post.");
+      }
+      // toast.success("Post deleted successfully.");
+      alert("Post deleted successfully.");
+      // Refresh posts by filtering out the deleted one or re-fetching
+      setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
+      // Or: fetchPosts();
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      // toast.error(error instanceof Error ? error.message : "Failed to delete post.");
+      alert(error instanceof Error ? error.message : "Failed to delete post.");
+    }
+  };
+
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -27,13 +94,53 @@ export default function FeedPage() {
     }
   }
 
-  const handlePost = () => {
-    // Handle posting logic here
-    console.log("Posting:", { text: postText, image: selectedImage })
-    setPostText("")
-    setSelectedImage(null)
-    setIsDialogOpen(false)
-  }
+  const handlePost = async () => {
+    if (!session || !session.user) {
+      // toast.error("You must be logged in to create a post.");
+      alert("You must be logged in to create a post."); // Simple alert if toast not configured
+      return;
+    }
+    if (!postText.trim()) {
+      // toast.error("Post content cannot be empty.");
+      alert("Post content cannot be empty.");
+      return;
+    }
+
+    setIsSubmittingPost(true);
+    try {
+      // For now, selectedImage (base64 data URL) is not sent.
+      // Backend /api/posts expects content and optionally imageUrl (actual URL).
+      // Actual image upload logic would convert selectedImage to a URL via an upload service.
+      const payload = {
+        content: postText,
+        // imageUrl: null, // Explicitly null, or undefined if backend handles it
+      };
+
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create post.");
+      }
+
+      // const newPost = await response.json(); // The created post from the API
+      // toast.success("Post created successfully!");
+      setPostText("");
+      setSelectedImage(null); // Reset image state
+      setIsDialogOpen(false);
+      fetchPosts(); // Refresh posts to show the new one
+    } catch (error) {
+      console.error("Error creating post:", error);
+      // toast.error(error instanceof Error ? error.message : "Failed to create post.");
+      alert(error instanceof Error ? error.message : "Failed to create post.");
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
 
   const removeImage = () => {
     setSelectedImage(null)
@@ -176,142 +283,155 @@ export default function FeedPage() {
 
         {/* Feed Posts */}
         <div className="space-y-6">
-          {/* Featured Post */}
-          <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
-            <CardContent className="p-8">
-              <div className="flex justify-between items-start mb-6">
-            <div className="flex space-x-4">
-                  <Avatar className="w-16 h-16">
-                <AvatarImage src="/placeholder-user.jpg" alt="User" />
-                    <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">CL</AvatarFallback>
-              </Avatar>
-              <div>
-                    <div className="font-heading text-xl text-primary-navy">Carl Livingston</div>
-                    <div className="text-base text-slate-500 font-subheading">Computer Science · Stanford University · 2024</div>
-                    <div className="text-sm text-slate-400 mt-1">2 hours ago</div>
+          {/* Display Loading State */}
+          {isLoadingPosts && (
+            <div className="text-center py-10">
+              <p className="text-lg text-slate-500">Loading posts...</p>
+              {/* Consider adding a spinner component here */}
+            </div>
+          )}
+
+          {/* Display Fetch Error */}
+          {fetchError && (
+            <Card className="border-red-300 bg-red-50">
+              <CardContent className="p-6 text-center">
+                <p className="text-red-600 font-medium">Error fetching posts:</p>
+                <p className="text-red-500">{fetchError}</p>
+                <Button onClick={fetchPosts} variant="outline" className="mt-4">Try Again</Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Display Posts or No Posts Message */}
+          {!isLoadingPosts && !fetchError && posts.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-lg text-slate-500">No posts in the feed yet.</p>
+              <p className="text-sm text-slate-400">Be the first to share something!</p>
+            </div>
+          )}
+
+          {!isLoadingPosts && !fetchError && posts.map((post) => (
+            <Card key={post.id} className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
+              <CardContent className="p-8">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex space-x-4">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={post.authorProfilePictureUrl || "/placeholder-user.jpg"} alt={post.authorName || "User"} />
+                      <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">
+                        {post.authorName?.charAt(0).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-heading text-xl text-primary-navy">{post.authorName}</div>
+                      {/* TODO: Add author headline if available from session/DB fetch for author */}
+                      {/* <div className="text-base text-slate-500 font-subheading">Author Headline Here</div> */}
+                      <div className="text-sm text-slate-400 mt-1">
+                        {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10">
+                    <MoreHorizontal className="h-6 w-6" />
+                  </Button>
+                  {/* Edit/Delete buttons for author */}
+                  {currentUserId && post.authorId === currentUserId && (
+                    <div className="ml-auto flex space-x-2">
+                      <Link href={`/posts/${post.id}/edit`}>
+                        <Button variant="ghost" size="icon" className="text-slate-400 hover:text-blue-500 h-8 w-8">
+                          <Edit3Icon className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-400 hover:text-red-500 h-8 w-8"
+                        onClick={() => handleDeletePost(post.id)}
+                      >
+                        <Trash2Icon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-slate-700 font-subheading leading-relaxed text-base whitespace-pre-line">
+                    {post.content}
+                  </p>
+                </div>
+
+                {post.imageUrl && (
+                  <div className="rounded-xl overflow-hidden border border-slate-100 mb-6">
+                    <img src={post.imageUrl} alt="Post image" className="w-full object-cover" />
+                  </div>
+                )}
+                {/* TODO: Add videoUrl and linkPreview rendering */}
+
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-6 text-slate-500">
+                    <span className="text-base font-subheading">{post.likesCount} likes • {post.commentsCount} comments</span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10"
+                      onClick={() => console.log("Like clicked for post:", post.id)}
+                    >
+                      <Heart className="h-6 w-6" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10"
+                      onClick={() => console.log("Comment clicked for post:", post.id)}
+                    >
+                      <MessageCircle className="h-6 w-6" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10"
+                      onClick={() => console.log("Bookmark clicked for post:", post.id)} // Added for completeness
+                    >
+                      <BookmarkIcon className="h-6 w-6" />
+                    </Button>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10">
-                  <MoreHorizontal className="h-6 w-6" />
-                </Button>
-              </div>
+              </CardContent>
+            </Card>
+          ))}
 
-              <div className="mb-6">
-                <p className="text-slate-700 font-subheading leading-relaxed text-base">
-                  Just finished my final interview round at Google! 🎉 The preparation was intense, but these interview tips from the 100 Networks community were game-changers. 
-                  
-                  Key takeaways that helped me:
-                  • Research the company culture deeply
-                  • Practice behavioral questions with real examples
-                  • Ask thoughtful questions about the role
-                  
-                  Grateful for this amazing community! 💙
-                </p>
-            </div>
-
-              <div className="rounded-xl overflow-hidden border border-slate-100 mb-6">
-                <img src="/campus-walk.png" alt="Students on campus" className="w-full h-52 object-cover" />
-                <div className="p-6 bg-slate-50">
-                  <h3 className="font-heading text-lg text-primary-navy mb-2">5 Interview Tips That Actually Work</h3>
-                  <p className="text-base text-slate-600 font-subheading">Transform your interview game with research-backed strategies...</p>
-                  <p className="text-sm text-[#0056B3] mt-2 font-medium">100networks.com</p>
-          </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-6 text-slate-500">
-                  <span className="text-base font-subheading">127 likes • 23 comments</span>
-            </div>
-              <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10">
-                    <Heart className="h-6 w-6" />
-                </Button>
-                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10">
-                    <MessageCircle className="h-6 w-6" />
-                </Button>
-                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10">
-                    <BookmarkIcon className="h-6 w-6" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-          {/* Regular Post */}
-          <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
-            <CardContent className="p-8">
-              <div className="flex justify-between items-start mb-6">
-            <div className="flex space-x-4">
-                  <Avatar className="w-16 h-16">
-                <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
-                    <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">IA</AvatarFallback>
-              </Avatar>
-              <div>
-                    <div className="font-heading text-xl text-primary-navy">Ian Arruda, MPM, CAPM</div>
-                    <div className="text-base text-slate-500 font-subheading">Arizona State University · Project Management</div>
-                    <div className="text-sm text-slate-400 mt-1">1 day ago</div>
-              </div>
-            </div>
-                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10">
-                  <MoreHorizontal className="h-6 w-6" />
-              </Button>
-            </div>
-
-              <div className="mb-6">
-                <p className="text-slate-700 font-subheading leading-relaxed text-base">
-                  🎓 I finally did it! After two years of balancing work, studies, and life, I've earned my Master of Project Management degree from Arizona State University.
-                  
-                  This journey taught me that persistence pays off. Thank you to everyone who supported me along the way – mentors, classmates, and the incredible 100 Networks community! 
-                  
-                  Next chapter: Leading impactful projects and helping others achieve their goals. 🚀
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-6 text-slate-500">
-                  <span className="text-base font-subheading">89 likes • 12 comments</span>
-          </div>
-              <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10">
-                    <Heart className="h-6 w-6" />
-                </Button>
-                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10">
-                    <MessageCircle className="h-6 w-6" />
-                </Button>
-                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10">
-                    <BookmarkIcon className="h-6 w-6" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-          {/* Community Spotlight Card */}
-          <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white">
-            <CardContent className="p-8">
-              <div className="flex items-start space-x-6">
-                <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
-                  <span className="text-3xl">✨</span>
-            </div>
-            <div className="flex-1">
-                  <h3 className="font-heading text-2xl mb-3">Welcome to the Community Feed!</h3>
-                  <p className="text-[#0056B3]/30 font-subheading leading-relaxed mb-6 text-lg">
-                    Follow thousands of students and professionals. Share your journey, get advice, and discover opportunities that align with your goals.
-                  </p>
-                  <Button 
-                    variant="secondary" 
-                    className="bg-white text-primary-navy hover:bg-primary-navy hover:text-white rounded-full font-subheading border border-white px-6 py-3 text-base"
-                    onClick={() => setIsDialogOpen(true)}
-                  >
-                    Share Your Story
+          {/* Community Spotlight Card (can be kept or removed based on dynamic content strategy) */}
+           {!isLoadingPosts && !fetchError && posts.length > 0 && ( // Show only if there are posts
+            <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white mt-10">
+              <CardContent className="p-8">
+                <div className="flex items-start space-x-6">
+                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
+                    <span className="text-3xl">✨</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-2xl mb-3">Join the Conversation!</h3>
+                    <p className="text-white/80 font-subheading leading-relaxed mb-6 text-lg">
+                      You're seeing the latest from the 100 Networks community. Share your thoughts, achievements, and connect with others.
+                    </p>
+                    <Button
+                      variant="secondary"
+                      className="bg-white text-primary-navy hover:bg-slate-100 rounded-full font-subheading border border-white px-6 py-3 text-base"
+                      onClick={() => setIsDialogOpen(true)}
+                    >
+                      Create Your Post
+                    </Button>
+                  </div>
+                  {/* Optional: Close button for this spotlight card if it's dismissible
+                  <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10 h-10 w-10">
+                    <X className="h-6 w-6" />
                   </Button>
-            </div>
-                <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10 h-10 w-10">
-                  <X className="h-6 w-6" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                  */}
+                </div>
+              </CardContent>
+            </Card>
+           )}
         </div>
       </div>
     </div>

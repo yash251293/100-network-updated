@@ -18,9 +18,10 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    // No need for a separate error state, toast can handle it.
 
     try {
-      const response = await fetch('/api/auth/request-password-reset', {
+      const response = await fetch('/api/auth/forgot-password', { // Updated API endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,19 +29,21 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email }),
       });
 
+      const data = await response.json(); // Always parse JSON to get messages
+
       if (response.ok) {
-        const data = await response.json();
-        setIsSubmitted(true);
-        toast.success(data.message || "Password reset link sent (if email exists).");
+        setIsSubmitted(true); // Show the "Check your email" view
+        // The API now always returns a generic success message.
+        toast.success(data.message || "If your email is registered, you will receive a password reset link.");
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || "Failed to request password reset.");
-        setIsSubmitted(false); // Explicitly keep the form visible on error
+        // Display error from API, or a generic one
+        toast.error(data.error || "Failed to request password reset. Please try again.");
+        setIsSubmitted(false);
       }
     } catch (error) {
       console.error("Forgot password error:", error);
       toast.error("An unexpected error occurred. Please try again.");
-      setIsSubmitted(false); // Explicitly keep the form visible on error
+      setIsSubmitted(false);
     } finally {
       setIsLoading(false)
     }
