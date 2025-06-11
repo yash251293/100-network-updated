@@ -125,7 +125,7 @@ export default function SignUpPage() {
             Real roles. Real startups.
           </p>
         </div>
-        <div className="w-1/2 flex flex-col justify-center bg-white p-12 min-h-full">
+        <div className="w-1/2 flex flex-col bg-white p-12 min-h-full overflow-y-auto">
           <div className="mb-8 text-center">
             <span className="text-2xl font-black text-brand-text-dark" style={{fontFamily: 'Inter, sans-serif'}}>100</span>
             <span className="text-2xl font-black text-brand-blue ml-1" style={{fontFamily: 'Inter, sans-serif'}}>Networks</span>
