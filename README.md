@@ -97,3 +97,11 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 4.  Implement functionality for commenting on posts (API and UI, using Prisma).
 5.  Refactor Job and Freelance Project APIs to use Prisma.
 6.  Enhance Post creation UI to handle actual image uploads (backend and frontend).
+
+## Troubleshooting / Known Issues
+*   **React Context in Server Components:** Encountered 'React Context is unavailable in Server Components' error, typically when a Client Component hook like `useSession` or `useState` is used in a component not marked with `"use client";`. Ensured components like `components/header.tsx` (which uses `useSession`) are correctly marked. If this error appears again, check the import chain: any component directly importing and using a Client Component with context hooks might also need to be a Client Component if it doesn't form a clear boundary. `app/layout.tsx` is a Server Component by default; `SessionProvider` (a Client Component context provider) is correctly placed within it to provide context to child Client Components.
+*   **Tooling Limitations:** Automated execution of `pnpm` commands (for package installation) and `npx prisma` commands (for migrations, init) has been unreliable. These steps often require manual execution by the user in their local environment as detailed in `MANUAL_SETUP_GUIDE.md` and specific README sections.
+*   **Debugging 'React Context is unavailable' error on root page:**
+    *   Temporarily simplified `app/page.tsx` to isolate the issue.
+    *   Temporarily removed `HeaderWrapper` from `app/layout.tsx` to further isolate if the header (which uses `useSession`) is related to the context error on the root page.
+    *   The root cause is likely related to how Client Components (especially those using context like `useSession` from NextAuth.js) are rendered within the main layout or its direct children. `components/header.tsx` was confirmed to be a Client Component. Further investigation might be needed for `components/header-wrapper.tsx` if it's an intermediary Server Component. The Prisma migration step is paused until the user can confirm the dev server runs without this context error after these changes.

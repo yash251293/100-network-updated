@@ -35,7 +35,7 @@ export default function RootLayout({
         <SessionProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <div className="flex flex-col h-screen overflow-hidden bg-background">
-              <HeaderWrapper />
+              {/* <HeaderWrapper /> */} {/* Temporarily commented out for debugging React Context error */}
               <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
             </div>
           </ThemeProvider>
