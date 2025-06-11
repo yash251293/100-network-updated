@@ -3,6 +3,7 @@ import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface"
 import { Inter, Lora, Abhaya_Libre } from "next/font/google"
 import "./globals.css"
 import HeaderWrapper from "@/components/header-wrapper"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 const lora = Lora({ 
@@ -28,12 +29,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="light">
+    <html lang="en">
       <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable}`}>
-        <div className="flex flex-col h-screen overflow-hidden bg-background">
-          <HeaderWrapper />
-          <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <div className="flex flex-col h-screen overflow-hidden bg-background">
+            <HeaderWrapper />
+            <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
           </div>
+        </ThemeProvider>
       </body>
     </html>
   )

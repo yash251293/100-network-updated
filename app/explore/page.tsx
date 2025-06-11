@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -12,303 +12,103 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { BookmarkIcon, ArrowLeft, X, Send, MessageCircle, Building2, MapPin, Calendar, DollarSign, Clock, Users, Star, Award, CheckCircle, Target, Upload } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { Job, FreelanceProject, Company } from "@/lib/types"
 
 export default function ExplorePage() {
-  const [selectedJob, setSelectedJob] = useState<any>(null)
-  const [selectedProject, setSelectedProject] = useState<any>(null)
-  const [selectedCompany, setSelectedCompany] = useState<any>(null)
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [selectedProject, setSelectedProject] = useState<FreelanceProject | null>(null)
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [showApplicationModal, setShowApplicationModal] = useState(false)
   const [showProjectApplicationModal, setShowProjectApplicationModal] = useState(false)
   const [showJobsModal, setShowJobsModal] = useState(false)
-  const [followedCompanies, setFollowedCompanies] = useState<number[]>([])
+  const [followedCompanies, setFollowedCompanies] = useState<string[]>([]) // Assuming company IDs are strings
   const [applicationData, setApplicationData] = useState({
     coverLetter: "",
     expectedSalary: "",
     startDate: "",
-    resume: null,
-    portfolio: null
+    resume: null as File | null, // For file inputs
+    portfolio: null as File | null,
   })
   const [projectApplicationData, setProjectApplicationData] = useState({
     proposal: "",
     estimatedBudget: "",
     timeline: "",
-    portfolio: null,
+    portfolio: null as File | null,
     experience: ""
   })
 
-  const jobs = [
-    {
-      id: 1,
-      title: "Senior Frontend Developer",
-      company: "Atreyus Ai",
-      industry: "Information Technology",
-      logo: "/abstract-tech-logo.png",
-      type: "Full-time",
-      location: "Remote",
-      salaryRange: "$120,000 - $150,000",
-      posted: "3 days ago",
-      description: "We're looking for an experienced Frontend Developer to join our AI-driven platform team. You'll be responsible for building beautiful, responsive user interfaces that make complex AI tools accessible to everyone.",
-      requirements: ["5+ years React experience", "TypeScript proficiency", "Experience with modern build tools", "Strong UI/UX design sense"],
-      responsibilities: ["Build responsive web applications", "Collaborate with AI/ML teams", "Optimize for performance", "Code reviews and mentoring"],
-      companyInfo: {
-        size: "50-200 employees",
-        founded: 2019,
-        website: "atreyus.ai",
-        description: "Atreyus AI is building the future of artificial intelligence platforms for businesses."
-      },
-      benefits: ["Health Insurance", "Stock Options", "Remote Work", "Flexible Hours", "Learning Budget"]
-    },
-    {
-      id: 2,
-      title: "Python AI Engineer",
-      company: "Flexbone",
-      industry: "Healthcare",
-      logo: "/flexbone-logo.png",
-      type: "Contract",
-      location: "Hybrid",
-      salaryRange: "$90,000 - $110,000",
-      posted: "1 week ago",
-      description: "Join our healthcare innovation team to develop AI-powered solutions that improve patient outcomes. We're building the next generation of medical diagnostic tools.",
-      requirements: ["3+ years Python experience", "Machine Learning expertise", "Healthcare domain knowledge preferred", "Experience with TensorFlow/PyTorch"],
-      responsibilities: ["Develop ML models for medical diagnosis", "Work with healthcare professionals", "Ensure regulatory compliance", "Data analysis and visualization"],
-      companyInfo: {
-        size: "200-500 employees",
-        founded: 2015,
-        website: "flexbone.com",
-        description: "Flexbone is revolutionizing healthcare through innovative technology solutions."
-      },
-      benefits: ["Health Insurance", "Dental & Vision", "401(k)", "Professional Development", "Health Savings Account"]
-    },
-    {
-      id: 3,
-      title: "Full Stack Developer",
-      company: "Source",
-      industry: "Engineering & Construction",
-      logo: "/generic-company-logo.png",
-      type: "Full-time",
-      location: "On-site",
-      salaryRange: "$85,000 - $105,000",
-      posted: "2 weeks ago",
-      description: "We're seeking a Full Stack Developer to help build project management tools for the construction industry. You'll work on both frontend and backend systems.",
-      requirements: ["4+ years full-stack experience", "Node.js and React", "Database design experience", "API development"],
-      responsibilities: ["Full-stack web development", "Database architecture", "API design and implementation", "Code quality and testing"],
-      companyInfo: {
-        size: "100-300 employees",
-        founded: 2010,
-        website: "source-eng.com",
-        description: "Source provides innovative software solutions for the engineering and construction industry."
-      },
-      benefits: ["Health Insurance", "401(k) Matching", "Paid Time Off", "Professional Development", "Company Events"]
-    }
-  ]
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [jobsLoading, setJobsLoading] = useState(true)
+  const [jobsError, setJobsError] = useState<string | null>(null)
 
-  const freelanceProjects = [
-    {
-      id: 1,
-      title: "E-commerce Website Redesign",
-      company: "Ra Labs",
-      industry: "Internet & Software",
-      logo: "/placeholder.svg?height=40&width=40",
-      budget: "$3,000-5,000",
-      duration: "4 weeks",
-      posted: "2 days ago",
-      description: "We need a complete redesign of our e-commerce platform. The project involves modernizing the UI/UX, improving conversion rates, and implementing responsive design across all devices.",
-      requirements: ["React/Next.js experience", "E-commerce platform knowledge", "UI/UX design skills", "Responsive design expertise"],
-      deliverables: ["Complete website redesign", "Mobile-responsive layouts", "Shopping cart optimization", "Payment gateway integration"],
-      companyInfo: {
-        size: "10-50 employees",
-        founded: 2018,
-        website: "ralabs.com",
-        description: "Ra Labs creates innovative software solutions for modern businesses."
-      },
-      skills: ["React", "Next.js", "Figma", "Shopify", "CSS/Sass"]
-    },
-    {
-      id: 2,
-      title: "React Dashboard Development",
-      company: "Instalify, Inc.",
-      industry: "Internet & Software",
-      logo: "/placeholder.svg?height=40&width=40",
-      budget: "$50/hr",
-      duration: "2-3 months",
-      posted: "5 days ago",
-      description: "Build a comprehensive admin dashboard for our SaaS platform. The dashboard will include analytics, user management, reporting features, and real-time data visualization.",
-      requirements: ["Advanced React skills", "Data visualization experience", "API integration", "Real-time features"],
-      deliverables: ["Admin dashboard interface", "Data visualization components", "User management system", "Real-time notifications"],
-      companyInfo: {
-        size: "20-100 employees",
-        founded: 2020,
-        website: "instalify.com",
-        description: "Instalify provides installation and maintenance software for service companies."
-      },
-      skills: ["React", "D3.js", "Chart.js", "WebSockets", "Material-UI"]
-    },
-    {
-      id: 3,
-      title: "Financial App UI/UX Design",
-      company: "Dynex Capital",
-      industry: "Investment / Portfolio Management",
-      logo: "/placeholder.svg?height=40&width=40",
-      budget: "$2,500-4,000",
-      duration: "3 weeks",
-      posted: "1 week ago",
-      description: "Design a modern, intuitive interface for our financial portfolio management app. Focus on clean design, data visualization, and user experience for financial professionals.",
-      requirements: ["Financial app design experience", "Figma/Sketch proficiency", "Data visualization design", "Mobile design"],
-      deliverables: ["Complete UI/UX design", "Interactive prototypes", "Design system", "Mobile app designs"],
-      companyInfo: {
-        size: "50-200 employees",
-        founded: 2012,
-        website: "dynexcapital.com",
-        description: "Dynex Capital provides innovative investment and portfolio management solutions."
-      },
-      skills: ["Figma", "Sketch", "Principle", "InVision", "Adobe Creative Suite"]
-    }
-  ]
+  const [freelanceProjects, setFreelanceProjects] = useState<FreelanceProject[]>([])
+  const [freelanceProjectsLoading, setFreelanceProjectsLoading] = useState(true)
+  const [freelanceProjectsError, setFreelanceProjectsError] = useState<string | null>(null)
 
-  const companies = [
-    {
-      id: 1,
-      name: "TechFlow Solutions",
-      industry: "Web Development & Design",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "50-200 employees",
-      location: "San Francisco, CA",
-      founded: 2018,
-      verified: true,
-      companyType: "Startup",
-      description: "Leading web development agency specializing in modern React applications and e-commerce solutions.",
-      mission: "To empower businesses with cutting-edge web technologies that drive growth and innovation.",
-      vision: "Becoming the go-to partner for companies seeking exceptional digital experiences.",
-      values: ["Innovation", "Quality", "Collaboration", "Continuous Learning"],
-      benefits: ["Flexible Work Hours", "Health Insurance", "Stock Options", "Professional Development", "Remote Work Options"],
-      culture: "We foster a collaborative environment where creativity meets technical excellence. Our team values work-life balance and continuous learning.",
-      recentNews: [
-        "Launched AI-powered web analytics platform",
-        "Expanded team by 40% in Q3 2024",
-        "Partnership with major e-commerce brands"
-      ],
-      website: "techflowsolutions.com",
-      email: "careers@techflowsolutions.com",
-      phone: "+1 (555) 123-4567",
-      jobOpenings: [
-        {
-          id: 101,
-          title: "Senior React Developer",
-          department: "Engineering",
-          location: "San Francisco, CA / Remote",
-          type: "Full-time",
-          salary: "$120,000 - $150,000",
-          experience: "5+ years",
-          postedDate: "2024-01-15",
-          description: "Lead development of next-generation React applications for enterprise clients."
-        },
-        {
-          id: 102,
-          title: "UI/UX Designer",
-          department: "Design",
-          location: "San Francisco, CA",
-          type: "Full-time",
-          salary: "$90,000 - $120,000",
-          experience: "3+ years",
-          postedDate: "2024-01-20",
-          description: "Design beautiful and intuitive user interfaces for web applications."
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: "WebCraft Studios",
-      industry: "Digital Agency",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "20-50 employees",
-      location: "Austin, TX",
-      founded: 2020,
-      verified: true,
-      companyType: "Agency",
-      description: "Creative digital agency focused on building exceptional web experiences for startups and established brands.",
-      mission: "Crafting digital experiences that tell your brand's story and drive meaningful connections.",
-      vision: "To be recognized as the most innovative digital agency in the creative industry.",
-      values: ["Creativity", "Authenticity", "Excellence", "Partnership"],
-      benefits: ["Creative Freedom", "Health & Dental", "Flexible PTO", "Team Retreats", "Learning Stipend"],
-      culture: "A creative playground where designers and developers collaborate to push the boundaries of what's possible on the web.",
-      recentNews: [
-        "Won 3 Webby Awards for client projects",
-        "Opened new office in Denver",
-        "Featured in Design Week Magazine"
-      ],
-      website: "webcraftstudios.com",
-      email: "hello@webcraftstudios.com",
-      phone: "+1 (555) 234-5678",
-      jobOpenings: [
-        {
-          id: 201,
-          title: "Full Stack Developer",
-          department: "Development",
-          location: "Austin, TX / Remote",
-          type: "Full-time",
-          salary: "$95,000 - $125,000",
-          experience: "4+ years",
-          postedDate: "2024-01-18",
-          description: "Build end-to-end web solutions using modern JavaScript frameworks."
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: "DevForge Technologies",
-      industry: "Software Development",
-      logo: "/placeholder.svg?height=60&width=60",
-      size: "100-500 employees",
-      location: "Seattle, WA",
-      founded: 2015,
-      verified: true,
-      companyType: "Tech Company",
-      description: "Enterprise software development company specializing in scalable web applications and cloud solutions.",
-      mission: "Forging the future of enterprise software through innovative development practices and cutting-edge technology.",
-      vision: "To be the leading provider of enterprise web solutions that transform how businesses operate.",
-      values: ["Innovation", "Reliability", "Scalability", "Team Excellence"],
-      benefits: ["Comprehensive Health Coverage", "401(k) Matching", "Sabbatical Program", "Professional Certifications", "Gym Membership"],
-      culture: "We believe in empowering our developers with the latest tools and technologies while maintaining a supportive team environment.",
-      recentNews: [
-        "Completed Series B funding round",
-        "Launched new cloud platform",
-        "Acquired two smaller tech companies"
-      ],
-      website: "devforge.tech",
-      email: "careers@devforge.tech",
-      phone: "+1 (555) 345-6789",
-      jobOpenings: [
-        {
-          id: 301,
-          title: "Backend Developer",
-          department: "Engineering",
-          location: "Seattle, WA",
-          type: "Full-time",
-          salary: "$110,000 - $140,000",
-          experience: "3+ years",
-          postedDate: "2024-01-22",
-          description: "Develop robust backend systems for enterprise-level applications."
-        },
-        {
-          id: 302,
-          title: "DevOps Engineer",
-          department: "Infrastructure",
-          location: "Seattle, WA / Remote",
-          type: "Full-time",
-          salary: "$125,000 - $155,000",
-          experience: "5+ years",
-          postedDate: "2024-01-25",
-          description: "Manage cloud infrastructure and deployment pipelines."
-        }
-      ]
-    }
-  ]
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [companiesLoading, setCompaniesLoading] = useState(true)
+  const [companiesError, setCompaniesError] = useState<string | null>(null)
 
-  const handleJobClick = (job: any) => {
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setJobsLoading(true);
+        const res = await fetch('/api/jobs');
+        if (!res.ok) throw new Error('Failed to fetch jobs');
+        const data: Job[] = await res.json();
+        setJobs(data);
+        setJobsError(null);
+      } catch (error) {
+        setJobsError(error instanceof Error ? error.message : 'Unknown error fetching jobs');
+      } finally {
+        setJobsLoading(false);
+      }
+    };
+    fetchJobs();
+  }, []);
+
+  useEffect(() => {
+    const fetchFreelanceProjects = async () => {
+      try {
+        setFreelanceProjectsLoading(true);
+        const res = await fetch('/api/freelance-projects');
+        if (!res.ok) throw new Error('Failed to fetch freelance projects');
+        const data: FreelanceProject[] = await res.json();
+        setFreelanceProjects(data);
+        setFreelanceProjectsError(null);
+      } catch (error) {
+        setFreelanceProjectsError(error instanceof Error ? error.message : 'Unknown error fetching freelance projects');
+      } finally {
+        setFreelanceProjectsLoading(false);
+      }
+    };
+    fetchFreelanceProjects();
+  }, []);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setCompaniesLoading(true);
+        const res = await fetch('/api/companies');
+        if (!res.ok) throw new Error('Failed to fetch companies');
+        const data: Company[] = await res.json();
+        setCompanies(data);
+        setCompaniesError(null);
+      } catch (error) {
+        setCompaniesError(error instanceof Error ? error.message : 'Unknown error fetching companies');
+      } finally {
+        setCompaniesLoading(false);
+      }
+    };
+    fetchCompanies();
+  }, []);
+
+
+  const handleJobClick = (job: Job) => {
     setSelectedJob(job)
   }
 
-  const handleProjectClick = (project: any) => {
+  const handleProjectClick = (project: FreelanceProject) => {
     setSelectedProject(project)
   }
 
@@ -321,18 +121,20 @@ export default function ExplorePage() {
   }
 
   const handleSubmitApplication = () => {
+    // Actual submission logic would go here
     console.log("Job application submitted:", { job: selectedJob?.title, ...applicationData })
     setShowApplicationModal(false)
     setApplicationData({ coverLetter: "", expectedSalary: "", startDate: "", resume: null, portfolio: null })
   }
 
   const handleSubmitProjectApplication = () => {
+    // Actual submission logic would go here
     console.log("Project application submitted:", { project: selectedProject?.title, ...projectApplicationData })
     setShowProjectApplicationModal(false)
     setProjectApplicationData({ proposal: "", estimatedBudget: "", timeline: "", portfolio: null, experience: "" })
   }
 
-  const handleCompanyClick = (company: any) => {
+  const handleCompanyClick = (company: Company) => {
     setSelectedCompany(company)
   }
 
@@ -340,16 +142,16 @@ export default function ExplorePage() {
     setShowJobsModal(true)
   }
 
-  const handleFollowClick = (companyId: number) => {
-    setFollowedCompanies(prev => 
-      prev.includes(companyId) 
+  const handleFollowClick = (companyId: string) => {
+    setFollowedCompanies(prev =>
+      prev.includes(companyId)
         ? prev.filter(id => id !== companyId)
         : [...prev, companyId]
     )
   }
 
-  const isFollowed = (companyId: number) => {
-    return followedCompanies.includes(companyId)
+  const isFollowed = (companyId: string) => {
+    return followedCompanies.includes(companyId);
   }
 
   return (
@@ -408,43 +210,46 @@ export default function ExplorePage() {
                 View more
               </Link>
             </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {jobs.map((job) => (
-                <Card 
-                  key={job.id} 
-                  className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200"
-                  onClick={() => handleJobClick(job)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex items-start space-x-3">
-                        <img src={job.logo} alt={job.company} className="h-12 w-12 rounded" />
-                        <div>
-                          <p className="font-subheading font-medium text-base">{job.company}</p>
-                          <p className="text-sm text-muted-foreground">{job.industry}</p>
+            {jobsLoading && <p>Loading jobs...</p>}
+            {jobsError && <p className="text-red-500">{jobsError}</p>}
+            {!jobsLoading && !jobsError && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {jobs.map((job) => (
+                  <Card
+                    key={job.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200"
+                    onClick={() => handleJobClick(job)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-start space-x-3">
+                          <img src={job.companyLogo || '/placeholder.svg'} alt={job.companyName} className="h-12 w-12 rounded" />
+                          <div>
+                            <p className="font-subheading font-medium text-base">{job.companyName}</p>
+                            <p className="text-sm text-muted-foreground">{job.industry}</p>
+                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 hover:bg-primary-navy/10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Handle bookmark logic
+                          }}
+                        >
+                          <BookmarkIcon className="h-5 w-5" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 hover:bg-primary-navy/10"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          // Handle bookmark logic
-                        }}
-                      >
-                        <BookmarkIcon className="h-5 w-5" />
-                      </Button>
-                    </div>
-                    <h3 className="font-heading text-primary-navy mb-2 text-lg">{job.title}</h3>
-                    <p className="text-base text-muted-foreground mb-3 font-subheading">{job.type} • {job.location}</p>
-                    <p className="text-sm text-muted-foreground mb-4">{job.salaryRange} • Posted {job.posted}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <h3 className="font-heading text-primary-navy mb-2 text-lg">{job.title}</h3>
+                      <p className="text-base text-muted-foreground mb-3 font-subheading">{job.type} • {job.location}</p>
+                      <p className="text-sm text-muted-foreground mb-4">{job.salaryRange} • Posted {new Date(job.postedDate).toLocaleDateString()}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mb-8">
@@ -456,43 +261,46 @@ export default function ExplorePage() {
                 View more
               </Link>
             </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {freelanceProjects.map((project) => (
-                <Card 
-                  key={project.id} 
-                  className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleProjectClick(project)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex items-start space-x-3">
-                        <img src={project.logo} alt={project.company} className="h-12 w-12 rounded" />
-                        <div>
-                          <p className="font-subheading font-medium text-base">{project.company}</p>
-                          <p className="text-sm text-muted-foreground">{project.industry}</p>
+            {freelanceProjectsLoading && <p>Loading freelance projects...</p>}
+            {freelanceProjectsError && <p className="text-red-500">{freelanceProjectsError}</p>}
+            {!freelanceProjectsLoading && !freelanceProjectsError && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {freelanceProjects.map((project) => (
+                  <Card
+                    key={project.id}
+                    className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleProjectClick(project)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-start space-x-3">
+                          <img src={project.clientLogo || '/placeholder.svg'} alt={project.clientName} className="h-12 w-12 rounded" />
+                          <div>
+                            <p className="font-subheading font-medium text-base">{project.clientName}</p>
+                            <p className="text-sm text-muted-foreground">{project.industry}</p>
+                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 hover:bg-primary-navy/10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Handle bookmark logic
+                          }}
+                        >
+                          <BookmarkIcon className="h-5 w-5" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 hover:bg-primary-navy/10"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          // Handle bookmark logic
-                        }}
-                      >
-                        <BookmarkIcon className="h-5 w-5" />
-                      </Button>
-                    </div>
-                    <h3 className="font-heading text-primary-navy mb-2 text-lg">{project.title}</h3>
-                    <p className="text-base text-muted-foreground mb-3 font-subheading">{project.budget} • {project.duration}</p>
-                    <p className="text-sm text-muted-foreground mb-4">Posted {project.posted}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <h3 className="font-heading text-primary-navy mb-2 text-lg">{project.title}</h3>
+                      <p className="text-base text-muted-foreground mb-3 font-subheading">{project.budget} • {project.duration}</p>
+                      <p className="text-sm text-muted-foreground mb-4">Posted {new Date(project.postedDate).toLocaleDateString()}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mb-8">
@@ -504,61 +312,64 @@ export default function ExplorePage() {
                 View more
               </Link>
             </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {companies.map((company) => (
-                <Card 
-                  key={company.id} 
-                  className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleCompanyClick(company)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex items-start space-x-4">
-                        <img src={company.logo} alt={company.name} className="h-16 w-16 rounded" />
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <p className="font-subheading font-medium text-base">{company.name}</p>
-                            {company.verified && (
-                              <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                                <CheckCircle className="h-4 w-4 text-white" />
-                              </div>
-                            )}
+            {companiesLoading && <p>Loading companies...</p>}
+            {companiesError && <p className="text-red-500">{companiesError}</p>}
+            {!companiesLoading && !companiesError && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {companies.map((company) => (
+                  <Card
+                    key={company.id}
+                    className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleCompanyClick(company)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-start space-x-4">
+                          <img src={company.logo || '/placeholder.svg'} alt={company.name} className="h-16 w-16 rounded" />
+                          <div>
+                            <div className="flex items-center space-x-2 mb-2">
+                              <p className="font-subheading font-medium text-base">{company.name}</p>
+                              {company.verified && (
+                                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <CheckCircle className="h-4 w-4 text-white" />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{company.industry}</p>
                           </div>
-                          <p className="text-sm text-muted-foreground">{company.industry}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 hover:bg-primary-navy/10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Handle bookmark logic
+                          }}
+                        >
+                          <BookmarkIcon className="h-5 w-5" />
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{company.location}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          <span>{company.size}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                          <Building2 className="h-3 w-3" />
+                          <span>{company.jobOpeningsCount ?? 0} open position{company.jobOpeningsCount !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 hover:bg-primary-navy/10"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          // Handle bookmark logic
-                        }}
-                      >
-                        <BookmarkIcon className="h-5 w-5" />
-                      </Button>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span>{company.location}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{company.size}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                        <Building2 className="h-3 w-3" />
-                        <span>{company.jobOpenings.length} open position{company.jobOpenings.length !== 1 ? 's' : ''}</span>
-                      </div>
-                    </div>
-                </CardContent>
-              </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -603,10 +414,10 @@ export default function ExplorePage() {
             <div className="space-y-6">
               {/* Basic Info */}
               <div className="flex items-start space-x-4">
-                <img src={selectedJob.logo} alt={selectedJob.company} className="h-16 w-16 rounded-xl" />
+                <img src={selectedJob.companyLogo || '/placeholder.svg'} alt={selectedJob.companyName} className="h-16 w-16 rounded-xl" />
                 <div className="flex-1">
                   <h2 className="text-2xl font-heading text-primary-navy mb-1">{selectedJob.title}</h2>
-                  <p className="text-lg text-slate-600 font-subheading mb-2">{selectedJob.company}</p>
+                  <p className="text-lg text-slate-600 font-subheading mb-2">{selectedJob.companyName}</p>
                   <div className="grid grid-cols-2 gap-4 text-slate-600 font-subheading mb-4">
                     <div className="flex items-center space-x-2">
                       <Building2 className="h-4 w-4 text-slate-500" />
@@ -626,12 +437,20 @@ export default function ExplorePage() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4 text-slate-500" />
-                      <span>Posted {selectedJob.posted}</span>
+                      <span>Posted {new Date(selectedJob.postedDate).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-slate-500" />
-                      <span>{selectedJob.companyInfo.size}</span>
-                    </div>
+                    {selectedJob.experienceLevel && (
+                       <div className="flex items-center space-x-2">
+                         <Award className="h-4 w-4 text-slate-500" />
+                         <span>{selectedJob.experienceLevel}</span>
+                       </div>
+                    )}
+                    {selectedJob.applicantsCount !== undefined && (
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-slate-500" />
+                        <span>{selectedJob.applicantsCount} applicants</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -645,67 +464,92 @@ export default function ExplorePage() {
               </div>
 
               {/* Requirements */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
-                <div className="space-y-2">
-                  {selectedJob.requirements.map((req: string, index: number) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-                      <span className="text-slate-600 font-subheading">{req}</span>
-                    </div>
-                  ))}
+              {selectedJob.requirements && selectedJob.requirements.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
+                  <div className="space-y-2">
+                    {selectedJob.requirements.map((req: string, index: number) => (
+                      <div key={index} className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                        <span className="text-slate-600 font-subheading">{req}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Responsibilities */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Responsibilities</h3>
-                <div className="space-y-2">
-                  {selectedJob.responsibilities.map((resp: string, index: number) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-slate-600 font-subheading">{resp}</span>
-                    </div>
-                  ))}
+              {selectedJob.responsibilities && selectedJob.responsibilities.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Responsibilities</h3>
+                  <div className="space-y-2">
+                    {selectedJob.responsibilities.map((resp: string, index: number) => (
+                      <div key={index} className="flex items-start space-x-2">
+                        <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-slate-600 font-subheading">{resp}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-        </div>
+              )}
 
-              {/* Company Info */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedJob.company}</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed mb-3">{selectedJob.companyInfo.description}</p>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-500">Founded:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedJob.companyInfo.founded}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Size:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedJob.companyInfo.size}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Website:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedJob.companyInfo.website}</span>
+              {/* Nice to Have */}
+              {selectedJob.niceToHave && selectedJob.niceToHave.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Nice to Have</h3>
+                  <div className="space-y-2">
+                    {selectedJob.niceToHave.map((item: string, index: number) => (
+                      <div key={index} className="flex items-start space-x-2">
+                        <Star className="h-4 w-4 text-yellow-500 mt-1 flex-shrink-0" />
+                        <span className="text-slate-600 font-subheading">{item}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              )}
+
+
+              {/* Company Info Simplified */}
+              <div>
+                <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedJob.companyName}</h3>
+                <p className="text-slate-600 font-subheading leading-relaxed mb-3">
+                  Further details about {selectedJob.companyName} can be found on their company profile page.
+                  {/* Placeholder for link to company page: <Link href={`/companies/${selectedJob.companyId}`}>View Company Profile</Link> */}
+                </p>
               </div>
 
               {/* Benefits */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Benefits</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedJob.benefits.map((benefit: string, index: number) => (
-                    <Badge key={index} className="bg-green-100 text-green-700 font-subheading">
-                      <Award className="h-3 w-3 mr-1" />
-                      {benefit}
-                    </Badge>
-                  ))}
+              {selectedJob.benefits && selectedJob.benefits.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Benefits</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedJob.benefits.map((benefit: string, index: number) => (
+                      <Badge key={index} className="bg-green-100 text-green-700 font-subheading">
+                        <Award className="h-3 w-3 mr-1" />
+                        {benefit}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Skills */}
+              {selectedJob.skills && selectedJob.skills.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedJob.skills.map((skill: string, index: number) => (
+                      <Badge key={index} variant="outline" className="font-subheading">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Apply Button */}
               <div className="pt-4">
-                <Button 
+                <Button
                   className="w-full bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
                   onClick={handleApplyClick}
                 >
@@ -751,10 +595,10 @@ export default function ExplorePage() {
             <div className="space-y-6">
               {/* Basic Info */}
               <div className="flex items-start space-x-4">
-                <img src={selectedProject.logo} alt={selectedProject.company} className="h-16 w-16 rounded-xl" />
+                <img src={selectedProject.clientLogo || '/placeholder.svg'} alt={selectedProject.clientName} className="h-16 w-16 rounded-xl" />
                 <div className="flex-1">
                   <h2 className="text-2xl font-heading text-primary-navy mb-1">{selectedProject.title}</h2>
-                  <p className="text-lg text-slate-600 font-subheading mb-2">{selectedProject.company}</p>
+                  <p className="text-lg text-slate-600 font-subheading mb-2">{selectedProject.clientName}</p>
                   <div className="grid grid-cols-2 gap-4 text-slate-600 font-subheading mb-4">
                     <div className="flex items-center space-x-2">
                       <Building2 className="h-4 w-4 text-slate-500" />
@@ -770,7 +614,7 @@ export default function ExplorePage() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4 text-slate-500" />
-                      <span>Posted {selectedProject.posted}</span>
+                      <span>Posted {new Date(selectedProject.postedDate).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -785,66 +629,60 @@ export default function ExplorePage() {
               </div>
 
               {/* Requirements */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
-                <div className="space-y-2">
-                  {selectedProject.requirements.map((req: string, index: number) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
-                      <span className="text-slate-600 font-subheading">{req}</span>
-                    </div>
-                  ))}
+              {selectedProject.requirements && selectedProject.requirements.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
+                  <div className="space-y-2">
+                    {selectedProject.requirements.map((req: string, index: number) => (
+                      <div key={index} className="flex items-start space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+                        <span className="text-slate-600 font-subheading">{req}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Deliverables */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Deliverables</h3>
-                <div className="space-y-2">
-                  {selectedProject.deliverables.map((deliverable: string, index: number) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-slate-600 font-subheading">{deliverable}</span>
-                    </div>
-                  ))}
+              {selectedProject.deliverables && selectedProject.deliverables.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Deliverables</h3>
+                  <div className="space-y-2">
+                    {selectedProject.deliverables.map((deliverable: string, index: number) => (
+                      <div key={index} className="flex items-start space-x-2">
+                        <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-slate-600 font-subheading">{deliverable}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Required Skills */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Required Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedProject.skills.map((skill: string, index: number) => (
-                    <Badge key={index} className="bg-blue-100 text-blue-700 font-subheading">
-                      {skill}
-                    </Badge>
-                  ))}
+              {selectedProject.skills && selectedProject.skills.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Required Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProject.skills.map((skill: string, index: number) => (
+                      <Badge key={index} className="bg-blue-100 text-blue-700 font-subheading">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Company Info */}
+              {/* Client Info Simplified */}
               <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedProject.company}</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed mb-3">{selectedProject.companyInfo.description}</p>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-500">Founded:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedProject.companyInfo.founded}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Size:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedProject.companyInfo.size}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Website:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedProject.companyInfo.website}</span>
-                  </div>
-                </div>
+                <h3 className="text-lg font-heading text-primary-navy mb-3">About {selectedProject.clientName}</h3>
+                <p className="text-slate-600 font-subheading leading-relaxed mb-3">
+                  Information about the client.
+                </p>
               </div>
 
               {/* Apply Button */}
               <div className="pt-4">
-                <Button 
+                <Button
                   className="w-full bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
                   onClick={handleProjectApplyClick}
                 >
@@ -866,17 +704,17 @@ export default function ExplorePage() {
             Apply for {selectedJob?.title}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 mt-4">
           {/* Job Info */}
           {selectedJob && (
             <Card className="border-slate-200 bg-slate-50">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <img src={selectedJob.logo} alt={selectedJob.company} className="h-12 w-12 rounded" />
+                  <img src={selectedJob.companyLogo || '/placeholder.svg'} alt={selectedJob.companyName} className="h-12 w-12 rounded" />
                   <div>
                     <h4 className="font-heading text-primary-navy">{selectedJob.title}</h4>
-                    <p className="text-slate-600 font-subheading text-sm">{selectedJob.company} • {selectedJob.location}</p>
+                    <p className="text-slate-600 font-subheading text-sm">{selectedJob.companyName} • {selectedJob.location}</p>
                   </div>
                 </div>
             </CardContent>
@@ -926,19 +764,21 @@ export default function ExplorePage() {
               <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
               <p className="text-slate-600 font-subheading">Click to upload your resume</p>
               <p className="text-slate-400 font-subheading text-sm">PDF, DOC, or DOCX (max 5MB)</p>
+              {/* Basic file input, can be improved with actual upload handling */}
+              <Input type="file" className="sr-only" onChange={(e) => setApplicationData({...applicationData, resume: e.target.files ? e.target.files[0] : null})} />
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex space-x-4 pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1 rounded-xl font-subheading"
               onClick={() => setShowApplicationModal(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               className="flex-1 bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
               onClick={handleSubmitApplication}
             >
@@ -958,17 +798,17 @@ export default function ExplorePage() {
             Submit Proposal for {selectedProject?.title}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 mt-4">
           {/* Project Info */}
           {selectedProject && (
             <Card className="border-slate-200 bg-slate-50">
             <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <img src={selectedProject.logo} alt={selectedProject.company} className="h-12 w-12 rounded" />
+                  <img src={selectedProject.clientLogo || '/placeholder.svg'} alt={selectedProject.clientName} className="h-12 w-12 rounded" />
                   <div>
                     <h4 className="font-heading text-primary-navy">{selectedProject.title}</h4>
-                    <p className="text-slate-600 font-subheading text-sm">{selectedProject.company} • {selectedProject.budget}</p>
+                    <p className="text-slate-600 font-subheading text-sm">{selectedProject.clientName} • {selectedProject.budget}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1018,19 +858,20 @@ export default function ExplorePage() {
               <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
               <p className="text-slate-600 font-subheading">Upload portfolio or work samples</p>
               <p className="text-slate-400 font-subheading text-sm">PDF, Images, or ZIP (max 10MB)</p>
+              <Input type="file" className="sr-only" onChange={(e) => setProjectApplicationData({...projectApplicationData, portfolio: e.target.files ? e.target.files[0] : null})} />
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex space-x-4 pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1 rounded-xl font-subheading"
               onClick={() => setShowProjectApplicationModal(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               className="flex-1 bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
               onClick={handleSubmitProjectApplication}
             >
@@ -1074,7 +915,7 @@ export default function ExplorePage() {
             <div className="space-y-6">
               {/* Basic Info */}
               <div className="flex items-start space-x-4">
-                <img src={selectedCompany.logo} alt={selectedCompany.name} className="h-20 w-20 rounded-xl" />
+                <img src={selectedCompany.logo || '/placeholder.svg'} alt={selectedCompany.name} className="h-20 w-20 rounded-xl" />
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
                     <h2 className="text-2xl font-heading text-primary-navy">{selectedCompany.name}</h2>
@@ -1083,15 +924,17 @@ export default function ExplorePage() {
                         <CheckCircle className="h-4 w-4 text-white" />
                       </div>
                     )}
-                    <Badge 
-                      className={`${
-                        selectedCompany.companyType === 'Startup' ? 'bg-green-100 text-green-700' :
-                        selectedCompany.companyType === 'Agency' ? 'bg-purple-100 text-purple-700' :
-                        'bg-blue-100 text-blue-700'
-                      } font-subheading`}
-                    >
-                      {selectedCompany.companyType}
-                    </Badge>
+                    {selectedCompany.companyType && (
+                      <Badge
+                        className={`${
+                          selectedCompany.companyType === 'Startup' ? 'bg-green-100 text-green-700' :
+                          selectedCompany.companyType === 'Agency' ? 'bg-purple-100 text-purple-700' :
+                          'bg-blue-100 text-blue-700'
+                        } font-subheading`}
+                      >
+                        {selectedCompany.companyType}
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-lg text-slate-600 font-subheading mb-3">{selectedCompany.industry}</p>
                   <div className="grid grid-cols-2 gap-4 text-slate-600 font-subheading">
@@ -1109,7 +952,7 @@ export default function ExplorePage() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Building2 className="h-4 w-4 text-slate-500" />
-                      <span>{selectedCompany.jobOpenings.length} open positions</span>
+                      <span>{selectedCompany.jobOpeningsCount ?? 0} open positions</span>
                     </div>
                   </div>
                 </div>
@@ -1124,95 +967,103 @@ export default function ExplorePage() {
               </div>
 
               {/* Mission & Vision */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-heading text-primary-navy mb-2">Mission</h4>
-                  <p className="text-slate-600 font-subheading">{selectedCompany.mission}</p>
+              {selectedCompany.mission && selectedCompany.vision && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-heading text-primary-navy mb-2">Mission</h4>
+                    <p className="text-slate-600 font-subheading">{selectedCompany.mission}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-heading text-primary-navy mb-2">Vision</h4>
+                    <p className="text-slate-600 font-subheading">{selectedCompany.vision}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-heading text-primary-navy mb-2">Vision</h4>
-                  <p className="text-slate-600 font-subheading">{selectedCompany.vision}</p>
-                </div>
-              </div>
+              )}
 
               {/* Values */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Our Values</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedCompany.values.map((value: string, index: number) => (
-                    <Badge key={index} className="bg-blue-100 text-blue-700 font-subheading">
-                      <Star className="h-3 w-3 mr-1" />
-                      {value}
-                    </Badge>
-                  ))}
+              {selectedCompany.values && selectedCompany.values.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Our Values</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCompany.values.map((value: string, index: number) => (
+                      <Badge key={index} className="bg-blue-100 text-blue-700 font-subheading">
+                        <Star className="h-3 w-3 mr-1" />
+                        {value}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Benefits */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Benefits & Perks</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedCompany.benefits.map((benefit: string, index: number) => (
-                    <Badge key={index} className="bg-green-100 text-green-700 font-subheading">
-                      <Award className="h-3 w-3 mr-1" />
-                      {benefit}
-                    </Badge>
-                  ))}
+              {selectedCompany.benefits && selectedCompany.benefits.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Benefits & Perks</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCompany.benefits.map((benefit: string, index: number) => (
+                      <Badge key={index} className="bg-green-100 text-green-700 font-subheading">
+                        <Award className="h-3 w-3 mr-1" />
+                        {benefit}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Culture */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Company Culture</h3>
-                <p className="text-slate-600 font-subheading leading-relaxed">{selectedCompany.culture}</p>
-              </div>
-
-              {/* Recent News */}
-              <div>
-                <h3 className="text-lg font-heading text-primary-navy mb-3">Recent News</h3>
-                <div className="space-y-2">
-                  {selectedCompany.recentNews.map((news: string, index: number) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <div className="w-2 h-2 bg-[#0056B3] rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-slate-600 font-subheading">{news}</span>
-                    </div>
-                  ))}
+              {selectedCompany.culture && (
+                <div>
+                  <h3 className="text-lg font-heading text-primary-navy mb-3">Company Culture</h3>
+                  <p className="text-slate-600 font-subheading leading-relaxed">{selectedCompany.culture}</p>
                 </div>
-              </div>
+              )}
 
               {/* Contact Info */}
+              {(selectedCompany.website || selectedCompany.contactEmail || selectedCompany.contactPhone) && (
               <div>
                 <h3 className="text-lg font-heading text-primary-navy mb-3">Contact Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-500">Website:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedCompany.website}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Email:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedCompany.email}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Phone:</span>
-                    <span className="ml-2 text-slate-700 font-subheading">{selectedCompany.phone}</span>
-                  </div>
+                  {selectedCompany.website && (
+                    <div>
+                      <span className="text-slate-500">Website:</span>
+                      <Link href={selectedCompany.website.startsWith('http') ? selectedCompany.website : `https://${selectedCompany.website}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 hover:underline font-subheading">
+                        {selectedCompany.website}
+                      </Link>
+                    </div>
+                  )}
+                  {selectedCompany.contactEmail && (
+                    <div>
+                      <span className="text-slate-500">Email:</span>
+                      <a href={`mailto:${selectedCompany.contactEmail}`} className="ml-2 text-blue-600 hover:underline font-subheading">
+                        {selectedCompany.contactEmail}
+                      </a>
+                    </div>
+                  )}
+                  {selectedCompany.contactPhone && (
+                    <div>
+                      <span className="text-slate-500">Phone:</span>
+                      <span className="ml-2 text-slate-700 font-subheading">{selectedCompany.contactPhone}</span>
+                    </div>
+                  )}
                 </div>
               </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex space-x-4 pt-4">
-                <Button 
+                <Button
                   className="flex-1 bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
                   onClick={handleViewJobsClick}
+                  disabled={(selectedCompany.jobOpeningsCount ?? 0) === 0}
                 >
                   <Building2 className="h-4 w-4 mr-2" />
-                  View Open Positions ({selectedCompany.jobOpenings.length})
+                  View Open Positions ({selectedCompany.jobOpeningsCount ?? 0})
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className={`rounded-xl font-subheading ${
-                    isFollowed(selectedCompany.id) 
-                      ? 'bg-[#0056B3] text-white border-[#0056B3] hover:bg-primary-navy' 
+                    isFollowed(selectedCompany.id)
+                      ? 'bg-[#0056B3] text-white border-[#0056B3] hover:bg-primary-navy'
                       : 'border-[#0056B3] text-[#0056B3] hover:bg-primary-navy hover:text-white'
                   }`}
                   onClick={() => handleFollowClick(selectedCompany.id)}
@@ -1236,7 +1087,7 @@ export default function ExplorePage() {
       </div>
     )}
 
-    {/* Jobs Modal */}
+    {/* Jobs Modal for a specific company */}
     <Dialog open={showJobsModal} onOpenChange={setShowJobsModal}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1244,14 +1095,13 @@ export default function ExplorePage() {
             Open Positions at {selectedCompany?.name}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 mt-4">
-          {/* Company Info Header */}
           {selectedCompany && (
             <Card className="border-slate-200 bg-slate-50">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <img src={selectedCompany.logo} alt={selectedCompany.name} className="h-12 w-12 rounded" />
+                  <img src={selectedCompany.logo || '/placeholder.svg'} alt={selectedCompany.name} className="h-12 w-12 rounded" />
                   <div>
                     <h4 className="font-heading text-primary-navy">{selectedCompany.name}</h4>
                     <p className="text-slate-600 font-subheading text-sm">{selectedCompany.industry} • {selectedCompany.location}</p>
@@ -1260,61 +1110,14 @@ export default function ExplorePage() {
               </CardContent>
             </Card>
           )}
+          <p className="text-center text-slate-600 font-subheading">
+            Job listings for individual companies are not available in this view.
+            Please check the main jobs page or the company's career page for more details.
+          </p>
 
-          {/* Job Listings */}
-          <div className="space-y-4">
-            {selectedCompany?.jobOpenings.map((job: any) => (
-              <Card key={job.id} className="border-slate-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-heading text-primary-navy mb-2">{job.title}</h3>
-                      <p className="text-slate-600 font-subheading mb-3">{job.description}</p>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-sm text-slate-600 font-subheading mb-4">
-                        <div className="flex items-center space-x-2">
-                          <Building2 className="h-4 w-4 text-slate-500" />
-                          <span>{job.department}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-slate-500" />
-                          <span>{job.location}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="h-4 w-4 text-slate-500" />
-                          <span>{job.salary}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-slate-500" />
-                          <span>{job.type}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Star className="h-4 w-4 text-slate-500" />
-                          <span>{job.experience} experience</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-slate-500" />
-                          <span>Posted {new Date(job.postedDate).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <Button className="bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading">
-                      <Target className="h-4 w-4 mr-2" />
-                      Apply Now
-              </Button>
-                  </div>
-            </CardContent>
-          </Card>
-            ))}
-        </div>
-
-          {/* Back Button */}
           <div className="flex justify-center pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="rounded-xl font-subheading"
               onClick={() => setShowJobsModal(false)}
             >
@@ -1328,3 +1131,94 @@ export default function ExplorePage() {
     </>
   )
 }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Description */}
+              <div>
+                <h3 className="text-lg font-heading text-primary-navy mb-3">Job Description</h3>
+                <p className="text-slate-600 font-subheading leading-relaxed">{selectedJob.description}</p>
+              </div>
+
+              {/* Requirements */}
+              <div>
+                <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Freelance Project Details Modal */}
+    {selectedProject && !showProjectApplicationModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            {/* Header */}
+                    </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Description */}
+              <div>
+                <h3 className="text-lg font-heading text-primary-navy mb-3">Project Description</h3>
+                <p className="text-slate-600 font-subheading leading-relaxed">{selectedProject.description}</p>
+              </div>
+
+              {/* Requirements */}
+              <div>
+                <h3 className="text-lg font-heading text-primary-navy mb-3">Requirements</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Job Application Modal */}
+    <Dialog open={showApplicationModal} onOpenChange={setShowApplicationModal}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-primary-navy">
+            Apply for {selectedJob?.title}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 mt-4">
+          {/* Job Info */}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Project Application Modal */}
+    <Dialog open={showProjectApplicationModal} onOpenChange={setShowProjectApplicationModal}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-primary-navy">
+            Submit Proposal for {selectedProject?.title}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 mt-4">
+          {/* Project Info */}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Company Details Modal */}
+    {selectedCompany && !showJobsModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            {/* Header */}
