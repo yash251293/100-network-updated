@@ -104,6 +104,8 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 *   **Debugging 'React Context is unavailable' error on root page:**
     *   Temporarily simplified `app/page.tsx` to isolate the issue.
     *   Temporarily removed `HeaderWrapper` from `app/layout.tsx`.
-    *   Temporarily commented out `SessionProvider` in `app/layout.tsx` to further isolate the source of the context error.
-    *   **Update**: Re-introduced `SessionProvider` while keeping `HeaderWrapper` commented. This is to test if `SessionProvider` itself (without the header using `useSession`) triggers the error.
-    *   The root cause is likely related to how Client Components (especially those using context like `useSession` from NextAuth.js) are rendered within the main layout or its direct children. `components/header.tsx` was confirmed to be a Client Component. Further investigation might be needed for `components/header-wrapper.tsx` if it's an intermediary Server Component. The Prisma migration step is paused until the user can confirm the dev server runs without this context error after these changes.
+    *   Temporarily commented out `SessionProvider` in `app/layout.tsx`.
+    *   **Update**: Re-introduced `SessionProvider` while keeping `HeaderWrapper` commented. Error was resolved when both were removed.
+    *   **Update**: Re-introduced `HeaderWrapper` (which uses `useSession`) with `SessionProvider` also active.
+    *   **Update**: Set `app/page.tsx` to minimal. In `app/layout.tsx`, temporarily commented out `ThemeProvider`, `SessionProvider`, AND `HeaderWrapper` to test baseline rendering.
+    *   The root cause is likely related to how Client Components (especially those using context like `useSession` from NextAuth.js) are rendered within the main layout or its direct children. The Prisma migration step is paused until the user can confirm the dev server runs without this context error after these changes.
