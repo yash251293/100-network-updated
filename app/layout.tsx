@@ -2,9 +2,9 @@ import type React from "react"
 import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface"
 import { Inter, Lora, Abhaya_Libre } from "next/font/google"
 import "./globals.css"
-// import HeaderWrapper from "@/components/header-wrapper"; // Ensure Commented out
-// import { ThemeProvider } from "@/components/theme-provider"; // Ensure Commented out
-// import { SessionProvider } from "next-auth/react"; // Ensure Commented out
+// import HeaderWrapper from "@/components/header-wrapper"; // Still Commented out
+import { ThemeProvider } from "@/components/theme-provider"; // UNCOMMENTED
+// import { SessionProvider } from "next-auth/react"; // Still Commented out
 
 const inter = Inter({ subsets: ["latin"] })
 const lora = Lora({ 
@@ -30,22 +30,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" /* suppressHydrationWarning might not be needed if no client providers */ >
+    <html lang="en" suppressHydrationWarning> {/* suppressHydrationWarning is good with ThemeProvider */}
       <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable}`}>
-        {/* <SessionProvider> */}
-          {/* <ThemeProvider
+        {/* <SessionProvider> */} {/* Still Commented out */}
+          <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
-            disableTransitionOnChange
-          > */}
-            {/* The div below is for basic structure; bg-background might not work if ThemeProvider is out */}
-            <div className="flex flex-col h-screen overflow-hidden"> {/* Removed bg-background for now */}
-              {/* <HeaderWrapper /> */} {/* Ensure Commented out */}
+            // disableTransitionOnChange // Keep as is from previous state, or decide if needed
+          >
+            <div className="flex flex-col h-screen overflow-hidden bg-background"> {/* bg-background re-added */}
+              {/* <HeaderWrapper /> */} {/* Still Commented out */}
               <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
             </div>
-          {/* </ThemeProvider> */}
-        {/* </SessionProvider> */}
+          </ThemeProvider>
+        {/* </SessionProvider> */} {/* Still Commented out */}
       </body>
     </html>
   )

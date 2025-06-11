@@ -107,5 +107,6 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
     *   Temporarily commented out `SessionProvider` in `app/layout.tsx`.
     *   **Update**: Re-introduced `SessionProvider` while keeping `HeaderWrapper` commented. Error was resolved when both were removed.
     *   **Update**: Re-introduced `HeaderWrapper` (which uses `useSession`) with `SessionProvider` also active.
-    *   **Update**: Set `app/page.tsx` to minimal. In `app/layout.tsx`, temporarily commented out `ThemeProvider`, `SessionProvider`, AND `HeaderWrapper` to test baseline rendering.
+    *   **Update**: Set `app/page.tsx` to minimal. In `app/layout.tsx`, temporarily commented out `ThemeProvider`, `SessionProvider`, AND `HeaderWrapper` to test baseline rendering. This confirmed baseline rendering works.
+    *   **Update**: Re-introducing `ThemeProvider` in `app/layout.tsx` (while `SessionProvider` and `HeaderWrapper` remain commented out). This is to isolate if `ThemeProvider` interacts negatively.
     *   The root cause is likely related to how Client Components (especially those using context like `useSession` from NextAuth.js) are rendered within the main layout or its direct children. The Prisma migration step is paused until the user can confirm the dev server runs without this context error after these changes.
