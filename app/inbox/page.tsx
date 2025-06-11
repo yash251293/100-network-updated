@@ -1,20 +1,13 @@
 "use client"
 
-"use client" // Already client, but ensure
-
-import { useState, useEffect, useCallback } from "react" // Added useCallback
-import { useRouter } from 'next/navigation' // Added
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { getToken } from "@/lib/authClient"; // Added
-import { toast } from "sonner"; // Added
-import ProtectedRoute from "@/components/ProtectedRoute"; // Added
-import { formatDistanceToNow } from 'date-fns'; // Added
-import NewConversationModal from "@/components/NewConversationModal"; // Added
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Search, MoreHorizontal, Circle, Star, Archive, Trash2, Send, ArrowLeft, Phone, Video, Info, UserPlus } from "lucide-react" // Added UserPlus
+import { Search, MoreHorizontal, Circle, Star, Archive, Trash2, Send, ArrowLeft, Phone, Video, Info, X } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 // TypeScript interfaces
 interface Message {
@@ -37,6 +30,8 @@ interface InboxMessage {
   messageCount: number
   isPriority: boolean
   isOnline: boolean
+  isArchived: boolean
+  isStarred: boolean
   conversation: Message[]
 }
 
@@ -53,6 +48,8 @@ const messages: InboxMessage[] = [
     messageCount: 2,
     isPriority: true,
     isOnline: true,
+    isArchived: false,
+    isStarred: true,
     conversation: [
       {
         id: 1,
@@ -83,6 +80,8 @@ const messages: InboxMessage[] = [
     messageCount: 1,
     isPriority: false,
     isOnline: false,
+    isArchived: true,
+    isStarred: false,
     conversation: [
       {
         id: 1,
@@ -105,6 +104,8 @@ const messages: InboxMessage[] = [
     messageCount: 1,
     isPriority: false,
     isOnline: true,
+    isArchived: false,
+    isStarred: true,
     conversation: [
       {
         id: 1,
@@ -127,6 +128,8 @@ const messages: InboxMessage[] = [
     messageCount: 1,
     isPriority: false,
     isOnline: false,
+    isArchived: true,
+    isStarred: false,
     conversation: [
       {
         id: 1,
@@ -149,6 +152,8 @@ const messages: InboxMessage[] = [
     messageCount: 1,
     isPriority: false,
     isOnline: false,
+    isArchived: false,
+    isStarred: false,
     conversation: [
       {
         id: 1,
@@ -171,6 +176,8 @@ const messages: InboxMessage[] = [
     messageCount: 1,
     isPriority: false,
     isOnline: true,
+    isArchived: false,
+    isStarred: true,
     conversation: [
       {
         id: 1,
@@ -198,74 +205,36 @@ const TypingIndicator = () => {
   )
 }
 
-function InboxPageContent() {
-  const router = useRouter();
-  const [selectedMessage, setSelectedMessage] = useState<any | null>(null) // Will be less used now
-  const [newMessage, setNewMessage] = useState("") // For the right pane, keep for now
-  const [isTyping, setIsTyping] = useState(false) // For the right pane, keep for now
+export default function InboxPage() {
+  const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null)
+  const [newMessage, setNewMessage] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+  const [showArchiveModal, setShowArchiveModal] = useState(false)
+  const [showStarredModal, setShowStarredModal] = useState(false)
+  const [messageList, setMessageList] = useState<InboxMessage[]>(messages)
 
-  const [conversationsList, setConversationsList] = useState<any[]>([]);
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
-  const [conversationsError, setConversationsError] = useState<string | null>(null);
-  const [showNewConversationModal, setShowNewConversationModal] = useState(false); // Added
-
-  const fetchConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
-    setConversationsError(null);
-    const token = getToken();
-
-    if (!token) {
-      setConversationsError("Authentication required.");
-      toast.error("Authentication required to view messages.");
-      setIsLoadingConversations(false);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/conversations', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Failed to fetch conversations" }));
-        throw new Error(errorData.message || "Failed to fetch conversations");
-      }
-      const data = await response.json();
-      setConversationsList(data.conversations || []);
-    } catch (err: any) {
-      setConversationsError(err.message);
-      toast.error(err.message || "Could not load conversations.");
-      setConversationsList([]);
-    } finally {
-      setIsLoadingConversations(false);
-    }
-  }, []);
-
+  // Simulate someone typing after opening a conversation
   useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
-
-
-  // This effect for simulating typing in right pane might need adjustment if right pane is removed/changed
-  useEffect(() => {
-    if (selectedMessage) { // This selectedMessage is now less relevant for list view
+    if (selectedMessage) {
       const timer = setTimeout(() => {
         setIsTyping(true)
         const stopTyping = setTimeout(() => {
           setIsTyping(false)
-        }, 3000)
+        }, 3000) // Stop typing after 3 seconds
+
         return () => clearTimeout(stopTyping)
-      }, 2000)
+      }, 2000) // Start typing 2 seconds after opening conversation
+
       return () => clearTimeout(timer)
     }
   }, [selectedMessage])
 
-  const handleConversationClick = (conversation: any) => {
-    // setSelectedMessage(message) // Old behavior
-    // setIsTyping(false) // Old behavior
-    router.push(`/inbox/${conversation.id}`);
+  const handleMessageClick = (message: InboxMessage) => {
+    setSelectedMessage(message)
+    setIsTyping(false)
   }
 
-  const handleBackToList = () => { // This button is in the right pane, may not be used from this page anymore
+  const handleBackToList = () => {
     setSelectedMessage(null)
     setIsTyping(false)
   }
@@ -299,21 +268,46 @@ function InboxPageContent() {
 
   const handleArchive = (messageId: number, e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log("Archive message:", messageId)
-    // Add archive logic here
+    setMessageList(prev =>
+      prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, isArchived: !msg.isArchived }
+          : msg
+      )
+    )
   }
 
   const handleStar = (messageId: number, e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log("Star message:", messageId)
-    // Add star logic here
+    setMessageList(prev =>
+      prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, isStarred: !msg.isStarred }
+          : msg
+      )
+    )
   }
 
   const handleDelete = (messageId: number, e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log("Delete message:", messageId)
-    // Add delete logic here
+    setMessageList(prev => prev.filter(msg => msg.id !== messageId))
+    // If currently viewing the deleted message, go back to list
+    if (selectedMessage && selectedMessage.id === messageId) {
+      setSelectedMessage(null)
+    }
   }
+
+  const handleShowArchived = () => {
+    setShowArchiveModal(true)
+  }
+
+  const handleShowStarred = () => {
+    setShowStarredModal(true)
+  }
+
+  const archivedMessages = messageList.filter(message => message.isArchived)
+  const starredMessages = messageList.filter(message => message.isStarred)
+  const activeMessages = messageList.filter(message => !message.isArchived)
 
   // If a message is selected, show the conversation view
   if (selectedMessage) {
@@ -423,11 +417,160 @@ function InboxPageContent() {
                 </Button>
           </div>
             </CardContent>
-          </Card>
-        </div>
+                  </Card>
       </div>
-    )
-  }
+
+      {/* Archive Modal */}
+      <Dialog open={showArchiveModal} onOpenChange={setShowArchiveModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-heading text-primary-navy flex items-center">
+              <Archive className="h-6 w-6 mr-2" />
+              Archived Messages ({archivedMessages.length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {archivedMessages.length === 0 ? (
+              <div className="text-center py-8">
+                <Archive className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                <h3 className="text-lg font-heading text-slate-600 mb-2">No archived messages</h3>
+                <p className="text-slate-500 font-subheading">Messages you archive will appear here.</p>
+              </div>
+            ) : (
+              archivedMessages.map((message) => (
+                <Card
+                  key={message.id}
+                  className="border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white cursor-pointer"
+                  onClick={() => {
+                    setShowArchiveModal(false)
+                    handleMessageClick(message)
+                  }}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={message.avatar || undefined} alt={message.name} />
+                        <AvatarFallback className="bg-slate-100 text-slate-600 font-medium">
+                          {message.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-heading text-primary-navy truncate">
+                            {message.name}
+                          </h3>
+                          <span className="text-sm text-slate-500 font-subheading">{message.date}</span>
+                        </div>
+                        <p className="text-slate-600 font-subheading text-sm line-clamp-2">
+                          {message.preview}
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs px-2 py-1 rounded-full font-medium bg-slate-100 text-slate-600">
+                            {message.category}
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleArchive(message.id, e)
+                              }}
+                              className="text-xs px-2 py-1 h-auto text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                            >
+                              Unarchive
+                            </Button>
+                            <span className="text-xs text-slate-500">Archived</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Starred Modal */}
+      <Dialog open={showStarredModal} onOpenChange={setShowStarredModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-heading text-primary-navy flex items-center">
+              <Star className="h-6 w-6 mr-2" />
+              Starred Messages ({starredMessages.length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {starredMessages.length === 0 ? (
+              <div className="text-center py-8">
+                <Star className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                <h3 className="text-lg font-heading text-slate-600 mb-2">No starred messages</h3>
+                <p className="text-slate-500 font-subheading">Messages you star will appear here.</p>
+              </div>
+            ) : (
+              starredMessages.map((message) => (
+                <Card
+                  key={message.id}
+                  className="border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white cursor-pointer"
+                  onClick={() => {
+                    setShowStarredModal(false)
+                    handleMessageClick(message)
+                  }}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={message.avatar || undefined} alt={message.name} />
+                        <AvatarFallback className="bg-slate-100 text-slate-600 font-medium">
+                          {message.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-heading text-primary-navy truncate">
+                            {message.name}
+                          </h3>
+                          <span className="text-sm text-slate-500 font-subheading">{message.date}</span>
+                        </div>
+                        <p className="text-slate-600 font-subheading text-sm line-clamp-2">
+                          {message.preview}
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs px-2 py-1 rounded-full font-medium bg-slate-100 text-slate-600">
+                            {message.category}
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleStar(message.id, e)
+                              }}
+                              className="text-xs px-2 py-1 h-auto text-amber-600 hover:text-amber-800 hover:bg-amber-50"
+                            >
+                              Unstar
+                            </Button>
+                            <div className="flex items-center space-x-1">
+                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              <span className="text-xs text-slate-500">Starred</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
 
   // Default inbox list view
   return (
@@ -438,24 +581,25 @@ function InboxPageContent() {
           <div>
             <h1 className="text-4xl font-heading text-primary-navy mb-2">Messages</h1>
             <p className="text-slate-600 font-subheading text-xl">Stay in touch with your professional network</p>
-          </div>
+            </div>
           <div className="flex items-center space-x-3">
             <Button
-              variant="default"
+              variant="outline"
               size="sm"
-              className="rounded-full bg-primary-navy text-white hover:bg-primary-navy/90"
-              onClick={() => setShowNewConversationModal(true)}
+              className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+              onClick={handleShowArchived}
             >
-              <UserPlus className="h-4 w-4 mr-2" />
-              New Message
-            </Button>
-            <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:border-primary-navy/30 hover:text-primary-navy">
               <Archive className="h-4 w-4 mr-2" />
-              Archive
+              Archive ({archivedMessages.length})
             </Button>
-            <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-slate-600 hover:border-primary-navy/30 hover:text-primary-navy">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+              onClick={handleShowStarred}
+            >
               <Star className="h-4 w-4 mr-2" />
-              Starred
+              Starred ({starredMessages.length})
             </Button>
           </div>
         </div>
@@ -475,80 +619,98 @@ function InboxPageContent() {
 
         {/* Messages List */}
         <div className="space-y-3 max-w-4xl">
-          {isLoadingConversations && (
-            <div className="text-center py-10"><Search className="h-12 w-12 text-slate-300 mx-auto mb-2" />Loading conversations...</div>
-          )}
-          {!isLoadingConversations && conversationsError && (
-            <div className="text-center py-10 text-red-500">Error: {conversationsError} <Button onClick={fetchConversations} variant="link">Try again</Button></div>
-          )}
-          {!isLoadingConversations && !conversationsError && conversationsList.length === 0 && (
-            <div className="text-center py-10 text-slate-500">No conversations yet.</div>
-          )}
-
-          {!isLoadingConversations && !conversationsError && conversationsList.map((conversation) => {
-            const lastMsg = conversation.lastMessage;
-            const displayDate = lastMsg?.createdAt ? formatDistanceToNow(new Date(lastMsg.createdAt), { addSuffix: true }) : formatDistanceToNow(new Date(conversation.updatedAt), { addSuffix: true });
-            const initials = conversation.name?.substring(0, 2).toUpperCase() || '??';
-
-            return (
-              <Card
-                key={conversation.id}
-                className="border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white cursor-pointer"
-                onClick={() => handleConversationClick(conversation)}
-              >
-                <CardContent className="p-0">
-                  <div className="flex items-center space-x-4 p-6 group">
-                    <div className="relative">
-                      <Avatar className="w-14 h-14">
-                        <AvatarImage src={conversation.avatarUrl || undefined} alt={conversation.name} />
-                        <AvatarFallback className={'bg-slate-100 text-slate-600 font-medium text-base'}>
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      {/* Online status not available in API list item */}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-heading text-lg text-primary-navy truncate">
-                          {conversation.name || "Conversation"}
-                        </h3>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-slate-500 font-subheading whitespace-nowrap">{displayDate}</span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7">
-                                <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem onClick={(e) => {e.stopPropagation(); console.log("Archive", conversation.id)}}>
-                                <Archive className="h-4 w-4 mr-2" /> Archive
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {e.stopPropagation(); console.log("Star", conversation.id)}}>
-                                <Star className="h-4 w-4 mr-2" /> Star
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {e.stopPropagation(); console.log("Delete", conversation.id)}} className="text-red-600 focus:text-red-600">
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                      <p className="text-slate-600 font-subheading leading-relaxed line-clamp-2 text-sm mb-3">
-                        {lastMsg?.senderFirstName && <span className="font-medium">{lastMsg.senderFirstName}: </span>}
-                        {lastMsg?.content || "No messages yet."}
-                      </p>
-                      {/* Category and messageCount not directly available from API list item */}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {activeMessages.length === 0 ? (
+            <Card className="border-0 shadow-sm rounded-2xl bg-white">
+              <CardContent className="p-12 text-center">
+                <Circle className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+                <h3 className="text-xl font-heading text-slate-600 mb-2">No active messages</h3>
+                <p className="text-slate-500 font-subheading mb-4">All your messages have been archived.</p>
+                <Button
+                  variant="outline"
+                  onClick={handleShowArchived}
+                  className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  View Archived ({archivedMessages.length})
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            activeMessages.map((message) => (
+            <Card
+              key={message.id}
+              className="border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-white cursor-pointer"
+              onClick={() => handleMessageClick(message)}
+            >
+              <CardContent className="p-0">
+                <div className="flex items-center space-x-4 p-6 group">
+                  <div className="relative">
+                    <Avatar className="w-14 h-14">
+                      <AvatarImage src={message.avatar || undefined} alt={message.name} />
+                      <AvatarFallback className={`${message.isPriority ? 'bg-[#0056B3]/10 text-[#0056B3]' : 'bg-slate-100 text-slate-600'} font-medium text-base`}>
+                        {message.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    {message.isOnline && (
+                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${message.isPriority ? 'bg-[#0056B3]' : 'bg-green-500'} rounded-full border-2 border-white`}></div>
+                    )}
         </div>
 
-        {/* Footer Message - can be kept or removed based on preference */}
+          <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-heading text-lg text-primary-navy truncate">
+                        {message.name}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-slate-500 font-subheading whitespace-nowrap">{message.date}</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7">
+                              <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={(e) => handleArchive(message.id, e)}>
+                              <Archive className="h-4 w-4 mr-2" />
+                              {message.isArchived ? 'Unarchive' : 'Archive'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleStar(message.id, e)}>
+                              <Star className={`h-4 w-4 mr-2 ${message.isStarred ? 'fill-amber-400 text-amber-400' : ''}`} />
+                              {message.isStarred ? 'Unstar' : 'Star'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleDelete(message.id, e)} className="text-red-600 focus:text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <p className="text-slate-600 font-subheading leading-relaxed line-clamp-2 text-sm mb-3">
+                      {message.preview}
+                    </p>
+                                <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${message.isPriority ? 'bg-[#0056B3]/10 text-[#0056B3]' : 'bg-slate-100 text-slate-600'}`}>
+                          {message.category}
+                        </span>
+                        {message.messageCount > 1 && (
+                          <span className="text-xs text-slate-500">{message.messageCount} messages</span>
+                        )}
+                      </div>
+                      {message.isStarred && (
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      )}
+                    </div>
+            </div>
+          </div>
+              </CardContent>
+            </Card>
+            ))
+          )}
+        </div>
+
+        {/* Footer Message */}
         <Card className="border-0 shadow-sm rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white mt-8 max-w-4xl">
           <CardContent className="p-6">
             <div className="text-center">
@@ -560,18 +722,6 @@ function InboxPageContent() {
           </CardContent>
         </Card>
       </div>
-      <NewConversationModal
-        isOpen={showNewConversationModal}
-        onClose={() => setShowNewConversationModal(false)}
-      />
     </div>
-  );
-}
-
-export default function InboxPage() {
-  return (
-    <ProtectedRoute>
-      <InboxPageContent />
-    </ProtectedRoute>
   )
 }

@@ -33,7 +33,9 @@ import {
   ExternalLink,
   CreditCard,
   Shield,
-  TrendingUp
+  TrendingUp,
+  X,
+  BookmarkIcon
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -58,6 +60,10 @@ export default function MyProjectsPage() {
   const [activeTab, setActiveTab] = useState("posted")
   const [updateMessage, setUpdateMessage] = useState("")
   const [selectedProject, setSelectedProject] = useState<number | null>(null)
+  const [showMessageModal, setShowMessageModal] = useState(false)
+  const [messageText, setMessageText] = useState("")
+  const [selectedFreelancer, setSelectedFreelancer] = useState<any>(null)
+  const [showFreelancerProfile, setShowFreelancerProfile] = useState(false)
 
   const projects = [
     {
@@ -536,6 +542,25 @@ export default function MyProjectsPage() {
     }
   }
 
+  const handleMessageClick = (e: React.MouseEvent, freelancer: any) => {
+    e.stopPropagation()
+    setSelectedFreelancer(freelancer)
+    setShowMessageModal(true)
+  }
+
+  const handleViewProfileClick = (e: React.MouseEvent, freelancer: any) => {
+    e.stopPropagation()
+    setSelectedFreelancer(freelancer)
+    setShowFreelancerProfile(true)
+  }
+
+  const handleSendMessage = () => {
+    // Handle message sending logic here
+    console.log("Sending message:", messageText)
+    setShowMessageModal(false)
+    setMessageText("")
+  }
+
   return (
     <div className="min-h-full">
       <div className="w-[65%] mx-auto py-6">
@@ -693,53 +718,67 @@ export default function MyProjectsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading"
+                        className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View All
                       </Button>
                     </div>
                     <div className="space-y-4">
-                      {project.applications.slice(0, 2).map((application) => (
-                        <div key={application.id} className="border border-slate-200 rounded-xl p-4 hover:border-primary-navy/30 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-4 flex-1">
+                      {project.applications && project.applications.length > 0 ? (
+                        project.applications.map((application) => (
+                          <div key={application.id} className="border-t border-slate-200 pt-4 first:border-t-0 first:pt-0">
+                            <div className="flex items-start space-x-4">
                               <Avatar className="h-12 w-12">
-                                <AvatarFallback className="bg-gradient-to-br from-primary-navy to-slate-700 text-white font-heading">
+                                <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-800 text-white font-heading">
                                   {application.avatar}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
-                                <div className="flex items-center space-x-3 mb-2">
-                                  <h4 className="font-heading text-primary-navy">{application.name}</h4>
-                                  <Badge className={`${getApplicationStatusColor(application.status)} font-subheading text-xs`}>
-                                    {getApplicationStatusText(application.status)}
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h4 className="font-heading text-primary-navy">{application.name}</h4>
+                                    <div className="flex items-center space-x-4 mt-1">
+                                      <div className="flex items-center">
+                                        <Star className="h-4 w-4 fill-amber-400 text-amber-400 mr-1" />
+                                        <span className="font-subheading">{application.rating} ({application.reviews} reviews)</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <DollarSign className="h-4 w-4 mr-1" />
+                                        <span className="font-subheading">${application.hourlyRate}/hr</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <MapPin className="h-4 w-4 mr-1" />
+                                        <span className="font-subheading">{application.location}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className={`font-subheading ${
+                                      application.status === "hired"
+                                        ? "border-green-500 text-green-600"
+                                        : application.status === "rejected"
+                                        ? "border-red-500 text-red-600"
+                                        : "border-amber-500 text-amber-600"
+                                    }`}
+                                  >
+                                    {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center space-x-4 mb-2 text-sm text-slate-500">
-                                  <div className="flex items-center">
-                                    <Star className="h-4 w-4 mr-1 fill-amber-400 text-amber-400" />
-                                    <span className="font-subheading">{application.rating} ({application.reviews} reviews)</span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <DollarSign className="h-4 w-4 mr-1" />
-                                    <span className="font-subheading">${application.hourlyRate}/hr</span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <MapPin className="h-4 w-4 mr-1" />
-                                    <span className="font-subheading">{application.location}</span>
-                                  </div>
-                                </div>
-                                <p className="text-slate-600 font-subheading text-sm leading-relaxed mb-3">
-                                  {application.proposal.substring(0, 120)}...
-                                </p>
-                                <div className="flex items-center justify-between">
+                                <p className="text-slate-600 font-subheading mt-2">{application.proposal}</p>
+                                <div className="flex items-center justify-between mt-4">
                                   <p className="text-xs text-slate-500 font-subheading">Applied {application.appliedAt}</p>
                                   <div className="flex space-x-2">
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading"
+                                      className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedFreelancer(application);
+                                        setShowMessageModal(true);
+                                      }}
                                     >
                                       <Mail className="h-4 w-4 mr-1" />
                                       Message
@@ -757,6 +796,11 @@ export default function MyProjectsPage() {
                                     <Button
                                       size="sm"
                                       className="bg-primary-navy hover:bg-slate-800 text-white rounded-lg font-subheading"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedFreelancer(application);
+                                        setShowFreelancerProfile(true);
+                                      }}
                                     >
                                       View Profile
                                       <ChevronRight className="h-4 w-4 ml-1" />
@@ -766,13 +810,17 @@ export default function MyProjectsPage() {
                               </div>
                             </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-slate-500 font-subheading">No applications yet</p>
                         </div>
-                      ))}
+                      )}
                       {project.applications.length > 2 && (
                         <div className="text-center pt-2">
                           <Button
-                            variant="ghost"
-                            className="text-[#0056B3] hover:text-primary-navy hover:bg-primary-navy/5 font-subheading"
+                            variant="outline"
+                            className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                           >
                             View {project.applications.length - 2} more applications
                             <ChevronRight className="h-4 w-4 ml-1" />
@@ -962,8 +1010,9 @@ export default function MyProjectsPage() {
                               <DialogTrigger asChild>
                                 <Button
                                   size="sm"
-                                  className="bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-subheading"
-                                  onClick={() => setSelectedProject(project.id)}
+                                  variant="outline"
+                                  className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                                  onClick={(e) => handleMessageClick(e, project.freelancer)}
                                 >
                                   <Send className="h-4 w-4 mr-1" />
                                   Request Update
@@ -1160,6 +1209,271 @@ export default function MyProjectsPage() {
           </Card>
         )}
       </div>
+
+      {/* Message Modal */}
+      <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowMessageModal(false)}
+                  className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <DialogTitle className="font-heading text-primary-navy">
+                  Message {selectedFreelancer?.name}
+                </DialogTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowMessageModal(false)}
+                className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-slate-50 p-4 rounded-lg">
+              <p className="text-sm text-slate-500 mb-2">Your message will be sent to the freelancer's inbox</p>
+              <Textarea
+                className="w-full h-32 p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-navy"
+                placeholder="Type your message here..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowMessageModal(false)}
+                className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!messageText.trim()}
+                className="bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Send Message
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Freelancer Profile Modal */}
+      {selectedFreelancer && showFreelancerProfile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowFreelancerProfile(false)}
+                    className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <h1 className="text-2xl font-heading text-primary-navy">Freelancer Profile</h1>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowFreelancerProfile(false)}
+                  className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Profile Content */}
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div className="flex items-start space-x-6">
+                  <Avatar className="h-20 w-20">
+                    <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-800 text-white font-heading text-2xl">
+                      {selectedFreelancer.name.split(' ').map((n: string) => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-2xl font-heading text-primary-navy">{selectedFreelancer.name}</h2>
+                    <p className="text-slate-600 font-subheading">{selectedFreelancer.title || 'Freelancer'}</p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <div className="flex items-center">
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-400 mr-1" />
+                        <span className="font-subheading">{selectedFreelancer.rating} ({selectedFreelancer.reviews} reviews)</span>
+                      </div>
+                      <div className="flex items-center">
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        <span className="font-subheading">${selectedFreelancer.hourlyRate}/hr</span>
+                      </div>
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span className="font-subheading">{selectedFreelancer.location}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Application Details */}
+                <div className="bg-slate-50 rounded-xl p-6 space-y-6">
+                  <h3 className="text-xl font-heading text-primary-navy">Application Details</h3>
+
+                  {/* Cover Letter */}
+                  <div>
+                    <h4 className="font-heading text-primary-navy mb-2">Cover Letter</h4>
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                      <p className="text-slate-600 font-subheading leading-relaxed">{selectedFreelancer.proposal}</p>
+                    </div>
+                  </div>
+
+                  {/* Expected Salary */}
+                  <div>
+                    <h4 className="font-heading text-primary-navy mb-2">Expected Salary</h4>
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                      <p className="text-slate-600 font-subheading">${selectedFreelancer.hourlyRate}/hour</p>
+                    </div>
+                  </div>
+
+                  {/* Available Start Date */}
+                  <div>
+                    <h4 className="font-heading text-primary-navy mb-2">Available Start Date</h4>
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                      <p className="text-slate-600 font-subheading">{selectedFreelancer.startDate || 'Immediately'}</p>
+                    </div>
+                  </div>
+
+                  {/* Application Timeline */}
+                  <div>
+                    <h4 className="font-heading text-primary-navy mb-2">Application Timeline</h4>
+                    <div className="bg-white rounded-lg p-4 border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-slate-500">Applied</p>
+                          <p className="font-subheading">{selectedFreelancer.appliedAt}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Status</p>
+                          <Badge
+                            variant="outline"
+                            className={`font-subheading ${
+                              selectedFreelancer.status === "hired"
+                                ? "border-green-500 text-green-600"
+                                : selectedFreelancer.status === "rejected"
+                                ? "border-red-500 text-red-600"
+                                : "border-amber-500 text-amber-600"
+                            }`}
+                          >
+                            {selectedFreelancer.status.charAt(0).toUpperCase() + selectedFreelancer.status.slice(1)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skills & Expertise */}
+                <div>
+                  <h3 className="font-heading text-primary-navy mb-2">Skills & Expertise</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedFreelancer.skills && selectedFreelancer.skills.map((skill: string) => (
+                      <Badge key={skill} variant="secondary" className="font-subheading">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Experience */}
+                <div>
+                  <h3 className="font-heading text-primary-navy mb-2">Experience</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-sm text-slate-500">Experience</p>
+                      <p className="font-subheading">{selectedFreelancer.experience || 'Not specified'}</p>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-sm text-slate-500">Completed Projects</p>
+                      <p className="font-subheading">{selectedFreelancer.completedProjects || 'Not specified'}</p>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-sm text-slate-500">Client Retention</p>
+                      <p className="font-subheading">{selectedFreelancer.clientRetention || 'Not specified'}</p>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-sm text-slate-500">Response Time</p>
+                      <p className="font-subheading">{selectedFreelancer.responseTime || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Portfolio */}
+                {selectedFreelancer.portfolio && selectedFreelancer.portfolio.length > 0 && (
+                  <div>
+                    <h3 className="font-heading text-primary-navy mb-2">Portfolio</h3>
+                    <div className="space-y-2">
+                      {selectedFreelancer.portfolio.map((item: any) => (
+                        <div key={item.name} className="bg-slate-50 p-4 rounded-lg">
+                          <p className="font-subheading font-medium">{item.name}</p>
+                          <p className="text-sm text-slate-600">{item.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Testimonials */}
+                {selectedFreelancer.testimonials && selectedFreelancer.testimonials.length > 0 && (
+                  <div>
+                    <h3 className="font-heading text-primary-navy mb-2">Client Testimonials</h3>
+                    <div className="space-y-4">
+                      {selectedFreelancer.testimonials.map((testimonial: any) => (
+                        <div key={testimonial.client} className="bg-slate-50 p-4 rounded-lg">
+                          <p className="font-subheading font-medium">{testimonial.client}</p>
+                          <p className="text-sm text-slate-600 mt-1">{testimonial.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex space-x-4 pt-4">
+                  <Button
+                    className="flex-1 bg-primary-navy hover:bg-slate-800 text-white rounded-xl font-subheading"
+                    onClick={() => {
+                      setShowFreelancerProfile(false)
+                      setShowMessageModal(true)
+                    }}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Message Freelancer
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                    onClick={() => setShowFreelancerProfile(false)}
+                  >
+                    <BookmarkIcon className="h-4 w-4 mr-2" />
+                    Save Profile
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

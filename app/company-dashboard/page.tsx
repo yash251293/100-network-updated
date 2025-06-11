@@ -170,15 +170,15 @@ export default function CompanyDashboard() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-primary-navy mb-2">Dashboard</h1>
-            <p className="text-lg text-slate-600 font-semibold">
+            <h1 className="text-3xl font-heading text-primary-navy mb-2">Dashboard</h1>
+            <p className="text-lg text-slate-600 font-subheading">
               Welcome back! Here's what's happening with your recruiting.
             </p>
           </div>
           <div className="flex items-center space-x-3">
             <Button
               variant="outline"
-              className="rounded-lg font-bold text-sm px-4 py-2"
+              className="rounded-lg font-subheading text-sm px-4 py-2"
             >
               <BarChart3 className="h-4 w-4 mr-2" />
               Analytics
@@ -196,14 +196,14 @@ export default function CompanyDashboard() {
                 <div className={`p-2 rounded-lg ${metric.isPositive ? 'bg-green-50' : 'bg-red-50'}`}>
                   <metric.icon className={`h-5 w-5 ${metric.isPositive ? 'text-green-600' : 'text-red-600'}`} />
                 </div>
-                <div className={`flex items-center text-sm font-bold ${metric.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`flex items-center text-sm font-subheading ${metric.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                   {metric.isPositive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                   {metric.change}
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-1">{metric.value}</h3>
-              <p className="text-sm text-slate-600 font-bold">{metric.title}</p>
-              <p className="text-xs text-slate-500 font-semibold mt-1">{metric.period}</p>
+              <h3 className="text-2xl font-heading text-slate-900 mb-1">{metric.value}</h3>
+              <p className="text-sm text-slate-600 font-subheading">{metric.title}</p>
+              <p className="text-xs text-slate-500 font-subheading mt-1">{metric.period}</p>
             </CardContent>
           </Card>
         ))}
@@ -214,9 +214,9 @@ export default function CompanyDashboard() {
         <Card className="border border-slate-200 rounded-lg">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-bold text-slate-900">Recent Applications</CardTitle>
+              <CardTitle className="text-xl font-heading text-slate-900">Recent Applications</CardTitle>
               <Link href="/company-dashboard?tab=applicants">
-                <Button variant="ghost" size="sm" className="text-primary-navy hover:bg-primary-navy/10 font-bold text-sm">
+                <Button variant="ghost" size="sm" className="text-primary-navy hover:bg-primary-navy/10 font-subheading text-sm">
                   View All
                 </Button>
               </Link>
@@ -227,28 +227,28 @@ export default function CompanyDashboard() {
               {recentApplications.slice(0, 4).map((applicant) => (
                 <div key={applicant.id} className="flex items-center space-x-4 p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
                   <div className="w-10 h-10 bg-primary-navy rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">
+                    <span className="text-white text-sm font-subheading">
                       {applicant.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-base text-slate-900 truncate">{applicant.name}</h4>
-                    <p className="text-sm text-slate-600 font-semibold">{applicant.position}</p>
+                    <h4 className="font-subheading text-base text-slate-900 truncate">{applicant.name}</h4>
+                    <p className="text-sm text-slate-600 font-subheading">{applicant.position}</p>
                     <div className="flex items-center space-x-2 mt-1">
-                      <span className="flex items-center text-xs text-slate-500 font-semibold">
+                      <span className="flex items-center text-xs text-slate-500 font-subheading">
                         <MapPin className="h-3 w-3 mr-1" />
                         {applicant.location}
                       </span>
                       <span className="text-xs text-slate-500">•</span>
-                      <span className="text-xs text-slate-500 font-semibold">{applicant.experience}</span>
+                      <span className="text-xs text-slate-500 font-subheading">{applicant.experience}</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="flex items-center space-x-2 mb-1">
                       <Star className="h-3 w-3 text-yellow-500" />
-                      <span className="text-sm font-bold text-slate-900">{applicant.match}%</span>
+                      <span className="text-sm font-subheading text-slate-900">{applicant.match}%</span>
                     </div>
-                    <Badge className={`${getStatusColor(applicant.status)} text-xs font-bold px-2 py-1`}>
+                    <Badge className={`${getStatusColor(applicant.status)} text-xs font-subheading px-2 py-1`}>
                       {applicant.status}
                     </Badge>
                   </div>
@@ -262,9 +262,9 @@ export default function CompanyDashboard() {
         <Card className="border border-slate-200 rounded-lg">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-bold text-slate-900">Top Performing Jobs</CardTitle>
+              <CardTitle className="text-xl font-heading text-slate-900">Top Performing Jobs</CardTitle>
               <Link href="/company-jobs">
-                <Button variant="ghost" size="sm" className="text-primary-navy hover:bg-primary-navy/10 font-bold text-sm">
+                <Button variant="ghost" size="sm" className="text-primary-navy hover:bg-primary-navy/10 font-subheading text-sm">
                   View All
                 </Button>
               </Link>
@@ -275,8 +275,8 @@ export default function CompanyDashboard() {
               {topJobs.map((job) => (
                 <div key={job.id} className="p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-bold text-base text-slate-900">{job.title}</h4>
-                    <Badge className="bg-green-50 text-green-600 border-green-200 text-xs font-bold px-2 py-1">
+                    <h4 className="font-subheading text-base text-slate-900">{job.title}</h4>
+                    <Badge className="bg-green-50 text-green-600 border-green-200 text-xs font-subheading px-2 py-1">
                       {job.status}
                     </Badge>
                   </div>
@@ -284,34 +284,32 @@ export default function CompanyDashboard() {
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
                         <Users className="h-4 w-4 text-slate-500 mr-1" />
-                        <span className="text-lg font-bold text-slate-900">{job.applicants}</span>
+                        <span className="text-lg font-heading text-slate-900">{job.applicants}</span>
                       </div>
-                      <p className="text-xs text-slate-600 font-bold">Applicants</p>
+                      <p className="text-xs text-slate-600 font-subheading">Applicants</p>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
                         <Eye className="h-4 w-4 text-slate-500 mr-1" />
-                        <span className="text-lg font-bold text-slate-900">{job.views}</span>
+                        <span className="text-lg font-heading text-slate-900">{job.views}</span>
                       </div>
-                      <p className="text-xs text-slate-600 font-bold">Views</p>
+                      <p className="text-xs text-slate-600 font-subheading">Views</p>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
                         <Target className="h-4 w-4 text-slate-500 mr-1" />
-                        <span className="text-lg font-bold text-slate-900">{job.conversion}</span>
+                        <span className="text-lg font-heading text-slate-900">{job.conversion}</span>
                       </div>
-                      <p className="text-xs text-slate-600 font-bold">Conversion</p>
+                      <p className="text-xs text-slate-600 font-subheading">Conversion</p>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 font-semibold mt-2">Posted {job.posted}</p>
+                  <p className="text-xs text-slate-500 font-subheading mt-2">Posted {job.posted}</p>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
-
-
     </div>
   )
 }

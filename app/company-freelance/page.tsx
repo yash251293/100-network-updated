@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +39,7 @@ import {
 } from "lucide-react"
 
 export default function CompanyFreelance() {
+  const router = useRouter()
   const [showNewProjectForm, setShowNewProjectForm] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filters, setFilters] = useState({
@@ -60,6 +62,10 @@ export default function CompanyFreelance() {
     category: "",
     timeline: ""
   })
+
+  const handleProjectClick = (projectId: number) => {
+    router.push(`/company-freelance/${projectId}`)
+  }
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault()
@@ -636,17 +642,17 @@ export default function CompanyFreelance() {
           {/* Projects List */}
           <div className="space-y-6">
             {filteredProjects.map((project) => (
-              <Card key={project.id} className="border border-slate-200 rounded-lg hover:shadow-lg transition-shadow">
+              <Card key={project.id} className="border border-slate-200 rounded-lg hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleProjectClick(project.id)}>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-bold text-primary-navy">{project.title}</h3>
-                        <Badge className={`${getStatusColor(project.status)} text-xs font-bold px-2 py-1`}>
+                        <h3 className="text-lg font-heading text-primary-navy">{project.title}</h3>
+                        <Badge className={`${getStatusColor(project.status)} text-xs font-subheading px-2 py-1`}>
                           {project.status}
                         </Badge>
                       </div>
-                      <div className="flex items-center space-x-4 text-sm font-semibold text-slate-500 mb-3">
+                      <div className="flex items-center space-x-4 text-sm font-subheading text-slate-500 mb-3">
                         <span>{project.category}</span>
                         <span>•</span>
                         <span>{project.duration}</span>
@@ -656,7 +662,7 @@ export default function CompanyFreelance() {
                         <span>{project.experience} level</span>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
@@ -665,7 +671,7 @@ export default function CompanyFreelance() {
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-2">
                       {project.skills.map((skill, index) => (
-                        <Badge key={index} variant="outline" className="text-xs font-semibold border-slate-300">
+                        <Badge key={index} variant="outline" className="text-xs font-subheading border-slate-300">
                           {skill}
                         </Badge>
                       ))}
@@ -675,40 +681,40 @@ export default function CompanyFreelance() {
                   {/* Project Stats */}
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <div className="text-center p-3 bg-slate-50 rounded">
-                      <div className="text-lg font-bold text-slate-900">{project.proposals}</div>
-                      <div className="text-xs font-semibold text-slate-500">Proposals</div>
+                      <div className="text-lg font-heading text-slate-900">{project.proposals}</div>
+                      <div className="text-xs font-subheading text-slate-500">Proposals</div>
                     </div>
                     <div className="text-center p-3 bg-slate-50 rounded">
-                      <div className="text-lg font-bold text-slate-900">{project.views}</div>
-                      <div className="text-xs font-semibold text-slate-500">Views</div>
+                      <div className="text-lg font-heading text-slate-900">{project.views}</div>
+                      <div className="text-xs font-subheading text-slate-500">Views</div>
                     </div>
                     <div className="text-center p-3 bg-slate-50 rounded">
-                      <div className="text-lg font-bold text-slate-900">{project.posted}</div>
-                      <div className="text-xs font-semibold text-slate-500">Posted</div>
+                      <div className="text-lg font-heading text-slate-900">{project.posted}</div>
+                      <div className="text-xs font-subheading text-slate-500">Posted</div>
                     </div>
                   </div>
 
                   {/* Recent Proposals */}
                   {project.proposals_data.length > 0 && (
                     <div className="mb-4">
-                      <h4 className="text-sm font-bold text-slate-900 mb-2">Recent Proposals</h4>
+                      <h4 className="text-sm font-heading text-slate-900 mb-2">Recent Proposals</h4>
                       <div className="space-y-2">
                         {project.proposals_data.slice(0, 2).map((proposal, index) => (
                           <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded">
                             <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-primary-navy text-white rounded-full flex items-center justify-center text-xs font-bold">
+                              <div className="w-8 h-8 bg-primary-navy text-white rounded-full flex items-center justify-center text-xs font-subheading">
                                 {proposal.name.split(' ').map(n => n[0]).join('')}
                               </div>
                               <div>
-                                <div className="text-sm font-bold text-slate-900">{proposal.name}</div>
-                                <div className="text-xs font-semibold text-slate-500">Rating: {proposal.rating}★</div>
+                                <div className="text-sm font-subheading text-slate-900">{proposal.name}</div>
+                                <div className="text-xs font-subheading text-slate-500">Rating: {proposal.rating}★</div>
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <Badge className={`${getProposalStatusColor(proposal.status)} text-xs font-bold`}>
+                              <Badge className={`${getProposalStatusColor(proposal.status)} text-xs font-subheading`}>
                                 {proposal.status}
                               </Badge>
-                              <span className="text-sm font-bold text-slate-900">{proposal.proposal_amount}</span>
+                              <span className="text-sm font-heading text-slate-900">{proposal.proposal_amount}</span>
                             </div>
                           </div>
                         ))}
@@ -718,11 +724,18 @@ export default function CompanyFreelance() {
 
                   {/* Action Buttons */}
                   <div className="flex space-x-3">
-                    <Button className="flex-1 bg-primary-navy hover:bg-primary-navy/90 text-white rounded-lg font-bold text-sm">
+                    <Button
+                      className="flex-1 bg-primary-navy hover:bg-primary-navy/90 text-white rounded-lg font-subheading text-sm"
+                      onClick={(e) => { e.stopPropagation(); handleProjectClick(project.id); }}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
-                    <Button variant="outline" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-lg font-bold text-sm">
+                    <Button
+                      variant="outline"
+                      className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-lg font-subheading text-sm"
+                      onClick={(e) => { e.stopPropagation(); }}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Project
                     </Button>

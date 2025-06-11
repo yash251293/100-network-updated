@@ -297,7 +297,7 @@ export default function FreelancePage() {
                       <Link href="/jobs/freelance/my-applications">
                         <Button
                           variant="outline"
-                          className="w-full justify-between border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading"
+                          className="w-full justify-between border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                         >
                           <span className="flex items-center">
                             <CheckCircle className="h-4 w-4 mr-2" />
@@ -472,15 +472,15 @@ export default function FreelancePage() {
                     />
             </div>
             <Select>
-                    <SelectTrigger className="w-[180px] rounded-xl border-slate-200 font-subheading">
+                    <SelectTrigger className="w-[180px] border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:ring-0 focus:outline-none">
                       <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent>
-                      <SelectItem value="newest">Newest First</SelectItem>
-                      <SelectItem value="budget-high">Highest Budget</SelectItem>
-                      <SelectItem value="budget-low">Lowest Budget</SelectItem>
-                      <SelectItem value="deadline">Deadline</SelectItem>
-                      <SelectItem value="applications">Fewest Applications</SelectItem>
+              <SelectContent className="border-primary-navy">
+                      <SelectItem value="newest" className="focus:bg-primary-navy focus:text-white">Newest First</SelectItem>
+                      <SelectItem value="budget-high" className="focus:bg-primary-navy focus:text-white">Highest Budget</SelectItem>
+                      <SelectItem value="budget-low" className="focus:bg-primary-navy focus:text-white">Lowest Budget</SelectItem>
+                      <SelectItem value="deadline" className="focus:bg-primary-navy focus:text-white">Deadline</SelectItem>
+                      <SelectItem value="applications" className="focus:bg-primary-navy focus:text-white">Fewest Applications</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -566,7 +566,7 @@ export default function FreelancePage() {
                       <Link href="/jobs/freelance/my-projects">
                         <Button
                           variant="outline"
-                          className="w-full justify-between border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading"
+                          className="w-full justify-between border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                         >
                           <span className="flex items-center">
                             <FolderOpen className="h-4 w-4 mr-2" />
@@ -733,15 +733,15 @@ export default function FreelancePage() {
                     />
             </div>
             <Select>
-                    <SelectTrigger className="w-[180px] rounded-xl border-slate-200 font-subheading">
+                    <SelectTrigger className="w-[180px] border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:ring-0 focus:outline-none">
                       <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent>
-                      <SelectItem value="rating">Highest Rating</SelectItem>
-                      <SelectItem value="reviews">Most Reviews</SelectItem>
-                      <SelectItem value="recent">Recently Active</SelectItem>
-                      <SelectItem value="price-low">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+              <SelectContent className="border-primary-navy">
+                      <SelectItem value="rating" className="focus:bg-primary-navy focus:text-white">Highest Rating</SelectItem>
+                      <SelectItem value="reviews" className="focus:bg-primary-navy focus:text-white">Most Reviews</SelectItem>
+                      <SelectItem value="recent" className="focus:bg-primary-navy focus:text-white">Recently Active</SelectItem>
+                      <SelectItem value="price-low" className="focus:bg-primary-navy focus:text-white">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high" className="focus:bg-primary-navy focus:text-white">Price: High to Low</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -831,20 +831,12 @@ export default function FreelancePage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setSelectedProject(null)}
-                    className="rounded-xl"
+                    className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                   >
-                    <ArrowLeft className="h-5 w-5" />
+                    <X className="h-5 w-5" />
                   </Button>
                   <h1 className="text-2xl font-heading text-primary-navy">Project Details</h1>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedProject(null)}
-                  className="rounded-xl"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
               </div>
 
               {/* Project Content */}
@@ -1014,7 +1006,7 @@ export default function FreelancePage() {
             <div className="flex space-x-4 pt-4">
               <Button
                 variant="outline"
-                className="flex-1 rounded-xl font-subheading"
+                className="flex-1 border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                 onClick={() => setShowApplyModal(false)}
               >
                 Cancel
@@ -1043,7 +1035,7 @@ export default function FreelancePage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setSelectedFreelancer(null)}
-                    className="rounded-xl"
+                    className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
@@ -1053,7 +1045,7 @@ export default function FreelancePage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setSelectedFreelancer(null)}
-                  className="rounded-xl"
+                  className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -1193,7 +1185,7 @@ export default function FreelancePage() {
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Contact & Message
                   </Button>
-                  <Button variant="outline" className="rounded-xl font-subheading">
+                  <Button variant="outline" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading">
                     <BookmarkIcon className="h-4 w-4 mr-2" />
                     Save Profile
                   </Button>
@@ -1216,7 +1208,7 @@ export default function FreelancePage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setShowMessageModal(false)}
-                    className="rounded-xl"
+                    className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
@@ -1229,7 +1221,7 @@ export default function FreelancePage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowMessageModal(false)}
-                  className="rounded-xl"
+                  className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -1333,7 +1325,7 @@ export default function FreelancePage() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="rounded-xl font-subheading"
+                    className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                     onClick={() => setShowMessageModal(false)}
                   >
                     Cancel

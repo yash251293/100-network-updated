@@ -1,11 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react" // Added useEffect, useCallback
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getToken } from "@/lib/authClient"; // Added
-import { toast } from "sonner"; // Added
-import ProtectedRoute from "@/components/ProtectedRoute"; // Added
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,95 +15,15 @@ import { Label } from "@/components/ui/label"
 import { Search, Filter, MapPin, Users, Building2, Star, TrendingUp, Award, ChevronRight, Bookmark, Eye, Heart, Globe, Calendar, Shield, Zap, ArrowLeft, X, Send, MessageCircle, UserPlus, ExternalLink, CheckCircle, Phone, Mail, DollarSign, Clock, Target } from "lucide-react"
 import Link from "next/link"
 
-
-function EmployersPageContent() {
+export default function EmployersPage() {
   const [showFilters, setShowFilters] = useState(false)
-  const [followerRange, setFollowerRange] = useState([1000, 1000000]) // Keep for UI, not connected
-  const [ratingRange, setRatingRange] = useState([3.0, 5.0]) // Keep for UI, not connected
-  const [selectedCompany, setSelectedCompany] = useState<any>(null) // For modal, keep static data for now
-  const [showJobsModal, setShowJobsModal] = useState(false) // For modal
-  const [followedCompanies, setFollowedCompanies] = useState<number[]>([2]) // Keep for UI, not connected to API
+  const [followerRange, setFollowerRange] = useState([1000, 1000000])
+  const [ratingRange, setRatingRange] = useState([3.0, 5.0])
+  const [selectedCompany, setSelectedCompany] = useState<any>(null)
+  const [showJobsModal, setShowJobsModal] = useState(false)
+  const [followedCompanies, setFollowedCompanies] = useState<number[]>([2])
 
-  // New state for API data
-  const [companiesData, setCompaniesData] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1) // Will be updated if API supports pagination
-  const [searchTerm, setSearchTerm] = useState("")
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
-
-  const ITEMS_PER_PAGE = 6; // Or your desired limit
-
-  // Debounce search term
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1); // Reset to first page on new search
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  const fetchCompanies = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    const token = getToken();
-
-    if (!token && !process.env.NEXT_PUBLIC_ALLOW_UNAUTHENTICATED_VIEW) { // Allow unauth view if env var is set
-        setError("Authentication required to view companies.");
-        toast.error("Authentication required.");
-        setIsLoading(false);
-        setCompaniesData([]);
-        return;
-    }
-
-    try {
-      const params = new URLSearchParams({
-        page: String(currentPage),
-        limit: String(ITEMS_PER_PAGE),
-      });
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
-      }
-
-      const response = await fetch(`/api/companies?${params.toString()}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Failed to fetch companies" }));
-        throw new Error(errorData.message || "Failed to fetch companies");
-      }
-      const data = await response.json();
-      // If current page is 1, replace data. Otherwise, append. (Basic pagination if API doesn't support it fully)
-      // For now, assuming API might not paginate, so we replace.
-      setCompaniesData(data.data || []);
-      // If API returns pagination info:
-      // setTotalPages(data.pagination?.total_pages || 1);
-      // setCompaniesData(prev => currentPage === 1 ? (data.data || []) : [...prev, ...(data.data || [])]);
-      // For now, if less than limit items are returned, assume no more pages.
-      if ((data.data || []).length < ITEMS_PER_PAGE) {
-        setTotalPages(currentPage); // No more pages if less than limit returned
-      } else {
-        setTotalPages(currentPage + 1); // Assume there might be more if limit is met
-      }
-
-    } catch (err: any) {
-      setError(err.message);
-      setCompaniesData([]);
-      toast.error(err.message || "Failed to load companies.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, debouncedSearchTerm]);
-
-  useEffect(() => {
-    fetchCompanies();
-  }, [fetchCompanies]);
-
-
-  // Static company data for modal - to be replaced if modal is made dynamic later
-  const staticCompanyDetailsForModal = [
+  const companies = [
     {
       id: 1,
       name: "Amazon",
@@ -323,13 +240,10 @@ function EmployersPageContent() {
         }
       ]
     }
-  ];
+  ]
 
-
-  const handleCompanyClick = (companyFromApi: any) => {
-    // For now, find matching static data to populate modal, or use API data directly if modal is adapted
-    const staticData = staticCompanyDetailsForModal.find(c => c.name.toLowerCase().includes(companyFromApi.name.toLowerCase()));
-    setSelectedCompany(staticData || { ...companyFromApi, industry: "N/A", location: "N/A", employees: "N/A", description: "Details not fully available.", openJobs: 0, rating: 0 });
+  const handleCompanyClick = (company: any) => {
+    setSelectedCompany(company)
   }
 
   const handleViewJobsClick = () => {
@@ -656,14 +570,11 @@ function EmployersPageContent() {
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <Input
-                    placeholder="Search companies by name..."
+                    placeholder="Search companies by name, industry, or location..."
                     className="pl-12 h-12 border-slate-200 focus:border-primary-navy focus:ring-primary-navy/10 font-subheading rounded-xl"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                {/* Sorting Select can be re-added if API supports sorting */}
-                {/* <Select>
+        <Select>
                   <SelectTrigger className="w-[160px] h-12 border-slate-200 focus:border-primary-navy rounded-xl font-subheading">
                     <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -681,51 +592,8 @@ function EmployersPageContent() {
 
           {/* Companies Grid */}
           <div className="space-y-4">
-            {isLoading && companiesData.length === 0 && (
-              <>
-                {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
-                  <Card key={`skeleton-${i}`} className="border-slate-200">
-                    <CardContent className="p-8">
-                      <div className="animate-pulse flex space-x-6">
-                        <div className="rounded-xl bg-slate-200 h-20 w-20"></div>
-                        <div className="flex-1 space-y-3 py-1">
-                          <div className="h-6 bg-slate-200 rounded w-3/4"></div>
-                          <div className="space-y-2">
-                            <div className="h-4 bg-slate-200 rounded"></div>
-                            <div className="h-4 bg-slate-200 rounded w-5/6"></div>
-                          </div>
-                          <div className="h-8 bg-slate-200 rounded w-1/4 mt-3"></div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </>
-            )}
-
-            {!isLoading && error && (
-              <Card className="border-red-200 bg-red-50">
-                <CardContent className="p-6 text-center">
-                  <XCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
-                  <h3 className="text-lg font-semibold text-red-700">Error Fetching Companies</h3>
-                  <p className="text-red-600">{error}</p>
-                  <Button onClick={fetchCompanies} className="mt-4">Try Again</Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {!isLoading && !error && companiesData.length === 0 && (
-              <Card className="border-slate-200">
-                <CardContent className="p-6 text-center">
-                  <Search className="h-12 w-12 text-slate-400 mx-auto mb-2" />
-                  <h3 className="text-lg font-semibold text-slate-700">No Companies Found</h3>
-                  <p className="text-slate-500">Try adjusting your search term.</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {!error && companiesData.map((company) => {
-              const followed = isFollowed(company.id); // Assuming company.id is from API
+            {companies.map((company) => {
+              const followed = isFollowed(company.id)
 
               return (
                 <Card
@@ -738,62 +606,67 @@ function EmployersPageContent() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-6 mb-5">
                           <div className="relative">
-                            {company.logo_url ? (
+                            {company.logo ? (
                               <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
-                                <img src={company.logo_url} alt={company.name} className="w-full h-full object-cover" />
+                                <img src={company.logo} alt={company.name} className="w-full h-full object-cover" />
                               </div>
                             ) : (
                               <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-primary-navy to-[#0056B3] flex items-center justify-center text-white font-heading text-xl">
-                                {company.name?.substring(0, 2).toUpperCase() || "N/A"}
+                                {company.logoFallback}
                               </div>
                             )}
-                            {/* isVerified not in API list response */}
+                            {company.isVerified && (
+                              <div className="absolute -top-1 -right-1 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center">
+                                <Award className="h-4 w-4 text-white" />
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
                               <h2 className="text-2xl font-heading text-primary-navy group-hover:text-primary-navy transition-colors">
                                 {company.name}
                               </h2>
-                              {/* isVerified not in API list response */}
+                              {company.isVerified && (
+                                <Badge className="bg-green-50 text-green-700 border-green-200 font-subheading text-sm px-3 py-1">
+                                  Verified
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-slate-600 font-subheading leading-relaxed mb-4 text-base">
-                              {/* Full description not in API list, use placeholder or remove */}
-                              Industry: {company.industry || "N/A"} | Location: {company.hq_location_city && company.hq_location_state ? `${company.hq_location_city}, ${company.hq_location_state}` : company.hq_location_country || "N/A"}
+                              {company.description}
                             </p>
                             <div className="flex items-center space-x-4 text-base text-slate-500">
-                               {/* These details are not in the /api/companies list view */}
-                               <div className="flex items-center space-x-1">
+                              <div className="flex items-center space-x-1">
                                 <Building2 className="h-5 w-5" />
-                                <span className="font-subheading">Industry: N/A</span>
+                                <span className="font-subheading">{company.industry}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <MapPin className="h-5 w-5" />
-                                <span className="font-subheading">Location: N/A</span>
+                                <span className="font-subheading">{company.location}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Users className="h-5 w-5" />
-                                <span className="font-subheading">Employees: N/A</span>
+                                <span className="font-subheading">{company.employees}</span>
                               </div>
                             </div>
                           </div>
-                        </div>
+      </div>
 
-                        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-6">
-                             {/* These details are not in the /api/companies list view */}
-                            <div className="flex items-center space-x-1 text-slate-500 opacity-50">
+                            <div className="flex items-center space-x-1 text-slate-500">
                               <TrendingUp className="h-5 w-5" />
-                              <span className="font-subheading text-base">--- followers</span>
+                              <span className="font-subheading text-base">{company.followers} followers</span>
                             </div>
-                            <div className="flex items-center space-x-1 opacity-50">
-                              <Star className="h-5 w-5 text-slate-400" />
-                              <span className="font-subheading text-base text-slate-500">--</span>
+                            <div className="flex items-center space-x-1">
+                              <Star className="h-5 w-5 text-yellow-500" />
+                              <span className="font-subheading text-base text-slate-600">{company.rating}</span>
                             </div>
-                            <Badge className="bg-slate-100 text-slate-700 font-subheading text-sm px-3 py-1 opacity-50">
-                              Type: N/A
+                            <Badge className="bg-slate-100 text-slate-700 font-subheading text-sm px-3 py-1">
+                              {company.type}
                             </Badge>
-                            <span className="text-base text-slate-500 font-subheading opacity-50">
-                              -- open positions
+                            <span className="text-base text-slate-500 font-subheading">
+                              {company.openJobs} open positions
                             </span>
                           </div>
                           <div className="flex items-center space-x-3">
@@ -832,32 +705,24 @@ function EmployersPageContent() {
             })}
           </div>
 
-          {/* Load More Section / Pagination */}
-          { !isLoading && !error && companiesData.length > 0 && (
-            <div className="text-center mt-12">
-              { currentPage < totalPages ? (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-xl font-subheading px-8"
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  disabled={isLoading || currentPage >= totalPages}
-                >
-                  {isLoading && currentPage > 1 ? "Loading More..." : "Load More Companies"}
-                </Button>
-              ) : (
-                 companiesData.length >= ITEMS_PER_PAGE && <p className="text-slate-500 font-subheading text-sm mt-3">End of results.</p>
-              )}
-              { totalPages > 1 && <p className="text-slate-500 font-subheading text-sm mt-3">
-                Showing {companiesData.length} results. Page {currentPage} of {totalPages}.
-              </p>}
-            </div>
-          )}
+          {/* Load More Section */}
+          <div className="text-center mt-12">
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-xl font-subheading px-8"
+            >
+              Load More Companies
+            </Button>
+            <p className="text-slate-500 font-subheading text-sm mt-3">
+              Showing 6 of 1,247 companies
+            </p>
+          </div>
         </div>
           </div>
         </div>
 
-    {/* Company Details Modal - Kept static for now, will show limited data if API item passed */}
+    {/* Company Details Modal */}
     {selectedCompany && !showJobsModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
@@ -1185,12 +1050,4 @@ function EmployersPageContent() {
     </Dialog>
     </>
   )
-}
-
-export default function EmployersPage() {
-  return (
-    <ProtectedRoute>
-      <EmployersPageContent />
-    </ProtectedRoute>
-  );
 }

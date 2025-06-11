@@ -434,7 +434,7 @@ export default function PeoplePage() {
 
             <div className="flex items-center justify-between mb-6">
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="px-3 py-1 border-primary-navy text-primary-navy bg-primary-navy/5 rounded-lg font-subheading">
+                <Badge variant="outline" className="px-3 py-1 border-primary-navy text-primary-navy bg-primary-navy/5 rounded-lg font-subheading text-sm px-3 py-1">
                   All
                 </Badge>
                 <Badge variant="outline" className="px-3 py-1 border-slate-200 text-slate-600 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading cursor-pointer transition-all duration-200">
@@ -453,15 +453,16 @@ export default function PeoplePage() {
                   Healthcare
                 </Badge>
               </div>
-              <Select>
-                <SelectTrigger className="w-40 h-10 border-slate-200 focus:border-primary-navy rounded-lg font-subheading">
-                  <SelectValue placeholder="Sort by" />
+              <Select onValueChange={(value) => console.log(value)}>
+                <SelectTrigger className="w-40 h-10 border-slate-200 focus:border-primary-navy rounded-lg font-subheading focus:ring-0 focus:outline-none">
+                  <SelectValue defaultValue="sort-by" placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent className="rounded-lg">
-                  <SelectItem value="relevance" className="font-subheading">Relevance</SelectItem>
-                  <SelectItem value="recent" className="font-subheading">Recently joined</SelectItem>
-                  <SelectItem value="connections" className="font-subheading">Most followers</SelectItem>
-                  <SelectItem value="location" className="font-subheading">Location</SelectItem>
+                <SelectContent className="rounded-lg border-primary-navy">
+                  <SelectItem value="sort-by" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Sort by</SelectItem>
+                  <SelectItem value="relevance" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Relevance</SelectItem>
+                  <SelectItem value="recent" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Recently joined</SelectItem>
+                  <SelectItem value="connections" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Most followers</SelectItem>
+                  <SelectItem value="location" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Location</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -560,7 +561,7 @@ export default function PeoplePage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setSelectedPerson(null)}
-                  className="rounded-xl"
+                  className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
@@ -570,7 +571,7 @@ export default function PeoplePage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setSelectedPerson(null)}
-                className="rounded-xl"
+                className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
               >
                 <X className="h-5 w-5" />
               </Button>

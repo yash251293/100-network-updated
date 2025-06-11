@@ -4,52 +4,17 @@ import type React from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-// Input not used directly in this version, Textarea is
-// import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { BookmarkIcon, Heart, MessageCircle, MoreHorizontal, X, Send, ImageIcon, Plus, Smile, AtSign, Hash, Loader2 } from "lucide-react" // Added Loader2
-import { useState, useEffect, useCallback } from "react" // Added useEffect, useCallback
-import { getToken } from "@/lib/authClient"; // Added
-import { toast } from "sonner"; // Added
+import { BookmarkIcon, Heart, MessageCircle, MoreHorizontal, X, Send, ImageIcon, Plus, Smile, AtSign, Hash } from "lucide-react"
+import { useState } from "react"
 
 export default function FeedPage() {
   const [postText, setPostText] = useState("")
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-
-  // New states for feed posts
-  const [posts, setPosts] = useState<any[]>([])
-  const [isLoadingPosts, setIsLoadingPosts] = useState(true)
-  const [postsError, setPostsError] = useState<string | null>(null)
-  const [isSubmittingPost, setIsSubmittingPost] = useState(false)
-
-
-  const fetchPosts = useCallback(async () => {
-    setIsLoadingPosts(true);
-    setPostsError(null);
-    console.log("Attempting to fetch posts. GET /api/posts would be called here.");
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Simulate fetching posts - replace with actual API call
-      // For now, set to empty to show "No posts" message or populate with mock data
-      setPosts([]);
-      // toast.info("Feed section is a work in progress: API not yet connected.");
-    } catch (error) {
-      console.error("Error fetching posts (simulation):", error);
-      setPostsError("Failed to load posts.");
-      toast.error("Failed to load posts (simulation).");
-    } finally {
-      setIsLoadingPosts(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
-
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -62,51 +27,12 @@ export default function FeedPage() {
     }
   }
 
-  const handlePost = async () => {
-    setIsSubmittingPost(true);
-    const token = getToken();
-
-    if (!token) {
-      toast.error("Please log in to create a post.");
-      setIsSubmittingPost(false);
-      return;
-    }
-
-    const payload = { content: postText, imageUrl: selectedImage };
-    console.log("Attempting to create post. POST /api/posts would be called with payload:", payload);
-    // TODO: Implement actual image upload. 'selectedImage' is currently a base64 preview.
-    // When implementing, upload image first, get URL, then include URL in payload.
-
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // const response = await fetch('/api/posts', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify(payload), // Send actual payload with image URL
-      // });
-
-      // if (!response.ok) {
-      //   const errorData = await response.json().catch(() => ({ message: "Failed to create post" }));
-      //   throw new Error(errorData.message);
-      // }
-
-      // const newPost = await response.json(); // Assuming API returns the created post
-
-      toast.success("Post created (simulation)!");
-      setPostText("");
-      setSelectedImage(null);
-      setIsDialogOpen(false);
-      fetchPosts(); // Refresh feed
-    } catch (error: any) {
-      console.error("Error creating post (simulation):", error);
-      toast.error(error.message || "Failed to create post (simulation).");
-    } finally {
-      setIsSubmittingPost(false);
-    }
+  const handlePost = () => {
+    // Handle posting logic here
+    console.log("Posting:", { text: postText, image: selectedImage })
+    setPostText("")
+    setSelectedImage(null)
+    setIsDialogOpen(false)
   }
 
   const removeImage = () => {
@@ -213,20 +139,11 @@ export default function FeedPage() {
                       </Button>
                       <Button
                         onClick={handlePost}
-                        disabled={(!postText.trim() && !selectedImage) || isSubmittingPost}
-                        className="bg-primary-navy hover:bg-primary-navy/90 text-white rounded-full px-6 shadow-md hover:shadow-lg transition-all"
+                        disabled={!postText.trim() && !selectedImage}
+                       className="bg-primary-navy hover:bg-primary-navy/90 text-white rounded-full px-6 shadow-md hover:shadow-lg transition-all"
                       >
-                        {isSubmittingPost ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Posting...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4 mr-2" />
-                            Post
-                          </>
-                        )}
+                        <Send className="h-4 w-4 mr-2" />
+                        Post
                       </Button>
                     </div>
                   </div>
@@ -259,100 +176,118 @@ export default function FeedPage() {
 
         {/* Feed Posts */}
         <div className="space-y-6">
-          {isLoadingPosts && (
-            <div className="text-center py-10">
-              <Loader2 className="h-12 w-12 text-primary-navy mx-auto animate-spin mb-4" />
-              <p className="text-lg font-semibold text-primary-navy">Loading feed...</p>
-            </div>
-          )}
-
-          {!isLoadingPosts && postsError && (
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="p-6 text-center">
-                <XCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
-                <h3 className="text-lg font-semibold text-red-700">Error Loading Feed</h3>
-                <p className="text-red-600">{postsError}</p>
-                <Button onClick={fetchPosts} className="mt-4">Try Again</Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {!isLoadingPosts && !postsError && posts.length === 0 && (
-            <Card className="border-slate-200">
-              <CardContent className="p-10 text-center">
-                <MessageCircle className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-700 mb-2">No posts in the feed yet.</h3>
-                <p className="text-slate-500 mb-6">Why not be the first to share something with your network?</p>
-                <Button
-                  onClick={() => setIsDialogOpen(true)}
-                  className="bg-primary-navy hover:bg-primary-navy/90 text-white rounded-full px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 font-subheading"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Post
+          {/* Featured Post */}
+          <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
+            <CardContent className="p-8">
+              <div className="flex justify-between items-start mb-6">
+            <div className="flex space-x-4">
+                  <Avatar className="w-16 h-16">
+                <AvatarImage src="/placeholder-user.jpg" alt="User" />
+                    <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">CL</AvatarFallback>
+              </Avatar>
+              <div>
+                    <div className="font-heading text-xl text-primary-navy">Carl Livingston</div>
+                    <div className="text-base text-slate-500 font-subheading">Computer Science · Stanford University · 2024</div>
+                    <div className="text-sm text-slate-400 mt-1">2 hours ago</div>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10">
+                  <MoreHorizontal className="h-6 w-6" />
                 </Button>
-              </CardContent>
-            </Card>
-          )}
+              </div>
 
-          {posts.map((post) => (
-            // This is a placeholder structure. Adapt to actual post data structure from API.
-            <Card key={post.id} className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
-              <CardContent className="p-8">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex space-x-4">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage src={post.author?.avatarUrl || "/placeholder-user.jpg"} alt={post.author?.name || "User"} />
-                      <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">
-                        {post.author?.name?.substring(0,2).toUpperCase() || "UN"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-heading text-xl text-primary-navy">{post.author?.name || "Anonymous User"}</div>
-                      <div className="text-base text-slate-500 font-subheading">{post.author?.headline || ""}</div>
-                      <div className="text-sm text-slate-400 mt-1">{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : "Some time ago"}</div>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10" onClick={() => console.log("More options for post:", post.id)}>
-                    <MoreHorizontal className="h-6 w-6" />
-                  </Button>
-                </div>
+              <div className="mb-6">
+                <p className="text-slate-700 font-subheading leading-relaxed text-base">
+                  Just finished my final interview round at Google! 🎉 The preparation was intense, but these interview tips from the 100 Networks community were game-changers.
 
-                <div className="mb-6">
-                  <p className="text-slate-700 font-subheading leading-relaxed text-base">
-                    {post.content}
-                  </p>
-                </div>
+                  Key takeaways that helped me:
+                  • Research the company culture deeply
+                  • Practice behavioral questions with real examples
+                  • Ask thoughtful questions about the role
 
-                {post.imageUrl && (
-                  <div className="rounded-xl overflow-hidden border border-slate-100 mb-6">
-                    <img src={post.imageUrl} alt="Post image" className="w-full object-cover" />
-                    {/* Optional: If imageUrl links to an article, show article preview */}
-                  </div>
-                )}
+                  Grateful for this amazing community! 💙
+                </p>
+            </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-6 text-slate-500">
-                    <span className="text-base font-subheading">{post.likesCount || 0} likes • {post.commentsCount || 0} comments</span>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10" onClick={() => console.log("Would like post:", post.id)}>
-                      <Heart className="h-6 w-6" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10" onClick={() => console.log("Would comment on post:", post.id)}>
-                      <MessageCircle className="h-6 w-6" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10" onClick={() => console.log("Would bookmark post:", post.id)}>
-                      <BookmarkIcon className="h-6 w-6" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+              <div className="rounded-xl overflow-hidden border border-slate-100 mb-6">
+                <img src="/campus-walk.png" alt="Students on campus" className="w-full h-52 object-cover" />
+                <div className="p-6 bg-slate-50">
+                  <h3 className="font-heading text-lg text-primary-navy mb-2">5 Interview Tips That Actually Work</h3>
+                  <p className="text-base text-slate-600 font-subheading">Transform your interview game with research-backed strategies...</p>
+                  <p className="text-sm text-[#0056B3] mt-2 font-medium">100networks.com</p>
+          </div>
+              </div>
 
-          {/* Static Community Spotlight Card (can be kept or made dynamic later) */}
-          {!isLoadingPosts && !postsError && posts.length > 0 && ( // Show only if there are posts
-            <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6 text-slate-500">
+                  <span className="text-base font-subheading">127 likes • 23 comments</span>
+            </div>
+              <div className="flex space-x-2">
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10">
+                    <Heart className="h-6 w-6" />
+                </Button>
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10">
+                    <MessageCircle className="h-6 w-6" />
+                </Button>
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10">
+                    <BookmarkIcon className="h-6 w-6" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+          {/* Regular Post */}
+          <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-2xl bg-white">
+            <CardContent className="p-8">
+              <div className="flex justify-between items-start mb-6">
+            <div className="flex space-x-4">
+                  <Avatar className="w-16 h-16">
+                <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
+                    <AvatarFallback className="bg-[#0056B3]/10 text-[#0056B3] font-medium text-lg">IA</AvatarFallback>
+              </Avatar>
+              <div>
+                    <div className="font-heading text-xl text-primary-navy">Ian Arruda, MPM, CAPM</div>
+                    <div className="text-base text-slate-500 font-subheading">Arizona State University · Project Management</div>
+                    <div className="text-sm text-slate-400 mt-1">1 day ago</div>
+              </div>
+            </div>
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 h-10 w-10">
+                  <MoreHorizontal className="h-6 w-6" />
+              </Button>
+            </div>
+
+              <div className="mb-6">
+                <p className="text-slate-700 font-subheading leading-relaxed text-base">
+                  🎓 I finally did it! After two years of balancing work, studies, and life, I've earned my Master of Project Management degree from Arizona State University.
+
+                  This journey taught me that persistence pays off. Thank you to everyone who supported me along the way – mentors, classmates, and the incredible 100 Networks community!
+
+                  Next chapter: Leading impactful projects and helping others achieve their goals. 🚀
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6 text-slate-500">
+                  <span className="text-base font-subheading">89 likes • 12 comments</span>
+          </div>
+              <div className="flex space-x-2">
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full h-10 w-10">
+                    <Heart className="h-6 w-6" />
+                </Button>
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary-navy hover:bg-primary-navy/10 rounded-full h-10 w-10">
+                    <MessageCircle className="h-6 w-6" />
+                </Button>
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-full h-10 w-10">
+                    <BookmarkIcon className="h-6 w-6" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+          {/* Community Spotlight Card */}
+          <Card className="border-0 shadow-md rounded-2xl bg-gradient-to-r from-primary-navy to-[#0056B3] text-white">
             <CardContent className="p-8">
               <div className="flex items-start space-x-6">
                 <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">

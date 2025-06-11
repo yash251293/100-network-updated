@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Search, Filter, MapPin, Users, Building2, Star, TrendingUp, Award, ArrowLeft, Heart, HeartOff, Eye, Bookmark, Calendar, Globe } from "lucide-react"
 import Link from "next/link"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 const starredCompanies = [
   {
@@ -81,6 +82,7 @@ const starredCompanies = [
 export default function StarredCompaniesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("recently-starred")
+  const [activeTab, setActiveTab] = useState('starred')
 
   const filteredCompanies = starredCompanies.filter(company =>
     company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -94,259 +96,164 @@ export default function StarredCompaniesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-6">
-      {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex items-center mb-4">
-          <Link href="/employers">
-            <Button variant="ghost" size="sm" className="mr-4 text-slate-600 hover:text-primary-navy">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Companies
+    <div className="min-h-screen">
+      <div className="max-w-[65%] mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center mb-4">
+            <Link href="/employers">
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+          <h1 className="text-4xl font-heading text-primary-navy mb-3">Starred Companies</h1>
+          <p className="text-slate-600 font-subheading text-xl">
+            Manage your starred companies and follow their updates
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-heading text-primary-navy flex items-center">
+                <Star className="h-5 w-5 mr-2" />
+                Starred Companies
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-slate-500 font-subheading text-center py-3">
+                <p className="text-2xl font-heading text-primary-navy">24</p>
+                <p>Companies you've starred</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-heading text-primary-navy flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Following
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-slate-500 font-subheading text-center py-3">
+                <p className="text-2xl font-heading text-primary-navy">12</p>
+                <p>Companies you follow</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <div className="mt-12 text-center">
+          <div className="flex gap-4">
+            <Button
+              variant="outline"
+              className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white focus:ring-0 focus:outline-none"
+              onClick={() => setActiveTab('starred')}
+            >
+              Starred Companies
             </Button>
-          </Link>
+            <Button
+              variant="outline"
+              className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white focus:ring-0 focus:outline-none"
+              onClick={() => setActiveTab('following')}
+            >
+              Following
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center mb-2">
-          <Heart className="h-8 w-8 mr-3 text-red-500" />
-          <h1 className="text-3xl font-heading text-primary-navy">Starred Companies</h1>
-        </div>
-        <p className="text-slate-600 font-subheading text-lg">Companies you've bookmarked for future reference</p>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-subheading text-slate-500">Total Starred</p>
-                <p className="text-2xl font-heading text-primary-navy">{starredCompanies.length}</p>
-              </div>
-              <Star className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-subheading text-slate-500">Also Following</p>
-                <p className="text-2xl font-heading text-blue-600">{starredCompanies.filter(c => c.isFollowing).length}</p>
-              </div>
-              <Eye className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-subheading text-slate-500">Open Positions</p>
-                <p className="text-2xl font-heading text-green-600">{starredCompanies.reduce((sum, c) => sum + c.openJobs, 0)}</p>
-              </div>
-              <Building2 className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-subheading text-slate-500">Avg Rating</p>
-                <p className="text-2xl font-heading text-orange-600">
-                  {(starredCompanies.reduce((sum, c) => sum + c.rating, 0) / starredCompanies.length).toFixed(1)}
-                </p>
-              </div>
-              <Award className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <Card className="border-slate-200 shadow-sm mb-8">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input
-                placeholder="Search starred companies..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 border-slate-200 focus:border-primary-navy focus:ring-primary-navy/10 font-subheading rounded-xl"
-              />
+        {/* Main Content */}
+        <div className="mt-8">
+          {/* Search and Filter Bar */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="px-3 py-1 border-primary-navy text-primary-navy bg-primary-navy/5 rounded-lg font-subheading text-sm px-3 py-1">
+                All
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 border-slate-200 text-slate-600 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading cursor-pointer transition-all duration-200">
+                Technology
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 border-slate-200 text-slate-600 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading cursor-pointer transition-all duration-200">
+                Finance
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 border-slate-200 text-slate-600 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading cursor-pointer transition-all duration-200">
+                Healthcare
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 border-slate-200 text-slate-600 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading cursor-pointer transition-all duration-200">
+                Education
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 border-slate-200 text-slate-600 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading cursor-pointer transition-all duration-200">
+                Retail
+              </Badge>
             </div>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[200px] h-12 border-slate-200 focus:border-primary-navy rounded-xl font-subheading">
+              <SelectTrigger className="w-40 h-10 border-slate-200 focus:border-primary-navy rounded-lg font-subheading focus:ring-0 focus:outline-none">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="recently-starred" className="font-subheading">Recently Starred</SelectItem>
-                <SelectItem value="name" className="font-subheading">Company Name</SelectItem>
-                <SelectItem value="rating" className="font-subheading">Highest Rated</SelectItem>
-                <SelectItem value="jobs" className="font-subheading">Most Jobs</SelectItem>
-                <SelectItem value="followers" className="font-subheading">Most Followers</SelectItem>
+              <SelectContent className="rounded-lg border-primary-navy">
+                <SelectItem value="recently-starred" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Recently Starred</SelectItem>
+                <SelectItem value="name" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Company Name</SelectItem>
+                <SelectItem value="rating" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Highest Rated</SelectItem>
+                <SelectItem value="jobs" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Most Jobs</SelectItem>
+                <SelectItem value="followers" className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading focus:bg-primary-navy focus:text-white">Most Followers</SelectItem>
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Companies List */}
-      <div className="space-y-4">
-        {filteredCompanies.length === 0 ? (
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="p-12 text-center">
-              <Heart className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-              <h3 className="text-xl font-heading text-slate-600 mb-2">No starred companies found</h3>
-              <p className="text-slate-500 font-subheading mb-6">
-                {searchQuery ? "Try adjusting your search terms" : "Start exploring companies and star the ones you're interested in"}
-              </p>
-              <Link href="/employers">
-                <Button className="bg-primary-navy hover:bg-primary-navy/90 text-white rounded-lg font-subheading">
-                  Browse Companies
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredCompanies.map((company) => (
-            <Card key={company.id} className="border-slate-200 hover:shadow-lg hover:border-primary-navy/30 transition-all duration-200 group">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4 mb-4">
-                      <div className="relative">
-                        {company.logo ? (
-                          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
-                            <img src={company.logo} alt={company.name} className="w-full h-full object-cover" />
-                          </div>
-                        ) : (
-                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-navy to-[#0056B3] flex items-center justify-center text-white font-heading text-lg">
-                            {company.logoFallback}
-                          </div>
-                        )}
-                        {company.isVerified && (
-                          <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                            <Award className="h-3 w-3 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h2 className="text-xl font-heading text-primary-navy group-hover:text-primary-navy transition-colors">
-                            {company.name}
-                          </h2>
-                          {company.isVerified && (
-                            <Badge className="bg-green-50 text-green-700 border-green-200 font-subheading text-xs">
-                              Verified
-                            </Badge>
-                          )}
-                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        </div>
-                        <p className="text-slate-600 font-subheading leading-relaxed mb-3">
-                          {company.description}
-                        </p>
-                        <div className="flex items-center space-x-4 text-sm text-slate-500">
-                          <div className="flex items-center space-x-1">
-                            <Building2 className="h-4 w-4" />
-                            <span className="font-subheading">{company.industry}</span>
-                          </div>
+          {/* Company Cards Grid */}
+          <div className="grid grid-cols-1 gap-6">
+            {starredCompanies.map((company) => (
+              <Card key={company.id} className="border-slate-200 hover:border-primary-navy transition-colors duration-200">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={company.logo} alt={company.name} />
+                        <AvatarFallback className="bg-primary-navy text-white font-heading text-xl">
+                          {company.logoFallback}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="text-xl font-heading text-primary-navy mb-1">{company.name}</h3>
+                        <p className="text-slate-600 font-subheading mb-2">{company.industry}</p>
+                        <div className="flex items-center space-x-4 text-slate-500 font-subheading">
                           <div className="flex items-center space-x-1">
                             <MapPin className="h-4 w-4" />
-                            <span className="font-subheading">{company.location}</span>
+                            <span>{company.location}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Users className="h-4 w-4" />
-                            <span className="font-subheading">{company.employees}</span>
+                            <span>{company.employees}</span>
                           </div>
                           <div className="flex items-center space-x-1">
-                            <Calendar className="h-4 w-4" />
-                            <span className="font-subheading">Starred {new Date(company.starredDate).toLocaleDateString()}</span>
+                            <Star className="h-4 w-4" />
+                            <span>{company.rating} rating</span>
                           </div>
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-6">
-                        <div className="flex items-center space-x-1 text-slate-500">
-                          <TrendingUp className="h-4 w-4" />
-                          <span className="font-subheading text-sm">{company.followers} followers</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          <span className="font-subheading text-sm text-slate-600">{company.rating}</span>
-                        </div>
-                        <Badge className="bg-slate-100 text-slate-700 font-subheading">
-                          {company.type}
-                        </Badge>
-                        <span className="text-sm text-slate-500 font-subheading">
-                          {company.openJobs} open positions
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-lg font-subheading"
-                        >
-                          View Jobs
-                        </Button>
-                        <Button
-                          variant={company.isFollowing ? "outline" : "default"}
-                          size="sm"
-                          className={company.isFollowing
-                            ? "border-slate-200 hover:border-red-300 hover:text-red-600 rounded-lg font-subheading"
-                            : "bg-primary-navy hover:bg-primary-navy/90 text-white rounded-lg font-subheading"
-                          }
-                        >
-                          {company.isFollowing ? "Following" : "Follow"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUnstar(company.id)}
-                          className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 rounded-lg font-subheading"
-                        >
-                          <HeartOff className="h-4 w-4 mr-1" />
-                          Unstar
-                        </Button>
-                      </div>
+                    <div className="flex items-center space-x-3">
+                      <Button
+                        variant="outline"
+                        className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+                        onClick={() => handleUnstar(company.id)}
+                      >
+                        <HeartOff className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mt-12 text-center">
-        <div className="flex justify-center space-x-4">
-          <Link href="/employers">
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-xl font-subheading px-8"
-            >
-              <Bookmark className="h-4 w-4 mr-2" />
-              Find More Companies
-            </Button>
-          </Link>
-          <Link href="/companies/following">
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-slate-200 hover:border-primary-navy hover:text-primary-navy rounded-xl font-subheading px-8"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              View Following
-            </Button>
-          </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     </div>

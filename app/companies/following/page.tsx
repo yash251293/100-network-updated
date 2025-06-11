@@ -146,21 +146,21 @@ export default function FollowingCompaniesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-6">
-      {/* Header Section */}
+    <div className="max-w-[65%] mx-auto py-8 px-4">
+      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center mb-4">
           <Link href="/employers">
-            <Button variant="ghost" size="sm" className="mr-4 text-slate-600 hover:text-primary-navy">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Companies
+            <Button
+              variant="outline"
+              size="icon"
+              className="border-primary-navy text-primary-navy hover:bg-primary-navy hover:text-white rounded-xl font-subheading"
+            >
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
         </div>
-        <div className="flex items-center mb-2">
-          <Eye className="h-8 w-8 mr-3 text-blue-500" />
-          <h1 className="text-3xl font-heading text-primary-navy">Following</h1>
-        </div>
+        <h1 className="text-4xl font-heading text-primary-navy mb-3">Following Companies</h1>
         <p className="text-slate-600 font-subheading text-lg">Companies you're following and their latest updates</p>
       </div>
 
