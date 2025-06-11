@@ -30,7 +30,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning> {/* suppressHydrationWarning is good with ThemeProvider */}
+    <html lang="en" suppressHydrationWarning>
+      {/* Ensuring no whitespace text node here. Next.js manages the actual <head> content.
+          Adding an explicit <head /> tag is usually not necessary unless you have specific
+          meta tags to place directly here, but it doesn't hurt for clarity. */}
+      <head />
       <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable}`}>
         {/* <SessionProvider> */} {/* Still Commented out */}
           <ThemeProvider
@@ -47,5 +51,5 @@ export default function RootLayout({
         {/* </SessionProvider> */} {/* Still Commented out */}
       </body>
     </html>
-  )
+  );
 }

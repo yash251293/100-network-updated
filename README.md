@@ -109,4 +109,5 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
     *   **Update**: Re-introduced `HeaderWrapper` (which uses `useSession`) with `SessionProvider` also active.
     *   **Update**: Set `app/page.tsx` to minimal. In `app/layout.tsx`, temporarily commented out `ThemeProvider`, `SessionProvider`, AND `HeaderWrapper` to test baseline rendering. This confirmed baseline rendering works.
     *   **Update**: Re-introducing `ThemeProvider` in `app/layout.tsx` (while `SessionProvider` and `HeaderWrapper` remain commented out). This is to isolate if `ThemeProvider` interacts negatively.
+    *   **Update**: Fixed hydration error in `app/layout.tsx` caused by extraneous whitespace within `<html>` tag. Continuing test with `ThemeProvider` active.
     *   The root cause is likely related to how Client Components (especially those using context like `useSession` from NextAuth.js) are rendered within the main layout or its direct children. The Prisma migration step is paused until the user can confirm the dev server runs without this context error after these changes.
