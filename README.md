@@ -103,5 +103,6 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 *   **Tooling Limitations:** Automated execution of `pnpm` commands (for package installation) and `npx prisma` commands (for migrations, init) has been unreliable. These steps often require manual execution by the user in their local environment as detailed in `MANUAL_SETUP_GUIDE.md` and specific README sections.
 *   **Debugging 'React Context is unavailable' error on root page:**
     *   Temporarily simplified `app/page.tsx` to isolate the issue.
-    *   Temporarily removed `HeaderWrapper` from `app/layout.tsx` to further isolate if the header (which uses `useSession`) is related to the context error on the root page.
+    *   Temporarily removed `HeaderWrapper` from `app/layout.tsx`.
+    *   Temporarily commented out `SessionProvider` in `app/layout.tsx` to further isolate the source of the context error.
     *   The root cause is likely related to how Client Components (especially those using context like `useSession` from NextAuth.js) are rendered within the main layout or its direct children. `components/header.tsx` was confirmed to be a Client Component. Further investigation might be needed for `components/header-wrapper.tsx` if it's an intermediary Server Component. The Prisma migration step is paused until the user can confirm the dev server runs without this context error after these changes.

@@ -4,7 +4,7 @@ import { Inter, Lora, Abhaya_Libre } from "next/font/google"
 import "./globals.css"
 import HeaderWrapper from "@/components/header-wrapper"
 import { ThemeProvider } from "@/components/theme-provider"
-import { SessionProvider } from "next-auth/react"
+// import { SessionProvider } from "next-auth/react"; // Temporarily commented out for debugging
 
 const inter = Inter({ subsets: ["latin"] })
 const lora = Lora({ 
@@ -30,16 +30,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning> {/* Added suppressHydrationWarning as SessionProvider often handles this */}
       <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable}`}>
-        <SessionProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        {/* <SessionProvider> */} {/* Temporarily commented out for debugging */}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            // disableTransitionOnChange // This might be useful with ThemeProvider
+          >
             <div className="flex flex-col h-screen overflow-hidden bg-background">
-              {/* <HeaderWrapper /> */} {/* Temporarily commented out for debugging React Context error */}
+              {/* <HeaderWrapper /> */} {/* Should still be commented out */}
               <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
             </div>
           </ThemeProvider>
-        </SessionProvider>
+        {/* </SessionProvider> */} {/* Temporarily commented out for debugging */}
       </body>
     </html>
   )
