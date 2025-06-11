@@ -4,7 +4,7 @@ import { Inter, Lora, Abhaya_Libre } from "next/font/google"
 import "./globals.css"
 import HeaderWrapper from "@/components/header-wrapper"
 import { ThemeProvider } from "@/components/theme-provider"
-// import { SessionProvider } from "next-auth/react"; // Temporarily commented out for debugging
+import { SessionProvider } from "next-auth/react"; // Ensure this is uncommented
 
 const inter = Inter({ subsets: ["latin"] })
 const lora = Lora({ 
@@ -30,21 +30,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning> {/* Added suppressHydrationWarning as SessionProvider often handles this */}
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable}`}>
-        {/* <SessionProvider> */} {/* Temporarily commented out for debugging */}
+        <SessionProvider> {/* Ensure this is uncommented */}
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
-            // disableTransitionOnChange // This might be useful with ThemeProvider
+            // disableTransitionOnChange // This was commented out, keeping as is. Consider if needed.
           >
             <div className="flex flex-col h-screen overflow-hidden bg-background">
-              {/* <HeaderWrapper /> */} {/* Should still be commented out */}
+              {/* <HeaderWrapper /> */} {/* KEEP THIS COMMENTED OUT for this test */}
               <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
             </div>
           </ThemeProvider>
-        {/* </SessionProvider> */} {/* Temporarily commented out for debugging */}
+        </SessionProvider> {/* Ensure this is uncommented */}
       </body>
     </html>
   )
