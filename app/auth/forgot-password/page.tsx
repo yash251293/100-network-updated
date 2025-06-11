@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import { toast } from "sonner"; // Added
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -19,19 +19,36 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // TODO: Add forgot password logic here
-    console.log("Forgot password request for:", email)
+    try {
+      const response = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    // Simulate API call
-    setTimeout(() => {
+      if (response.ok) {
+        const data = await response.json();
+        setIsSubmitted(true);
+        toast.success(data.message || "Password reset link sent (if email exists).");
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to request password reset.");
+        setIsSubmitted(false); // Explicitly keep the form visible on error
+      }
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+      setIsSubmitted(false); // Explicitly keep the form visible on error
+    } finally {
       setIsLoading(false)
-      setIsSubmitted(true)
-    }, 1000)
+    }
   }
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-[#0056B3]/5 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -63,7 +80,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-[#0056B3]/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

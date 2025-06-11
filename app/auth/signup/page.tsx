@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-
+import { useRouter } from "next/navigation"; // Added
+import { toast } from "sonner"; // Added
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -21,7 +22,7 @@ export default function SignupPage() {
     confirmPassword: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null); // For API messages
+  const router = useRouter(); // Added
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     uppercase: false,
@@ -30,18 +31,18 @@ export default function SignupPage() {
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage(null); // Clear previous messages
+    e.preventDefault()
+    setIsLoading(true)
 
     if (formData.password !== formData.confirmPassword) {
-      setMessage({ type: 'error', content: "Passwords don't match!" });
-      setIsLoading(false);
-      return;
+      toast.error("Passwords do not match!");
+      setIsLoading(false)
+      return
     }
 
-    if (!isPasswordValid) {
-      setMessage({ type: 'error', content: "Please ensure your password meets all criteria." });
+    const isPwdValid = Object.values(passwordValidation).every(Boolean);
+    if (!isPwdValid) {
+      toast.error("Password does not meet requirements.");
       setIsLoading(false);
       return;
     }
@@ -53,30 +54,27 @@ export default function SignupPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
         }),
       });
 
-      const data = await response.json();
-
       if (response.ok) {
-        setMessage({ type: 'success', content: data.message || 'Signup successful! Please login.' });
-        // Optionally redirect or clear form:
-        // router.push('/auth/login');
-        setFormData({ firstName: "", lastName: "", email: "", password: "", confirmPassword: ""});
+        toast.success("Signup Successful!", { description: "Please proceed to login." });
+        router.push("/auth/login");
       } else {
-        setMessage({ type: 'error', content: data.message || 'An error occurred during signup.' });
+        const errorData = await response.json();
+        toast.error("Signup Failed", { description: errorData.message || "Could not create account. Please try again." });
       }
     } catch (error) {
-      console.error('Signup fetch error:', error);
-      setMessage({ type: 'error', content: 'Failed to connect to the server. Please try again.' });
+      console.error("Signup error:", error);
+      toast.error("Signup Failed", { description: "An unexpected error occurred. Please try again." });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -99,7 +97,7 @@ export default function SignupPage() {
   const isPasswordValid = Object.values(passwordValidation).every(Boolean)
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-[#0056B3]/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -238,12 +236,6 @@ export default function SignupPage() {
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
-
-          {message && (
-            <div className={`mt-4 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-              {message.content}
-            </div>
-          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">

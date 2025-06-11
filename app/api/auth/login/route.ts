@@ -1,86 +1,67 @@
-import { NextResponse } from 'next/server';
-import bcrypt from 'bcrypt';
-import pool from '@/lib/db';
-import { generateToken } from '@/lib/auth_utils';
-import { LoginSchema, formatZodError } from '@/lib/validation_schemas';
+import { NextResponse } from 'next/server'
+import { compare } from 'bcryptjs'
+import { query } from '@/lib/db' // Adjusted path
+import jwt from 'jsonwebtoken';
 
 export async function POST(request: Request) {
+  let body
   try {
-    const body = await request.json();
+    body = await request.json()
+  } catch (error) {
+    console.error("Failed to parse request body:", error)
+    return NextResponse.json({ success: false, message: 'Invalid request body. Ensure it is valid JSON.' }, { status: 400 })
+  }
 
-    // --- Input Validation with Zod ---
-    const validationResult = LoginSchema.safeParse(body);
-    if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid input.',
-          details: formatZodError(validationResult.error),
-        },
-        { status: 400 }
-      );
-    }
-    const { email, password } = validationResult.data;
+  const { email, password } = body
+  // console.log('Login API request body:', body); // Optional: Keep for debugging
 
-    // --- Retrieve User ---
-    const result = await pool.query(
-      'SELECT id, email, password_hash, first_name, last_name, role FROM users WHERE email = $1 AND is_active = TRUE',
-      [email]
-    );
+  if (!email || typeof email !== 'string' || !password || typeof password !== 'string' || password.length === 0) {
+    return NextResponse.json({ success: false, message: 'Invalid credentials. Please provide email and password.' }, { status: 401 })
+  }
+
+  try {
+    // Retrieve user by email
+    const result = await query('SELECT id, email, password_hash FROM users WHERE email = $1', [email])
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
-        { status: 401 } // Unauthorized
-      );
+      return NextResponse.json({ success: false, message: 'Invalid email or password.' }, { status: 401 })
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0]
 
-    // --- Compare Password ---
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
-        { status: 401 } // Unauthorized
-      );
+    // Compare passwords
+    const passwordsMatch = await compare(password, user.password_hash)
+
+    if (!passwordsMatch) {
+      return NextResponse.json({ success: false, message: 'Invalid email or password.' }, { status: 401 })
     }
 
-    // --- Generate JWT ---
-    const tokenPayload = {
-      userId: user.id,
-      email: user.email,
-      // role: user.role, // Optionally include role or other relevant info
-      // firstName: user.first_name,
-      // lastName: user.last_name,
-    };
-    const token = generateToken(tokenPayload);
+    // If passwords match, generate JWT and return success response
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('Server configuration error: JWT_SECRET is not set.');
+      return NextResponse.json({ success: false, message: 'Server configuration error: JWT secret not set.' }, { status: 500 });
+    }
 
-    // --- Update Last Login Time (Optional) ---
-    // Consider doing this asynchronously or if it's critical for your app.
-    // await pool.query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+    const payload = { userId: user.id };
+    const options = { expiresIn: '1h' }; // Token expires in 1 hour
+    const token = jwt.sign(payload, jwtSecret, options);
 
     return NextResponse.json(
       {
         success: true,
         message: 'Login successful!',
-        token,
+        token: token,
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          role: user.role,
+          // Add other non-sensitive user details you might want to return
         },
       },
       { status: 200 }
     );
-
   } catch (error) {
-    console.error('Login API Error:', error);
-    return NextResponse.json(
-      { success: false, error: 'An unexpected error occurred.' },
-      { status: 500 }
-    );
+    console.error('Login database/bcrypt/jwt error:', error)
+    return NextResponse.json({ success: false, message: 'An error occurred during login. Please try again.' }, { status: 500 })
   }
 }

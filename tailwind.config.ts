@@ -3,11 +3,10 @@ import type { Config } from "tailwindcss";
 const config: Config = {
     darkMode: ["class"],
     content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "*.{js,ts,jsx,tsx,mdx}"
-  ],
+      "./app/**/*.{js,ts,jsx,tsx,mdx}",
+      "./components/**/*.{js,ts,jsx,tsx,mdx}",
+      // Add other paths if necessary, e.g., "./pages/**/*.{js,ts,jsx,tsx,mdx}" if any pages folder exists outside app
+    ],
   theme: {
   	extend: {
   		colors: {
@@ -60,7 +59,7 @@ const config: Config = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

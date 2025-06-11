@@ -1,9 +1,11 @@
 "use client"
 
 import type React from "react"
+import { useRouter } from "next/navigation"; // Added
+import { login as authLogin } from "@/lib/authClient"; // Added
+import { toast } from "sonner"; // Added
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,19 +13,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null); // For API messages
+  const router = useRouter(); // Added
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage(null); // Clear previous messages
+    e.preventDefault()
+    setIsLoading(true)
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -31,33 +31,25 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.token) {
-        setMessage({ type: 'success', content: data.message || 'Login successful! Redirecting...' });
-        // Store the JWT in localStorage
-        localStorage.setItem('authToken', data.token);
-        // Store user info if needed, or rely on token for future fetches
-        if (data.user) {
-            localStorage.setItem('authUser', JSON.stringify(data.user));
-        }
-        router.push('/explore'); // Redirect to a protected route or dashboard
+      if (response.ok) {
+        const data = await response.json();
+        authLogin(data.token); // Assuming the token is in data.token
+        toast.success("Login Successful", { description: "Welcome back!" });
+        router.push("/feed"); // Redirect to feed page
       } else {
-        setMessage({ type: 'error', content: data.message || 'An error occurred during login.' });
+        const errorData = await response.json();
+        toast.error("Login Failed", { description: errorData.message || "Invalid credentials or server error." });
       }
     } catch (error) {
-      console.error('Login fetch error:', error);
-      setMessage({ type: 'error', content: 'Failed to connect to the server. Please try again.' });
+      console.error("Login error:", error);
+      toast.error("Login Failed", { description: "An unexpected error occurred. Please try again." });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -67,7 +59,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-[#0056B3]/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -129,12 +121,6 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-
-          {message && (
-            <div className={`mt-4 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-              {message.content}
-            </div>
-          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">

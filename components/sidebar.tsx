@@ -18,10 +18,9 @@ const navItems = [
     icon: MessageSquare,
   },
   {
-    name: "Inbox",
+    name: "Messages",
     href: "/inbox",
     icon: Inbox,
-    badge: 24,
   },
   {
     name: "Jobs",
@@ -42,7 +41,6 @@ const navItems = [
     name: "Network",
     href: "/people",
     icon: Users,
-    badge: "New",
   },
   {
     name: "Companies",
@@ -79,18 +77,6 @@ export default function Sidebar() {
           >
             <item.icon className="mr-3 h-5 w-5" />
             {item.name}
-            {item.badge && (
-              <span
-                className={cn(
-                  "ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full",
-                  typeof item.badge === "string" && item.badge === "New"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800",
-                )}
-              >
-                {item.badge}
-              </span>
-            )}
           </Link>
         ))}
       </nav>
