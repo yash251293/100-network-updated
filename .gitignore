@@ -19,6 +19,12 @@ yarn-error.log*
 # env files
 .env*
 
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+# Note: migrations folder is typically versioned, but specific .sql files inside
+# can be ignored if desired, though not doing so by default here.
+
 # vercel
 .vercel
 

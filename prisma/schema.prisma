@@ -1,0 +1,181 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  password           String // Will be hashed
+  headline           String?
+  summary            String?
+  location           String?
+  profilePictureUrl  String?
+  linkedInProfileUrl String?
+  githubProfileUrl   String?
+  personalWebsiteUrl String?
+  skills             Json?     // Using Json for SQLite compatibility with arrays/lists
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  posts              Post[]
+  applications       JobApplication[]
+  experience         Experience[]
+  education          Education[]
+  passwordResetToken PasswordResetToken? // One-to-one optional relation
+}
+
+model Experience {
+  id          String   @id @default(cuid())
+  title       String
+  companyName String
+  location    String?
+  startDate   DateTime // Store as DateTime
+  endDate     DateTime? // Optional, for current positions
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Education {
+  id            String   @id @default(cuid())
+  schoolName    String
+  degree        String
+  fieldOfStudy  String?
+  startDate     DateTime
+  endDate       DateTime?
+  description   String?
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Company {
+  id                 String    @id @default(cuid())
+  name               String
+  industry           String?
+  logoUrl            String?
+  size               String?
+  location           String?
+  founded            String?
+  website            String?
+  description        String?
+  mission            String?
+  vision             String?
+  values             Json?     // Using Json for SQLite compatibility
+  culture            String?
+  verified           Boolean?  @default(false)
+  companyType        String?
+  contactEmail       String?
+  contactPhone       String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  jobs               Job[]
+}
+
+model Job {
+  id                 String    @id @default(cuid())
+  title              String
+  industry           String?
+  jobType            String    // e.g., "Full-time", "Contract" (matches TS type)
+  location           String
+  remoteStatus       String    // e.g., "Remote", "Hybrid", "On-site" (matches TS type 'remote')
+  salaryRange        String?
+  postedDate         DateTime  @default(now()) // Consider if this should be manually set from TS type's string
+  description        String
+  requirements       Json      // Using Json for SQLite
+  responsibilities   Json      // Using Json for SQLite
+  niceToHave         Json?     // Using Json for SQLite
+  benefits           Json?     // Using Json for SQLite
+  skillsRequired     Json?     // Using Json for SQLite
+  experienceLevel    String?
+
+  companyId          String
+  company            Company   @relation(fields: [companyId], references: [id])
+
+  applications       JobApplication[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model FreelanceProject {
+  id            String    @id @default(cuid())
+  title         String
+  industry      String?
+  budget        String?
+  duration      String?
+  postedDate    DateTime  @default(now()) // Consider if this should be manually set
+  description   String
+  requirements  Json      // Using Json for SQLite
+  deliverables  Json      // Using Json for SQLite
+  skillsNeeded  Json      // Using Json for SQLite
+
+  authorId      String    // Assuming a User authors this, not a Company for now
+  // If User relation is needed:
+  // author     User   @relation(fields: [authorId], references: [id])
+  // This requires adding a FreelanceProject[] relation to User model:
+  // authoredFreelanceProjects FreelanceProject[] @relation("AuthoredFreelanceProjects") - if named relation needed
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Post {
+  id                      String    @id @default(cuid())
+  content                 String
+  imageUrl                String?
+  videoUrl                String?
+  linkUrl                 String?
+  // linkPreview fields will be stored as Json if needed:
+  // linkPreview             Json?
+
+  likesCount              Int       @default(0)
+  commentsCount           Int       @default(0)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  authorId                String
+  author                  User      @relation(fields: [authorId], references: [id])
+}
+
+model JobApplication {
+  id                 String    @id @default(cuid())
+  coverLetter        String?
+  resumeUrl          String?
+  portfolioUrl       String?
+  expectedSalary     String?
+  availableStartDate DateTime?
+  status             String    // e.g., "submitted", "viewed" (matches TS type)
+  appliedDate        DateTime  @default(now()) // Matches TS type which is ISO string
+
+  jobId              String
+  job                Job       @relation(fields: [jobId], references: [id])
+  applicantId        String
+  applicant          User      @relation(fields: [applicantId], references: [id])
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([jobId, applicantId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  // userId    String   @unique // Optional: if direct relation to User is preferred over email lookup
+  // user      User     @relation(fields: [userId], references: [id])
+}
