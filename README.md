@@ -1,5 +1,7 @@
 # 100 Networks Project Status
 
+**CRITICAL SETUP REQUIRED:** Please follow the instructions in `GIT_MERGE_AND_SETUP_GUIDE.md` to update your local branch with the Auth.js v5 migration and set up your database **before proceeding with further development or expecting the application to run correctly.**
+
 ## Project Status & Next Steps
 
 Here's a summary of what has been accomplished so far:
@@ -12,12 +14,6 @@ Here's a summary of what has been accomplished so far:
 *   Frontend components (`app/jobs/[id]/page.tsx`, `app/explore/page.tsx`) refactored to fetch data from API routes.
 *   Job Application API (`POST /api/applications`) and frontend form (`app/jobs/[id]/apply/page.tsx`) implemented.
 *   Build configurations in `next.config.mjs` updated to enforce ESLint and TypeScript checks (manual verification of build/lint status pending due to tool limitations).
-*   NextAuth.js setup for credentials-based authentication:
-    *   Assumed installation of `next-auth` and `bcryptjs`.
-    *   Implemented API routes for auth (`app/api/auth/[...nextauth]/route.ts`) and registration (`app/api/auth/register/route.ts`).
-    *   Created UI pages for Signup (`/auth/signup`) and Login (`/auth/login`).
-    *   Integrated `SessionProvider` in `app/layout.tsx`.
-    *   Updated `components/header.tsx` for dynamic session display and login/logout.
 *   User Profile Management Foundation:
     *   Expanded `User`, `Experience`, and `Education` interfaces in `lib/types.ts`.
     *   Developed Profile Page (`app/profile/[userId]/page.tsx`) for displaying user data.
@@ -36,10 +32,9 @@ Here's a summary of what has been accomplished so far:
 *   `.env` file created for `DATABASE_URL`.
 *   SQLite database files (`prisma/dev.db*`) added to `.gitignore`.
 
-## Phase 1: Core Authentication & User Foundation - Complete
+## Phase 1: Core Authentication & User Foundation - Complete (Pending Auth.js v5 Full Test)
 
-The initial pass of Phase 1 is now complete. Key functionalities include:
-- Robust (credentials-based) authentication setup with NextAuth.js.
+The initial pass of Phase 1, focusing on setting up core authentication and user structures, is largely complete. The recent migration to Auth.js v5 needs thorough testing. Key functionalities include:
 - User registration and login, with password hashing (`bcryptjs`) and database persistence (Prisma).
 - User profile management (viewing and basic editing of own profile), with APIs using Prisma.
 - Route protection for authenticated areas using middleware.
@@ -49,21 +44,27 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 - Successfully ran initial Prisma migration creating SQLite database schema and generating Prisma Client (with user assistance for manual steps).
 - Created a reusable Prisma Client instance in `lib/prisma.ts`.
 - Refactored registration API (`/api/auth/register`) to use Prisma and `bcryptjs`.
-- Refactored NextAuth.js CredentialsProvider in `/api/auth/[...nextauth]` to use Prisma for user lookup and `bcryptjs` for password verification.
-- Refactored User Profile APIs (`GET /api/users/[userId]`, `PUT /api/users/[userId]`) to use Prisma.
-- Implemented basic CRUD APIs for Companies (`/api/companies`, `/api/companies/[id]`) using Prisma. (Note: `PUT` for companies currently allows any authenticated user to update; more granular authorization needed for production).
-- Implemented API endpoint `POST /api/auth/forgot-password` to handle password reset requests (generates token, stores hash in DB, simulates email).
-- Implemented API endpoint `POST /api/auth/reset-password` to validate reset tokens (hashed, checked against DB) and update user passwords with bcryptjs.
-- Connected `forgot-password` (`app/auth/forgot-password/page.tsx`) and `reset-password` (`app/auth/reset-password/page.tsx`) UI pages to their respective backend API endpoints.
-- The `lib/inMemoryStore.ts` is now being phased out, with User, Company, and PasswordResetToken data managed by Prisma. It may still hold data for Posts, Jobs, etc., until those are migrated.
+- Implemented API endpoint `POST /api/auth/forgot-password` to handle password reset requests.
+- Implemented API endpoint `POST /api/auth/reset-password` to validate reset tokens and update user passwords.
+- Connected `forgot-password` and `reset-password` UI pages.
+- The `lib/inMemoryStore.ts` is now being phased out for user and auth-related data.
 
-**Important Next Steps for Production-Ready System (Post-Phase 1 & 2):**
+**NextAuth.js v4 to Auth.js v5 Migration:**
+*   Uninstalled `next-auth` (v4) and installed `next-auth@beta` (v5) and `@auth/prisma-adapter` (assumed successful manual install by user due to tool limitations).
+*   Deleted old API route `app/api/auth/[...nextauth]/route.ts`.
+    *   Created new configuration files: `auth.config.ts` (with `CredentialsProvider` using Prisma, `PrismaAdapter` configured, JWT session strategy, and callbacks) and `auth.ts` (exporting `handlers`, `auth`, `signIn`, `signOut`).
+*   Created new API route `app/api/auth/[...auth]/route.ts` using the new handlers.
+    *   Updated `.env` requirements: `AUTH_SECRET` (replaces `NEXTAUTH_SECRET`), `AUTH_URL` (recommended, e.g., `http://localhost:3000`), and `DATABASE_URL`. `NEXTAUTH_URL` can be kept for now or replaced by `AUTH_URL`.
+    *   Removed temporary plain text password check from `authorize` function in `auth.config.ts`, relying on `bcryptjs.compare`.
+    *   **Note:** `SessionProvider` import in `app/layout.tsx` and `useSession`/`signIn`/`signOut` imports in client components still use `next-auth/react`. These may need to be updated based on Auth.js v5 best practices after initial testing.
+
+**Important Next Steps for Production-Ready Auth & Profile (Post-Phase 1 & 2):**
 - Transition all remaining API routes using `lib/inMemoryStore.ts` (e.g., posts, jobs, applications) to use Prisma Client.
-- Implement more granular authorization for sensitive operations (e.g., company updates, job postings).
-- Consider adding OAuth providers (Google, LinkedIn).
+- Implement more granular authorization for sensitive operations.
+- Consider adding OAuth providers (Google, LinkedIn) via `auth.config.ts`.
 - Implement profile picture file uploads.
 - Enhance profile editing (e.g., for experience and education arrays using Prisma relations).
-- Thorough testing of all authentication, profile, and core entity management flows with the database.
+- Thorough testing of all authentication (v5), profile, and core entity management flows with the database.
 - Manually run `pnpm run lint` and `pnpm run build` in a local development environment to identify and fix any ESLint or TypeScript errors.
 
 ## Phase 2: Core Content & Interaction
@@ -71,45 +72,31 @@ The initial pass of Phase 1 is now complete. Key functionalities include:
 **Accomplished:**
 *   Defined `Post` interface in `lib/types.ts`.
 *   Updated `lib/inMemoryStore.ts` to manage `Post` objects (this will be fully replaced by Prisma for posts).
-*   Implemented API endpoint `POST /api/posts` for creating new posts, linking to authenticated user. Data stored via Prisma.
-*   Implemented API endpoint `GET /api/posts` for retrieving all posts (ordered by newest first) from the database via Prisma.
-*   Connected `app/feed/page.tsx` UI to Post APIs: enabled creating text posts (image upload UI present but not functional for backend storage yet) and displaying a dynamic feed of posts from the database.
-*   Implemented API endpoint `GET /api/posts/:postId` for retrieving a single post by its ID using Prisma.
-*   Implemented API endpoint `PUT /api/posts/:postId` for updating authenticated user's own posts using Prisma.
-*   Implemented API endpoint `DELETE /api/posts/:postId` for authenticated users to delete their own posts using Prisma.
-*   Added Edit and Delete buttons/icons to posts in the feed (`app/feed/page.tsx`) for authors of the posts.
-*   Implemented client-side logic for deleting posts (with confirmation) by calling `DELETE /api/posts/:postId` and refreshing the feed.
-*   Edit button for posts currently navigates to a placeholder route (`/posts/:postId/edit`).
-*   Verified and ensured Like & Comment counts are displayed for each post in the feed.
-*   Confirmed placeholder Like & Comment buttons/icons are present on each post (functionality deferred).
-*   Defined `Like` model in `prisma/schema.prisma` and added `likes` relation to `Post` model.
+*   Implemented API endpoint `POST /api/posts` for creating new posts.
+*   Implemented API endpoint `GET /api/posts` for retrieving all posts.
+*   Connected `app/feed/page.tsx` UI to Post APIs (create/display text posts).
+*   Implemented API endpoints `GET /api/posts/:postId`, `PUT /api/posts/:postId`, `DELETE /api/posts/:postId`.
+*   Added Edit/Delete UI for posts in feed, with functional delete.
+*   Verified Like/Comment count display and placeholder buttons in feed.
+*   Defined `Like` model in `prisma/schema.prisma`.
 
 **Next Steps:**
-1.  **Manual Prisma Migration Required:** Run `npx prisma migrate dev --name add-like-model` to apply the new `Like` model to the database and regenerate Prisma Client. This is required before implementing Like API endpoints.
-2.  **Implement 'Like' functionality (API):**
-    *   Create API endpoints:
-        *   `POST /api/posts/[postId]/like` (to like a post).
-        *   `DELETE /api/posts/[postId]/like` (to unlike a post).
-    *   These endpoints will create/delete `Like` records in Prisma and update the `likesCount` on the `Post` model using a transaction.
-3.  **Implement 'Like' functionality (UI):**
-    *   Update the UI in `app/feed/page.tsx` to call these new Like/Unlike APIs.
-    *   Dynamically update the like button's appearance (e.g., filled/unfilled heart) and the `likesCount` based on user interaction and API response.
+1.  **Complete Auth.js v5 Migration & Testing:**
+    *   **Thoroughly test login, logout, and registration with the new Auth.js v5 setup.**
+    *   Verify session handling in client components (`useSession` from `next-auth/react` or equivalent from `auth.ts`).
+    *   Update `signIn` and `signOut` usage in client components if necessary (check if they should be imported from `auth.ts` or `next-auth/react`).
+    *   **Follow `GIT_MERGE_AND_SETUP_GUIDE.md` for detailed instructions on merging, cleaning the environment, installing dependencies, and running the initial Prisma migration.**
+    *   Thoroughly test login, logout, and registration with the new Auth.js v5 setup.
+    *   Verify session handling in client components (`useSession` from `next-auth/react` or equivalent from `auth.ts`).
+    *   Update `signIn` and `signOut` usage in client components if necessary.
+    *   Resolve any errors arising from the v5 migration, particularly the "React Context is unavailable" error if it persists.
+2.  **Manual Prisma Migration for Likes (After Dev Server is Stable):** Run `npx prisma migrate dev --name add-like-model`.
+3.  **Implement 'Like' functionality (API & UI) (once auth is stable and Like migration is done).**
 4.  Implement functionality for commenting on posts (API and UI, using Prisma).
 5.  Refactor Job and Freelance Project APIs to use Prisma.
-6.  Enhance Post creation UI to handle actual image uploads (backend and frontend).
+6.  Enhance Post creation UI to handle actual image uploads.
 
 ## Troubleshooting / Known Issues
-*   **React Context in Server Components:** Encountered 'React Context is unavailable in Server Components' error, typically when a Client Component hook like `useSession` or `useState` is used in a component not marked with `"use client";`. Ensured components like `components/header.tsx` (which uses `useSession`) are correctly marked. If this error appears again, check the import chain: any component directly importing and using a Client Component with context hooks might also need to be a Client Component if it doesn't form a clear boundary. `app/layout.tsx` is a Server Component by default; `SessionProvider` (a Client Component context provider) is correctly placed within it to provide context to child Client Components.
-*   **Tooling Limitations:** Automated execution of `pnpm` commands (for package installation) and `npx prisma` commands (for migrations, init) has been unreliable. These steps often require manual execution by the user in their local environment as detailed in `MANUAL_SETUP_GUIDE.md` and specific README sections.
-*   **Debugging 'React Context is unavailable' error on root page:**
-    *   Temporarily simplified `app/page.tsx` to isolate the issue.
-    *   Temporarily removed `HeaderWrapper` from `app/layout.tsx`.
-    *   Temporarily commented out `SessionProvider` in `app/layout.tsx`.
-    *   **Update**: Re-introduced `SessionProvider` while keeping `HeaderWrapper` commented. Error was resolved when both were removed.
-    *   **Update**: Re-introduced `HeaderWrapper` (which uses `useSession`) with `SessionProvider` also active.
-    *   **Update**: Set `app/page.tsx` to minimal. In `app/layout.tsx`, temporarily commented out `ThemeProvider`, `SessionProvider`, AND `HeaderWrapper` to test baseline rendering. This confirmed baseline rendering works.
-    *   **Update**: Re-introducing `ThemeProvider` in `app/layout.tsx` (while `SessionProvider` and `HeaderWrapper` remain commented out). This is to isolate if `ThemeProvider` interacts negatively.
-    *   **Update**: Fixed hydration error in `app/layout.tsx` caused by extraneous whitespace within `<html>` tag. Continuing test with `ThemeProvider` active.
-    *   **Update**: Re-introducing `SessionProvider` in `app/layout.tsx` (while `HeaderWrapper` remains commented out) to test its impact.
-    *   **Update**: Testing `SessionProvider` in isolation. `ThemeProvider` is now commented out, `HeaderWrapper` remains commented out.
-    *   The root cause is likely related to how Client Components (especially those using context like `useSession` from NextAuth.js) are rendered within the main layout or its direct children. The Prisma migration step is paused until the user can confirm the dev server runs without this context error after these changes.
+*   **React Context in Server Components:** This error was the primary driver for the Auth.js v5 migration attempt. Debugging steps included simplifying `app/page.tsx` and `app/layout.tsx` by commenting out providers. The error was resolved when `SessionProvider` and `HeaderWrapper` were both removed. Further testing is needed with the new Auth.js v5 structure. The `auth.ts` file now exports `auth` which can be used in Server Components to get session data, potentially reducing reliance on `useSession` in some places.
+*   **Tooling Limitations:** Automated execution of `pnpm` commands and `npx prisma` commands has been unreliable. These steps often require manual execution.
+*   **Auth.js v5 Beta:** As v5 is in beta, some APIs or import paths might change. Refer to official Auth.js documentation for the latest. `@auth/prisma-adapter` is now configured in `auth.config.ts`; its installation by the user needs to be confirmed.
