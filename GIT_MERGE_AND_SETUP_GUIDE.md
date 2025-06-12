@@ -6,28 +6,29 @@ This guide provides step-by-step CMD commands to update your local `master` bran
 
 ## Step 1: Commit Your Local Dependency Changes
 
-You previously added `next-auth@beta`, `@auth/prisma-adapter`, and `bcryptjs`. We need to save these changes to your `package.json`.
+If you manually ran `pnpm add next-auth@beta @auth/prisma-adapter bcryptjs` and potentially `pnpm remove next-auth` (for v4), commit these changes first. If the AI assistant handled package changes (even if simulated due to tool errors), you might be able to skip this specific commit, but it's safer to ensure your `package.json` and `pnpm-lock.yaml` reflect the Auth.js v5 dependencies.
 
 ```cmd
 git add package.json pnpm-lock.yaml
 ```
-*(If you get an error like "'pnpm-lock.yaml' did not match any files" from the command above, that's okay, it just means it wasn't tracked yet. Proceed to the next command.)*
+*(If you get an error like "'pnpm-lock.yaml' did not match any files" or if no changes are staged, that's okay. Proceed to the next command.)*
 
-Then, commit these changes:
 ```cmd
-git commit -m "chore: Add auth v5 and bcryptjs dependencies locally"
+git commit -m "chore: Update dependencies for Auth.js v5"
 ```
+*(If it says "nothing to commit", that's also okay.)*
 
 ## Step 2: Fetch Latest Branches from Remote
-This ensures your local git repository knows about all the branches from the remote, including `origin/refactor/authjs-v5-setup`.
+This ensures your local git repository knows about all the branches from the remote, including the branch containing the Auth.js v5 setup (e.g., `origin/feature/auth-v5-with-guide` - **the AI will provide the exact branch name**).
 ```cmd
 git fetch origin
 ```
 
 ## Step 3: Merge Auth.js v5 Refactor into Your Master Branch
+Replace `THE_AUTH_V5_BRANCH_NAME` with the actual branch name provided by the AI.
 This will bring the new authentication code (Auth.js v5) into your local `master` branch.
 ```cmd
-git merge origin/refactor/authjs-v5-setup
+git merge origin/THE_AUTH_V5_BRANCH_NAME
 ```
 **Watch for Merge Conflicts:**
 - If the output of this command mentions "merge conflict" or "Automatic merge failed; fix conflicts and then commit the result," **STOP** and show the full output to the AI assistant. Do not proceed until conflicts are resolved.
@@ -60,11 +61,11 @@ del pnpm-lock.yaml
 ```
 
 ## Step 6: Perform a Clean Install of All Dependencies
-This will install all packages based on the updated `package.json` and `pnpm-lock.yaml` (a new lockfile will be generated).
+This will install all packages based on the updated `package.json` (a new lockfile will be generated).
 ```cmd
 pnpm install
 ```
-- Review the output. You may still see peer dependency warnings related to React 19 for `react-day-picker` and `vaul` – this is okay for now. Ensure there are no `ERESOLVE` errors.
+- Review the output. You may still see peer dependency warnings related to React 19 for `react-day-picker` and `vaul` – this is okay for now. Ensure there are no `ERESOLVE` errors for critical packages like `next-auth` or `@auth/prisma-adapter`.
 
 ## Step 7: Test the Development Server
 Now, try to run the development server with the new Auth.js v5 code.
@@ -73,24 +74,24 @@ pnpm run dev
 ```
 **Observe the terminal output carefully:**
 - Does the server start successfully?
-- **Crucially, is the "React Context is unavailable in Server Components" error GONE?** (This is the main goal of the Auth.js v5 migration).
+- **Crucially, is the "React Context is unavailable in Server Components" error GONE?** (This was a primary motivation for the Auth.js v5 migration).
 
 **If the server starts without the context error:**
 - Open `http://localhost:3000` in your browser.
-    - What page content do you see? (It should be the minimal page or the full landing page, depending on the state of `app/page.tsx` after the merge).
+    - You should see the minimal home page content.
 - Test basic authentication:
     - Navigate to `/auth/signup` and try to register a new user.
     - Navigate to `/auth/login` and try to log in with the new user.
-    - Does login redirect you (e.g., to `/feed` or `/explore`)?
-    - (The main header UI might still be missing if `HeaderWrapper` is still commented out in `app/layout.tsx` from previous debugging steps – we can restore that later).
+    - Does login redirect you (e.g., to `/feed`)?
+    - The main header UI might still be missing or look different if `HeaderWrapper` is still commented out in `app/layout.tsx` from previous debugging steps. This is fine for this stage of testing.
 
 ## Step 8: Run Prisma Migration (If Dev Server is Stable)
-If `pnpm run dev` runs without the "React Context" error and basic site navigation seems okay (even if auth UI isn't fully back yet):
+If `pnpm run dev` runs without the "React Context" error and basic site navigation seems okay:
 1.  Stop the dev server (Ctrl+C in the terminal).
-2.  Run the Prisma migration to create your database schema based on the latest `prisma/schema.prisma` (which includes User, Company, Post, Like, PasswordResetToken models, etc.):
+2.  Run the Prisma migration to create your database schema based on the latest `prisma/schema.prisma` (which includes User, Company, Post, PasswordResetToken models, but **not yet the `Like` model**):
     ```cmd
     npx prisma migrate dev --name initial_schema_with_auth_v5
     ```
 3.  This command should complete successfully, creating `prisma/dev.db` and a migration file.
 
-After completing all these steps, please inform the AI assistant of the outcome of each major step (especially the `git merge`, `pnpm run dev`, and `npx prisma migrate dev` commands).
+After completing all these steps, please inform the AI assistant of the outcome of each major step (especially the `git merge`, `pnpm run dev`, and `npx prisma migrate dev` commands). This will determine the next steps, such as restoring the full UI for `app/page.tsx` and `app/layout.tsx`, and then proceeding with the `Like` model migration.
