@@ -66,6 +66,6 @@ export const authConfig = {
   pages: {
     signIn: '/auth/login',
   },
-  // secret: process.env.AUTH_SECRET, // Will be read from .env
-  // trustHost: true, // Useful for some deployments
+  // secret: process.env.AUTH_SECRET, // Ensure this is set in .env
+  // trustHost: true,
 } satisfies NextAuthConfig;
