@@ -23,21 +23,17 @@ export const authConfig = {
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        // console.log("Auth.js: Attempting to authorize user:", email); // Optional: for debugging
-
         const user = await prisma.user.findUnique({
           where: { email: email },
         });
 
         if (!user || !user.password) {
-          // console.log("Auth.js: User not found or user has no password for email:", email); // Optional: for debugging
           return null;
         }
 
         const isValidPassword = await bcryptjs.compare(password, user.password);
 
         if (isValidPassword) {
-          // console.log("Auth.js: Password validated for user:", email); // Optional: for debugging
           return {
             id: user.id,
             name: user.name,
@@ -46,7 +42,6 @@ export const authConfig = {
           };
         }
 
-        // console.log("Auth.js: Invalid password for user:", email); // Optional: for debugging
         return null;
       },
     }),
@@ -71,7 +66,6 @@ export const authConfig = {
   pages: {
     signIn: '/auth/login',
   },
-  // Ensure AUTH_SECRET is set in your .env file for production.
-  // secret: process.env.AUTH_SECRET,
-  // trustHost: true, // Recommended for some deployments
+  // secret: process.env.AUTH_SECRET, // Will be read from .env
+  // trustHost: true, // Useful for some deployments
 } satisfies NextAuthConfig;

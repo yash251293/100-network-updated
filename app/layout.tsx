@@ -3,7 +3,7 @@ import type { Metadata } from "next/dist/lib/metadata/types/metadata-interface"
 import { Inter, Lora, Abhaya_Libre } from "next/font/google"
 import "./globals.css"
 // import HeaderWrapper from "@/components/header-wrapper"; // Still Commented out
-// import { ThemeProvider } from "@/components/theme-provider"; // COMMENTED OUT
+import { ThemeProvider } from "@/components/theme-provider"; // ACTIVE
 import { SessionProvider } from "next-auth/react"; // ACTIVE
 
 const inter = Inter({ subsets: ["latin"] })
@@ -37,19 +37,18 @@ export default function RootLayout({
       <head />
       <body className={`${inter.className} ${lora.variable} ${abhayaLibre.variable}`}>
         <SessionProvider> {/* ACTIVE */}
-          {/* <ThemeProvider
+          <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
-            // disableTransitionOnChange
-          > */}
-            {/* bg-background might look odd without ThemeProvider but ok for test */}
-            <div className="flex flex-col h-screen overflow-hidden bg-background dark:bg-slate-900"> {/* Added dark mode class manually for testing */}
-              {/* <HeaderWrapper /> */} {/* Still Commented out */}
+            // disableTransitionOnChange // Assuming this was commented out or not present as per instructions
+          >
+            <div className="flex flex-col h-screen overflow-hidden bg-background">
+              {/* <HeaderWrapper /> */} {/* Keep commented for initial test */}
               <main className="flex-1 overflow-auto px-4 py-3">{children}</main>
             </div>
-          {/* </ThemeProvider> */}
-        </SessionProvider>
+          </ThemeProvider>
+        </SessionProvider> {/* ACTIVE */}
       </body>
     </html>
   );
